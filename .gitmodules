@@ -1,0 +1,15 @@
+[submodule "Libraries/glm"]
+	path = Libraries/glm
+	url = https://github.com/g-truc/glm.git
+[submodule "Libraries/imgui"]
+	path = Libraries/imgui
+	url = https://github.com/ocornut/imgui.git
+[submodule "Libraries/stb"]
+	path = Libraries/stb
+	url = https://github.com/nothings/stb.git
+[submodule "Libraries/assimp"]
+	path = Libraries/assimp
+	url = https://github.com/assimp/assimp.git
+[submodule "Libraries/VulkanMemoryAllocator"]
+	path = Libraries/VulkanMemoryAllocator
+	url = https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
