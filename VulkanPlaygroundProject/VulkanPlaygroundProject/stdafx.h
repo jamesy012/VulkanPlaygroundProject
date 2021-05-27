@@ -2,12 +2,14 @@
 
 #include <iostream>
 #include <assert.h>
+#include <vector>
 
 #include <vulkan/vulkan.h>
 
-#define ASSERT_RET_FALSE() assert(false); return false;
+#define ASSERT_RET_FALSE(x) assert(false); return false;
 
 #define ASSERT_VULKAN_VALUE(x) assert(x != VK_NULL_HANDLE);
+#define ASSERT_VALID(x) assert(x != nullptr);
 
 static VkAllocationCallbacks* CreateAllocationCallbacks() {
    VkAllocationCallbacks callback;

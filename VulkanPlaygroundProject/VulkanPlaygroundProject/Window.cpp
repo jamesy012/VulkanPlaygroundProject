@@ -30,7 +30,7 @@ bool Window::CreateSurface(VkInstance aInstance) {
    ASSERT_VULKAN_VALUE(aInstance);
    const VkResult result = glfwCreateWindowSurface(aInstance, mWindow, GetAllocationCallback(), &mSurface);
    if (result != VK_SUCCESS) {
-      ASSERT_RET_FALSE();
+      ASSERT_RET_FALSE("Failed to create surface");
    }
    return true;
 }
@@ -41,4 +41,19 @@ bool Window::ShouldClose() {
 
 void Window::Update() {
    glfwPollEvents();
+}
+
+const VkExtent2D Window::GetFBExtent() const {
+   int width, height;
+   glfwGetFramebufferSize(mWindow, &width, &height);
+
+   VkExtent2D actualExtent = {
+      static_cast<uint32_t>(width),
+      static_cast<uint32_t>(height)
+   };
+   return actualExtent;
+}
+
+const char** Window::GetGLFWVulkanExtentensions(uint32_t* aCount) {
+   return glfwGetRequiredInstanceExtensions(aCount);
 }

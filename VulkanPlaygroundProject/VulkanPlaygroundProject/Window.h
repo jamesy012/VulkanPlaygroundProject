@@ -19,6 +19,10 @@ public:
    const VkSurfaceKHR GetSurface()const {
       return mSurface;
    }
+   const VkExtent2D GetFBExtent() const;
+
+   static const char** GetGLFWVulkanExtentensions(uint32_t* aCount);
+
 private:
    GLFWwindow* mWindow = nullptr;
    VkSurfaceKHR mSurface = nullptr;

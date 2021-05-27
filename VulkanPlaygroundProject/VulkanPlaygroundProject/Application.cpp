@@ -14,6 +14,8 @@ void Application::Start() {
 void Application::Run() {
    while (!mWindow->ShouldClose()) {
       mWindow->Update();
+
+      Draw();
    }
 }
 
@@ -22,4 +24,10 @@ void Application::Destroy() {
    mWindow->Destroy();
    delete mWindow;
    delete mVkManager;
+}
+
+void Application::Draw() {
+   uint32_t frameIndex;
+   mVkManager->RenderStart(frameIndex);
+   mVkManager->RenderEnd();
 }
