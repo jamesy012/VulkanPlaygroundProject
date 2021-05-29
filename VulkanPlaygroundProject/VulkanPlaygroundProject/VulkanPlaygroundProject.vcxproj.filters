@@ -13,8 +13,14 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="Natvis">
+    <Filter Include="Other">
+      <UniqueIdentifier>{ca1450f5-8b5e-4405-a9be-1ce75c07154b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Other\Natvis">
       <UniqueIdentifier>{09e6bcaf-5191-4594-9c9e-b41766e46650}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Other\ImGui">
+      <UniqueIdentifier>{5b4014ee-0777-42c9-8053-cdbe4b0193f0}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -36,16 +42,37 @@
     <ClCompile Include="Framebuffer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\Libraries\imgui\imgui_draw.cpp">
+      <Filter>Other\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Libraries\imgui\imgui_tables.cpp">
+      <Filter>Other\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Libraries\imgui\imgui_widgets.cpp">
+      <Filter>Other\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Libraries\imgui\imgui.cpp">
+      <Filter>Other\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Libraries\imgui\imgui_demo.cpp">
+      <Filter>Other\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Libraries\imgui\backends\imgui_impl_vulkan.cpp">
+      <Filter>Other\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Libraries\imgui\backends\imgui_impl_glfw.cpp">
+      <Filter>Other\ImGui</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="..\..\Libraries\glm\util\glm.natvis">
-      <Filter>Natvis</Filter>
+      <Filter>Other\Natvis</Filter>
     </Natvis>
     <Natvis Include="..\..\Libraries\imgui\misc\debuggers\imgui.natvis">
-      <Filter>Natvis</Filter>
+      <Filter>Other\Natvis</Filter>
     </Natvis>
     <Natvis Include="..\..\Libraries\VulkanMemoryAllocator\src\vk_mem_alloc.natvis">
-      <Filter>Natvis</Filter>
+      <Filter>Other\Natvis</Filter>
     </Natvis>
   </ItemGroup>
   <ItemGroup>

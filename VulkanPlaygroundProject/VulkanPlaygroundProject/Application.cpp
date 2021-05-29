@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "Application.h"
 
+#include <imgui.h>
+
 #include "VulkanManager.h"
 #include "Window.h"
 
@@ -17,6 +19,9 @@ void Application::Start() {
 void Application::Run() {
    while (!mWindow->ShouldClose()) {
       mWindow->Update();
+      mVkManager->Update();
+
+      ImGui::ShowDemoWindow(0);
 
       Draw();
    }

@@ -10,6 +10,8 @@ public:
    void Create(Window* aWindow);
    void Destroy(Window* aWindow);
 
+   void Update();
+
    bool RenderStart(VkCommandBuffer& aBuffer, uint32_t& aFrameIndex);
    void RenderSubmit(std::vector<VkCommandBuffer> aCommandBuffers);
    void RenderEnd();
@@ -33,6 +35,8 @@ private:
    bool CreateSwapchain(Window* aWindow);
    bool CreateCommandPoolBuffers();
    bool CreateSyncObjects();
+   bool CreateImGui(Window* aWindow);
+   void RenderImGui();
 
    //vulkan
    VkInstance mInstance = VK_NULL_HANDLE;
@@ -43,8 +47,12 @@ private:
    VkDevice mDevice = VK_NULL_HANDLE;
    VkPhysicalDevice mPhysicalDevice = VK_NULL_HANDLE;
 
-   VkQueue mGraphicsQueue = VK_NULL_HANDLE;
-   VkQueue mPresentQueue = VK_NULL_HANDLE;
+   struct Queue {
+      VkQueue mQueue = VK_NULL_HANDLE;
+      uint32_t mFamily = 0;
+   };
+   Queue mGraphicsQueue{};
+   Queue mPresentQueue{};
 
    VkPhysicalDeviceProperties mDeviceProperties{};
    VkPhysicalDeviceFeatures mDeviceFeatures{};
@@ -69,5 +77,11 @@ private:
    //Other
    RenderPass mPresentRenderPass;
    std::vector<Framebuffer> mPresentFramebuffer;
+
+   //ImGui
+   VkDescriptorPool mImGuiDescriptorPool = VK_NULL_HANDLE;
+   VkRenderPass mImGuiRenderPass = VK_NULL_HANDLE;
+   std::vector<VkFramebuffer> mImGuiFramebuffer;
+   std::vector<VkCommandBuffer> mImGuiCommandBuffers;
 };
 

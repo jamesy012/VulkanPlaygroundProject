@@ -20,6 +20,9 @@ public:
       return mSurface;
    }
    const VkExtent2D GetFBExtent() const;
+   GLFWwindow* GetWindow() const {
+      return mWindow;
+   }
 
    static const char** GetGLFWVulkanExtentensions(uint32_t* aCount);
 

@@ -20,4 +20,6 @@ bool Framebuffer::Create(VkDevice aDevice, VkExtent2D aSize, RenderPass* aRender
 }
 
 void Framebuffer::Destroy(VkDevice aDevice) {
+   vkDestroyFramebuffer(aDevice, mFramebuffer, GetAllocationCallback());
+   mFramebuffer = VK_NULL_HANDLE;
 }

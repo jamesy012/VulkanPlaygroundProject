@@ -35,3 +35,8 @@ bool RenderPass::Create(VkDevice aDevice, VkImageLayout aColorLayout, VkFormat a
    ASSERT_VULKAN_SUCCESS(result);
     return true;
 }
+
+void RenderPass::Destroy(VkDevice aDevice) {
+   vkDestroyRenderPass(aDevice, mRenderPass, GetAllocationCallback());
+   mRenderPass = VK_NULL_HANDLE;
+}
