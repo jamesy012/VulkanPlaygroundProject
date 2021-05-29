@@ -168,6 +168,8 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Application.cpp" />
+    <ClCompile Include="Framebuffer.cpp" />
+    <ClCompile Include="RenderPass.cpp" />
     <ClCompile Include="VulkanManager.cpp" />
     <ClCompile Include="VulkanPlaygroundProject.cpp" />
     <ClCompile Include="Window.cpp" />
@@ -179,6 +181,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Application.h" />
+    <ClInclude Include="Framebuffer.h" />
+    <ClInclude Include="RenderPass.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="VulkanManager.h" />
     <ClInclude Include="Window.h" />

@@ -47,46 +47,54 @@ void VulkanManager::Create(Window* aWindow) {
    CreateSyncObjects();
 
    {
-      VkCommandBufferAllocateInfo allocInfo{};
-      allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-      allocInfo.commandPool = mGraphicsCommandPool;
-      allocInfo.commandBufferCount = 1;
-      allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-      VkCommandBuffer buffer;
-      vkAllocateCommandBuffers(mDevice, &allocInfo, &buffer);
-      VkCommandBufferBeginInfo beginInfo{};
-      beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-      beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-      vkBeginCommandBuffer(buffer, &beginInfo);
-
-      for (int i = 0; i < mNumSwapChainImages; i++) {
-         VkImageMemoryBarrier barrier{};
-         barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-         barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-         barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-         barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-         barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-         barrier.image = mSwapChainImages[i];
-         barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-         barrier.subresourceRange.baseMipLevel = 0;
-         barrier.subresourceRange.levelCount = 1;
-         barrier.subresourceRange.baseArrayLayer = 0;
-         barrier.subresourceRange.layerCount = 1;
-         //barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
-
-         vkCmdPipelineBarrier(buffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, 0, 0, 0, 1, &barrier);
+      mPresentRenderPass.Create(mDevice, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, mSwapChainImageFormat);
+      mPresentFramebuffer.resize(mNumSwapChainImages);
+      for (uint32_t i = 0; i < mNumSwapChainImages; i++) {
+         mPresentFramebuffer[i].Create(mDevice,mSwapChainExtent, &mPresentRenderPass, mSwapChainImageViews[i]);
       }
-      vkEndCommandBuffer(buffer);
-      VkSubmitInfo submitInfo{};
-      submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-      submitInfo.commandBufferCount = 1;
-      submitInfo.pCommandBuffers = &buffer;
-
-      vkQueueSubmit(mGraphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
-      vkQueueWaitIdle(mGraphicsQueue);
-
-      vkFreeCommandBuffers(mDevice, mGraphicsCommandPool, 1, &buffer);
    }
+
+   //{
+   //   VkCommandBufferAllocateInfo allocInfo{};
+   //   allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+   //   allocInfo.commandPool = mGraphicsCommandPool;
+   //   allocInfo.commandBufferCount = 1;
+   //   allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+   //   VkCommandBuffer buffer;
+   //   vkAllocateCommandBuffers(mDevice, &allocInfo, &buffer);
+   //   VkCommandBufferBeginInfo beginInfo{};
+   //   beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+   //   beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+   //   vkBeginCommandBuffer(buffer, &beginInfo);
+   //
+   //   for (int i = 0; i < mNumSwapChainImages; i++) {
+   //      VkImageMemoryBarrier barrier{};
+   //      barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+   //      barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+   //      barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+   //      barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+   //      barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+   //      barrier.image = mSwapChainImages[i];
+   //      barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+   //      barrier.subresourceRange.baseMipLevel = 0;
+   //      barrier.subresourceRange.levelCount = 1;
+   //      barrier.subresourceRange.baseArrayLayer = 0;
+   //      barrier.subresourceRange.layerCount = 1;
+   //      //barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
+   //
+   //      vkCmdPipelineBarrier(buffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, 0, 0, 0, 1, &barrier);
+   //   }
+   //   vkEndCommandBuffer(buffer);
+   //   VkSubmitInfo submitInfo{};
+   //   submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+   //   submitInfo.commandBufferCount = 1;
+   //   submitInfo.pCommandBuffers = &buffer;
+   //
+   //   vkQueueSubmit(mGraphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+   //   vkQueueWaitIdle(mGraphicsQueue);
+   //
+   //   vkFreeCommandBuffers(mDevice, mGraphicsCommandPool, 1, &buffer);
+   //}
 }
 
 void VulkanManager::Destroy(Window* aWindow) {
@@ -125,15 +133,15 @@ void VulkanManager::Destroy(Window* aWindow) {
    vkDestroyInstance(mInstance, GetAllocationCallback());
 }
 
-void VulkanManager::RenderStart(uint32_t& aFrameIndex) {
+bool VulkanManager::RenderStart(VkCommandBuffer& aBuffer, uint32_t& aFrameIndex) {
    assert(mCurrentImageIndex == -1);
    VkResult result = vkAcquireNextImageKHR(mDevice, mSwapChain, UINT64_MAX, mImageAvailableSemaphores[mCurrentFrameIndex], VK_NULL_HANDLE, &aFrameIndex);
 
    if (result == VK_ERROR_OUT_OF_DATE_KHR) {
       //RecreateSwapChain();
-      return;
+      return false;
    } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
-      throw std::runtime_error("failed to acqure swap chain image");
+      assert("failed to acqure swap chain image");
    }
 
    // Check if a previous frame is using this image (i.e. there is its fence to wait on)
@@ -143,6 +151,8 @@ void VulkanManager::RenderStart(uint32_t& aFrameIndex) {
    // Mark the image as now being in use by this frame
    mImagesInFlight[aFrameIndex] = mInFlightFences[mCurrentFrameIndex];
    mCurrentImageIndex = aFrameIndex;
+   aBuffer = mCommandBuffers[aFrameIndex];
+   return true;
 }
 
 void VulkanManager::RenderSubmit(std::vector<VkCommandBuffer> aCommandBuffers) {
@@ -171,7 +181,7 @@ void VulkanManager::RenderSubmit(std::vector<VkCommandBuffer> aCommandBuffers) {
    vkResetFences(mDevice, 1, &mInFlightFences[mCurrentFrameIndex]);
 
    if (vkQueueSubmit(mGraphicsQueue, 1, &submitInfo, mInFlightFences[mCurrentFrameIndex]) != VK_SUCCESS) {
-      throw std::runtime_error("failed to submit draw command buffer!");
+      assert("failed to submit draw command buffer!");
    }
 }
 
@@ -202,7 +212,7 @@ void VulkanManager::RenderEnd() {
       //RecreateSwapChain();
       return;
    } else if (result != VK_SUCCESS) {
-      throw std::runtime_error("failed to present swap chain image");
+      assert("failed to present swap chain image");
    }
    mCurrentFrameIndex = (mCurrentFrameIndex + 1) % mNumSwapChainImages;
 
@@ -564,13 +574,31 @@ bool VulkanManager::CreateSwapchain(Window* aWindow) {
    createInfo.oldSwapchain = VK_NULL_HANDLE;
 
     if (vkCreateSwapchainKHR(mDevice, &createInfo, nullptr, &mSwapChain) != VK_SUCCESS) {
-      throw std::runtime_error("failed to create swap chain");
+      assert("failed to create swap chain");
    }
 
    vkGetSwapchainImagesKHR(mDevice, mSwapChain, &mNumSwapChainImages, nullptr);
    mSwapChainImages.resize(mNumSwapChainImages);
+   mSwapChainImageViews.resize(mNumSwapChainImages);
 
    vkGetSwapchainImagesKHR(mDevice, mSwapChain, &mNumSwapChainImages, mSwapChainImages.data());
+
+   //create Views
+   {
+      VkImageViewCreateInfo imageViewInfo{};
+      imageViewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+      imageViewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+      imageViewInfo.format = surfaceFormat.format;
+      imageViewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+      imageViewInfo.subresourceRange.baseArrayLayer = 0;
+      imageViewInfo.subresourceRange.layerCount = 1;
+      imageViewInfo.subresourceRange.baseMipLevel = 0;
+      imageViewInfo.subresourceRange.levelCount = 1;
+      for (uint32_t i = 0; i < mNumSwapChainImages; i++) {
+         imageViewInfo.image = mSwapChainImages[i];
+         vkCreateImageView(mDevice, &imageViewInfo, GetAllocationCallback(), &mSwapChainImageViews[i]);
+      }
+   }
 
    mSwapChainImageFormat = surfaceFormat.format;
    mSwapChainExtent = extent;
@@ -604,16 +632,7 @@ bool VulkanManager::CreateCommandPoolBuffers() {
       allocInfo.commandBufferCount = mNumSwapChainImages;
 
       if (vkAllocateCommandBuffers(mDevice, &allocInfo, mCommandBuffers.data()) != VK_SUCCESS) {
-         throw std::runtime_error("failed to allocate command buffers!");
-      }
-
-      VkCommandBufferBeginInfo beginInfo{};
-      beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-      beginInfo.flags = 0; // Optional
-      beginInfo.pInheritanceInfo = nullptr; // Optional
-      for (size_t i = 0; i < mCommandBuffers.size(); i++) {
-         vkBeginCommandBuffer(mCommandBuffers[i],&beginInfo);
-         vkEndCommandBuffer(mCommandBuffers[i]);
+         assert("failed to allocate command buffers!");
       }
 
       //for (size_t i = 0; i < mCommandBuffers.size(); i++) {
