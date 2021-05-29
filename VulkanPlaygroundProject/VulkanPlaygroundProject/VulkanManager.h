@@ -8,7 +8,7 @@ class Window;
 class VulkanManager {
 public:
    void Create(Window* aWindow);
-   void Destroy(Window* aWindow);
+   void Destroy();
 
    void Update();
 
@@ -32,11 +32,16 @@ public:
 private:
    bool CreateInstance();
    bool CreateDevice();
-   bool CreateSwapchain(Window* aWindow);
+   bool CreateSwapchain();
    bool CreateCommandPoolBuffers();
    bool CreateSyncObjects();
-   bool CreateImGui(Window* aWindow);
+   bool CreateImGui();
+   bool CreateImGuiSizeDependent();
    void RenderImGui();
+
+   void SwapchainResized();
+   void DestroySizeDependent();
+   void CreateSizeDependent();
 
    //vulkan
    VkInstance mInstance = VK_NULL_HANDLE;
@@ -73,6 +78,9 @@ private:
    std::vector<VkFence> mImagesInFlight;
    uint32_t mCurrentFrameIndex = 0;
    int32_t mCurrentImageIndex = -1;
+
+   //Window
+   Window* mWindow;
 
    //Other
    RenderPass mPresentRenderPass;

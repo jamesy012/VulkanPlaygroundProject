@@ -28,7 +28,7 @@ void Application::Run() {
 }
 
 void Application::Destroy() {
-   mVkManager->Destroy(mWindow);
+   mVkManager->Destroy();
    mWindow->Destroy();
    delete mWindow;
    delete mVkManager;

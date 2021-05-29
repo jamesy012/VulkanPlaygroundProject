@@ -38,19 +38,20 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
 }
 
 void VulkanManager::Create(Window* aWindow) {
+   mWindow = aWindow;
    CreateInstance();
    if (aWindow->CreateSurface(GetInstance())) {
       mSurface = aWindow->GetSurface();
    }
    CreateDevice();
 
-   CreateSwapchain(aWindow);
+   CreateSwapchain();
 
    CreateCommandPoolBuffers();
 
    CreateSyncObjects();
 
-   CreateImGui(aWindow);
+   CreateImGui();
 
    {
       mPresentRenderPass.Create(mDevice, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, mSwapChainImageFormat);
@@ -89,7 +90,7 @@ void VulkanManager::Create(Window* aWindow) {
    }
 }
 
-void VulkanManager::Destroy(Window* aWindow) {
+void VulkanManager::Destroy() {
    vkDeviceWaitIdle(mDevice);
 
    //ImGui
@@ -100,21 +101,15 @@ void VulkanManager::Destroy(Window* aWindow) {
 
       vkFreeCommandBuffers(mDevice, mGraphicsCommandPool, mNumSwapChainImages, mImGuiCommandBuffers.data());
       mImGuiCommandBuffers.clear();
-      for (size_t i = 0; i < mNumSwapChainImages; i++) {
-         vkDestroyFramebuffer(mDevice, mImGuiFramebuffer[i], GetAllocationCallback());
-      }
-      mImGuiFramebuffer.clear();
+
       vkDestroyRenderPass(mDevice, mImGuiRenderPass, GetAllocationCallback());
       mImGuiRenderPass = VK_NULL_HANDLE;
       vkDestroyDescriptorPool(mDevice, mImGuiDescriptorPool, GetAllocationCallback());
       mImGuiDescriptorPool = VK_NULL_HANDLE;
    }
 
+
    mPresentRenderPass.Destroy(mDevice);
-   for (size_t i = 0; i < mNumSwapChainImages; i++) {
-      mPresentFramebuffer[i].Destroy(mDevice);
-   }
-   mPresentFramebuffer.clear();
 
    for (size_t i = 0; i < mNumSwapChainImages; i++) {
       vkDestroySemaphore(mDevice, mRenderFinishedSemaphores[i], nullptr);
@@ -125,17 +120,7 @@ void VulkanManager::Destroy(Window* aWindow) {
    mImageAvailableSemaphores.clear();
    mInFlightFences.clear();
 
-   for (size_t i = 0; i < mNumSwapChainImages; i++) {
-      vkDestroyImageView(mDevice, mSwapChainImageViews[i], GetAllocationCallback());
-   }
-   mSwapChainImageViews.clear();
-
-   vkDestroySwapchainKHR(mDevice, mSwapChain, GetAllocationCallback());
-   mSwapChain = VK_NULL_HANDLE;
-   mSwapChainImages.clear();
-   mNumSwapChainImages = 0;
-   mSwapChainExtent = {};
-   mSwapChainImageFormat = VK_FORMAT_UNDEFINED;
+   DestroySizeDependent();
 
    vkFreeCommandBuffers(mDevice, mGraphicsCommandPool, static_cast<uint32_t>(mCommandBuffers.size()), mCommandBuffers.data());
    mCommandBuffers.clear();
@@ -145,7 +130,7 @@ void VulkanManager::Destroy(Window* aWindow) {
    vkDestroyDevice(mDevice, CreateAllocationCallbacks());
    mDevice = VK_NULL_HANDLE;
 
-   aWindow->DestroySurface(GetInstance());
+   mWindow->DestroySurface(GetInstance());
 
    if(enableValidationLayers && mDebugMessenger != VK_NULL_HANDLE) {
       auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(mInstance, "vkDestroyDebugUtilsMessengerEXT");
@@ -170,7 +155,7 @@ bool VulkanManager::RenderStart(VkCommandBuffer& aBuffer, uint32_t& aFrameIndex)
    VkResult result = vkAcquireNextImageKHR(mDevice, mSwapChain, UINT64_MAX, mImageAvailableSemaphores[mCurrentFrameIndex], VK_NULL_HANDLE, &aFrameIndex);
 
    if (result == VK_ERROR_OUT_OF_DATE_KHR) {
-      //RecreateSwapChain();
+      SwapchainResized();
       return false;
    } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
       assert("failed to acqure swap chain image");
@@ -242,7 +227,7 @@ void VulkanManager::RenderEnd() {
    VkResult result = vkQueuePresentKHR(mPresentQueue.mQueue, &presentInfo);
 
    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR /*|| framebufferResized*/) {
-      //RecreateSwapChain();
+      SwapchainResized();
       return;
    } else if (result != VK_SUCCESS) {
       assert("failed to present swap chain image");
@@ -553,7 +538,7 @@ VkPresentModeKHR ChooseSwapPresentMode(const std::vector<VkPresentModeKHR>& avai
    return VK_PRESENT_MODE_FIFO_KHR;
 }
 
-VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities, const Window* aWindow) {
+VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities, Window* aWindow) {
    ASSERT_VALID(aWindow);
    if (capabilities.currentExtent.width != UINT32_MAX) {
       return capabilities.currentExtent;
@@ -567,12 +552,12 @@ VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities, const 
    }
 }
 
-bool VulkanManager::CreateSwapchain(Window* aWindow) {
+bool VulkanManager::CreateSwapchain() {
    SwapChainSupportDetails swapChainSupport = querySwapChainSupport(mPhysicalDevice, mSurface);
 
    VkSurfaceFormatKHR surfaceFormat = ChooseSwapSurfaceFormat(swapChainSupport.formats);
    VkPresentModeKHR presentMode = ChooseSwapPresentMode(swapChainSupport.presentModes);
-   VkExtent2D extent = ChooseSwapExtent(swapChainSupport.capabilities, aWindow);
+   VkExtent2D extent = ChooseSwapExtent(swapChainSupport.capabilities, mWindow);
 
    uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
    if (swapChainSupport.capabilities.maxImageCount > 0 && imageCount > swapChainSupport.capabilities.maxImageCount) {
@@ -703,7 +688,7 @@ bool VulkanManager::CreateSyncObjects() {
    }
 }
 
-bool VulkanManager::CreateImGui(Window* aWindow) {
+bool VulkanManager::CreateImGui() {
 
    // Create Descriptor Pool
    {
@@ -775,26 +760,7 @@ bool VulkanManager::CreateImGui(Window* aWindow) {
       //ImGui_ImplVulkan_CreatePipeline(device, allocator, VK_NULL_HANDLE, wd->RenderPass, VK_SAMPLE_COUNT_1_BIT, &wd->Pipeline, g_Subpass);
    }
 
-   mImGuiFramebuffer.resize(mNumSwapChainImages);
-
-   // Create Framebuffer
-   {
-      VkImageView attachment[1];
-      VkFramebufferCreateInfo info = {};
-      info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-      info.renderPass = mImGuiRenderPass;
-      info.attachmentCount = 1;
-      info.pAttachments = attachment;
-      info.width = mSwapChainExtent.width;
-      info.height = mSwapChainExtent.height;
-      info.layers = 1;
-      for (uint32_t i = 0; i < mNumSwapChainImages; i++) {
-         attachment[0] = mSwapChainImageViews[i];
-         VkResult result = vkCreateFramebuffer(mDevice, &info, nullptr, &mImGuiFramebuffer[i]);
-         ASSERT_VULKAN_SUCCESS_RET_FALSE(result);
-         //setObjName(VK_OBJECT_TYPE_FRAMEBUFFER, (uint64_t)imguiFramebuffers[i], "ImGui Frame Buffers Frame:" + std::to_string(i));
-      }
-   }
+   CreateImGuiSizeDependent();
 
    // Setup Dear ImGui context
    IMGUI_CHECKVERSION();
@@ -808,7 +774,7 @@ bool VulkanManager::CreateImGui(Window* aWindow) {
    ImGui::StyleColorsClassic();
 
    // Setup Platform/Renderer backends
-   ImGui_ImplGlfw_InitForVulkan(aWindow->GetWindow(), true);
+   ImGui_ImplGlfw_InitForVulkan(mWindow->GetWindow(), true);
    ImGui_ImplVulkan_InitInfo init_info = {};
    init_info.Instance = mInstance;
    init_info.PhysicalDevice = mPhysicalDevice;
@@ -841,6 +807,30 @@ bool VulkanManager::CreateImGui(Window* aWindow) {
    return true;
 }
 
+bool VulkanManager::CreateImGuiSizeDependent() {
+   mImGuiFramebuffer.resize(mNumSwapChainImages);
+
+   // Create Framebuffer
+   {
+      VkImageView attachment[1];
+      VkFramebufferCreateInfo info = {};
+      info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+      info.renderPass = mImGuiRenderPass;
+      info.attachmentCount = 1;
+      info.pAttachments = attachment;
+      info.width = mSwapChainExtent.width;
+      info.height = mSwapChainExtent.height;
+      info.layers = 1;
+      for (uint32_t i = 0; i < mNumSwapChainImages; i++) {
+         attachment[0] = mSwapChainImageViews[i];
+         VkResult result = vkCreateFramebuffer(mDevice, &info, nullptr, &mImGuiFramebuffer[i]);
+         ASSERT_VULKAN_SUCCESS_RET_FALSE(result);
+         //setObjName(VK_OBJECT_TYPE_FRAMEBUFFER, (uint64_t)imguiFramebuffers[i], "ImGui Frame Buffers Frame:" + std::to_string(i));
+      }
+   }
+   return true;
+}
+
 void VulkanManager::RenderImGui() {
    ImGui::Render();
    ImDrawData* draw_data = ImGui::GetDrawData();
@@ -857,6 +847,7 @@ void VulkanManager::RenderImGui() {
          renderBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
          renderBeginInfo.renderPass = mImGuiRenderPass;
          renderBeginInfo.framebuffer = mImGuiFramebuffer[mCurrentImageIndex];
+         //renderBeginInfo.framebuffer = mPresentFramebuffer[mCurrentImageIndex].GetFramebuffer();
          renderBeginInfo.renderArea.offset = { 0, 0 };
          renderBeginInfo.renderArea.extent = mSwapChainExtent;
          renderBeginInfo.clearValueCount = 1;
@@ -873,5 +864,41 @@ void VulkanManager::RenderImGui() {
          result = vkEndCommandBuffer(mImGuiCommandBuffers[mCurrentImageIndex]);
          ASSERT_VULKAN_SUCCESS(result);
       }
+   }
+}
+
+void VulkanManager::SwapchainResized() {
+   vkDeviceWaitIdle(mDevice);
+   mCurrentImageIndex = -1;
+   DestroySizeDependent();
+   CreateSizeDependent();
+}
+
+void VulkanManager::DestroySizeDependent() {
+   for (uint32_t i = 0; i < mNumSwapChainImages; i++) {
+      mPresentFramebuffer[i].Destroy(mDevice);
+      vkDestroyFramebuffer(mDevice, mImGuiFramebuffer[i], GetAllocationCallback());
+      vkDestroyImageView(mDevice, mSwapChainImageViews[i], GetAllocationCallback());
+   }
+
+   mPresentFramebuffer.clear();
+   mImGuiFramebuffer.clear();
+   mSwapChainImageViews.clear();
+
+   vkDestroySwapchainKHR(mDevice, mSwapChain, GetAllocationCallback());
+   mSwapChain = VK_NULL_HANDLE;
+   mSwapChainImages.clear();
+   mNumSwapChainImages = 0;
+   mSwapChainExtent = {};
+   mSwapChainImageFormat = VK_FORMAT_UNDEFINED;
+
+}
+
+void VulkanManager::CreateSizeDependent() {
+   CreateSwapchain();
+   CreateImGuiSizeDependent();
+   mPresentFramebuffer.resize(mNumSwapChainImages);
+   for (uint32_t i = 0; i < mNumSwapChainImages; i++) {
+      mPresentFramebuffer[i].Create(mDevice, mSwapChainExtent, &mPresentRenderPass, mSwapChainImageViews[i]);
    }
 }
