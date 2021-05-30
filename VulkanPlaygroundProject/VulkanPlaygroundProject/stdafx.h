@@ -9,11 +9,14 @@
 #include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>
 #include <glm/glm.hpp>
+#include <glm/ext.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
 #include "VulkanManager.h"
 
 extern class VulkanManager* _VulkanManager;
 
+//~~~~~~~ ASSERTS/Validation
 #define ASSERT_RET(x) assert(false);
 #define ASSERT_RET_FALSE(x) assert(false); return false;
 
@@ -30,6 +33,7 @@ static void CheckVulkanResult(VkResult aResult) {
 #define ASSERT_VULKAN_SUCCESS_RET_FALSE(x) if(x != VK_SUCCESS){ASSERT_RET_FALSE("")};
 #define ASSERT_VALID(x) assert(x != nullptr);
 
+//~~~~~~~ VULKAN HELPERS
 static VkAllocationCallbacks* CreateAllocationCallbacks() {
    VkAllocationCallbacks callback;
    callback.pUserData = nullptr;
@@ -46,9 +50,18 @@ static VkAllocationCallbacks* GetAllocationCallback() {
    return allocationCallback;
 }
 
+//~~~~~~~~~~ PROJECT HELPERS
+
 static std::string GetWorkDir() {
    return "../WorkDir/";
 }
+
+enum RenderMode {
+   NORMAL = 1,
+   ALL = ~0
+};
+
+//~~~~~~~ Math Helpers
 
 static int RoundUp(int number, int multiple) {
    assert(multiple);
@@ -62,7 +75,7 @@ static VkDeviceSize RoundUp(int number, VkDeviceSize multiple) {
    return ((number + isPositive * (multiple - 1)) / multiple) * multiple;
 }
 
-//Logging
+//~~~~~~ Logging
 namespace Logger {
 	extern int mPrintIndent;
 	extern std::string mLogCat;

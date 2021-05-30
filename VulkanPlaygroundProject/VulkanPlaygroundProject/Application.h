@@ -2,6 +2,7 @@
 
 #include "Pipeline.h"
 #include "Buffer.h"
+#include "Model.h"
 
 class Window;
 class VulkanManager;
@@ -19,7 +20,8 @@ private:
 
 private:
    BufferVertex mScreenQuad;
+   Pipeline mPipelineTest;
    Pipeline mPipeline;
-
+   Model mModelTest;
 };
 

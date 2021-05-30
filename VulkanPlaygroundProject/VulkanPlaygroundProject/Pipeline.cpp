@@ -89,6 +89,10 @@ bool Pipeline::AddShader(std::string aPath) {
    return true;
 }
 
+void Pipeline::SetVertexType(VertexType& aType) {
+   mVertexType = &aType;
+}
+
 bool Pipeline::Create(const VkExtent2D aSize, const RenderPass* aRenderPass) {
 
    {
@@ -109,11 +113,11 @@ bool Pipeline::Create(const VkExtent2D aSize, const RenderPass* aRenderPass) {
 
    VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
    vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-   //if (mVertexType == nullptr) {
-   VertexType* vertexType = &VertexTypeSimple;
-   //}
-   auto bindingDescription = vertexType->mBindingDescription;
-   auto attributeDescriptions = vertexType->mAttributeDescriptions;
+   if (mVertexType == nullptr) {
+      mVertexType = &VertexTypeDefault;
+   }
+   auto bindingDescription = mVertexType->mBindingDescription;
+   auto attributeDescriptions = mVertexType->mAttributeDescriptions;
    vertexInputInfo.vertexBindingDescriptionCount = 1;
    vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
    vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;

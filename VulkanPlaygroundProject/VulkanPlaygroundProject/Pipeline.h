@@ -1,10 +1,12 @@
 #pragma once
 
 class RenderPass;
+struct VertexType; 
 
 class Pipeline {
 public:
    bool AddShader(std::string aPath);
+   void SetVertexType(VertexType& aType);
    bool Create(const VkExtent2D aSize, const RenderPass* aRenderPass);
    void Destroy();
 
@@ -22,6 +24,7 @@ private:
    };
    std::vector<Shader> mShaders;
    std::vector<VkDynamicState> mDynamicStates;
+   VertexType* mVertexType;
 
    VkPipeline mPipeline = VK_NULL_HANDLE;
    VkPipelineLayout mPipelineLayout = VK_NULL_HANDLE;

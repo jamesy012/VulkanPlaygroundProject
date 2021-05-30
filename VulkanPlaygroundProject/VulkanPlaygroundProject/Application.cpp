@@ -44,9 +44,17 @@ void Application::Start() {
    }
    staging.Destroy();
 
-   mPipeline.AddShader(GetWorkDir()+"test.frag");
-   mPipeline.AddShader(GetWorkDir()+"test.vert");
+   mPipeline.AddShader(GetWorkDir() + "normal.vert");
+   mPipeline.AddShader(GetWorkDir() + "normal.frag");
+   mPipeline.SetVertexType(VertexTypeDefault);
    mPipeline.Create(mVkManager->GetSwapchainExtent(), mVkManager->GetPresentRenderPass());
+
+   mPipelineTest.AddShader(GetWorkDir() + "test.vert");
+   mPipelineTest.AddShader(GetWorkDir() + "test.frag");
+   mPipelineTest.SetVertexType(VertexTypeSimple);
+   mPipelineTest.Create(mVkManager->GetSwapchainExtent(), mVkManager->GetPresentRenderPass());
+
+   mModelTest.LoadModel(GetWorkDir()+"Sponza/glTF/Sponza.gltf");
 }
 
 void Application::Run() {
@@ -64,6 +72,8 @@ void Application::Destroy() {
    mVkManager->WaitDevice();
    mScreenQuad.Destroy();
    mPipeline.Destroy();
+   mPipelineTest.Destroy();
+   mModelTest.Destroy();
    mVkManager->Destroy();
    mWindow->Destroy();
    delete mWindow;
@@ -103,12 +113,15 @@ void Application::Draw() {
    VkRect2D scissor = { {}, mVkManager->GetSwapchainExtent() };
    vkCmdSetViewport(buffer, 0, 1, &viewport);
    vkCmdSetScissor(buffer, 0, 1, &scissor);
-   vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline.GetPipeline());
+
+   vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipelineTest.GetPipeline());
    VkBuffer vertexBuffer[] = { mScreenQuad.GetBuffer() };
    VkDeviceSize offsets[] = { 0 };
    vkCmdBindVertexBuffers(buffer, 0, 1, vertexBuffer, offsets);
-
    vkCmdDraw(buffer, 6, 1, 0, 0);
+
+   vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline.GetPipeline());
+   mModelTest.Render(buffer, mPipeline.GetPipelineLayout(), RenderMode::NORMAL);
 
    vkCmdEndRenderPass(buffer);
    vkEndCommandBuffer(buffer);

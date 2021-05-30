@@ -1,6 +1,19 @@
 #include "stdafx.h"
 #include "Buffer.h"
 
+void Buffer::CopyFrom(Buffer* aBuffer, const VkCommandBuffer aCommandList) {
+   VkCommandBuffer commandBuffer = aCommandList;
+   if (aCommandList == VK_NULL_HANDLE) {
+      _VulkanManager->OneTimeCommandBufferStart(commandBuffer);
+   }
+   VkBufferCopy copyRegion{};
+   copyRegion.size = std::min(GetSize(), aBuffer->GetSize());
+   vkCmdCopyBuffer(commandBuffer, aBuffer->GetBuffer(), GetBuffer(), 1, &copyRegion);
+   if (aCommandList == VK_NULL_HANDLE) {
+      _VulkanManager->OneTimeCommandBufferEnd(commandBuffer);
+   }
+}
+
 bool Buffer::Create(VkDeviceSize aSize, VkBufferUsageFlags aUseage, VmaMemoryUsage aMemUsage) {
 
    VkBufferCreateInfo bufferInfo{};
