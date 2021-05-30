@@ -8,12 +8,48 @@
 
 #include "Framebuffer.h"
 #include "RenderPass.h"
+#include "Pipeline.h"
+
+#include "Vertex.h"
+#include "Buffer.h"
+BufferVertex b;
 
 void Application::Start() {
    mWindow = new Window();
    mWindow->Create(800, 600, "vulkan");
    mVkManager = new VulkanManager();
    mVkManager->Create(mWindow);
+
+   VertexSimple verts[6];
+   verts[0].pos = glm::vec2(-1.0f, -1.0f);
+   verts[1].pos = glm::vec2(1.0f, -1.0f);
+   verts[2].pos = glm::vec2(-1.0f, 1.0f);
+   verts[3].pos = glm::vec2(1.0f, -1.0f);
+   verts[4].pos = glm::vec2(1.0f, 1.0f);
+   verts[5].pos = glm::vec2(-1.0f, 1.0f);
+   b.Create(sizeof(VertexSimple)*6);
+   BufferStaging staging;
+   staging.Create(b.GetSize());
+   void* data;
+   staging.Map(&data);
+   memcpy(data, verts, sizeof(VertexSimple) * 6);
+   staging.UnMap();
+   //Pre first run setup
+   {
+      VkCommandBuffer buffer;
+      mVkManager->OneTimeCommandBufferStart(buffer);
+      {
+         VkBufferCopy copyRegion{};
+         copyRegion.size = b.GetSize();
+         vkCmdCopyBuffer(buffer, staging.GetBuffer(), b.GetBuffer(), 1, &copyRegion);
+      }
+      mVkManager->OneTimeCommandBufferEnd(buffer);
+   }
+   staging.Destroy();
+
+   Pipeline test;
+   //test.AddShader(GetWorkDir()+"test.frag");
+   //test.AddShader(GetWorkDir()+"test.vert");
 }
 
 void Application::Run() {
@@ -28,6 +64,8 @@ void Application::Run() {
 }
 
 void Application::Destroy() {
+   mVkManager->WaitDevice();
+   b.Destroy();
    mVkManager->Destroy();
    mWindow->Destroy();
    delete mWindow;
@@ -38,7 +76,7 @@ void Application::Draw() {
    uint32_t frameIndex;
    VkCommandBuffer buffer;
    if (mVkManager->RenderStart(buffer, frameIndex) == false) {
-      ASSERT_RET();
+      ASSERT_RET("Failed to start render");
    }
    static uint32_t frameCounter = 0;
    frameCounter++;
@@ -62,7 +100,9 @@ void Application::Draw() {
    renderBegin.pClearValues = &clearColor;
    renderBegin.framebuffer = mVkManager->GetPresentFramebuffer(frameIndex)->GetFramebuffer();
    vkBeginCommandBuffer(buffer, &beginInfo);
-
+   VkBuffer vertexBuffer[] = { b.GetBuffer() };
+   VkDeviceSize offsets[] = { 0 };
+   vkCmdBindVertexBuffers(buffer, 0, 1, vertexBuffer, offsets);
    vkCmdBeginRenderPass(buffer, &renderBegin, VK_SUBPASS_CONTENTS_INLINE);
    vkCmdEndRenderPass(buffer);
    vkEndCommandBuffer(buffer);

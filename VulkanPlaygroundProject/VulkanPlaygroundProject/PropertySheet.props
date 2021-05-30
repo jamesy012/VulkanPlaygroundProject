@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ImportGroup Label="PropertySheets" />
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <IncludePath>C:\VulkanSDK\1.2.170.0\Include;$(SolutionDir)..\Libraries\glfw-3.3.4.bin.WIN64\include;$(SolutionDir)..\Libraries\glm;$(SolutionDir)..\Libraries\stb;$(SolutionDir)..\Libraries\imgui;$(SolutionDir)..\Libraries\assimp\include;$(SolutionDir)..\Libraries\VulkanMemoryAllocator\include;$(IncludePath)</IncludePath>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <Link>
+      <AdditionalDependencies>vulkan-1.lib;glfw3.lib;dxguid.lib;dinput8.lib;assimp-vc142-mt.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:\VulkanSDK\1.2.170.0\Lib;$(SolutionDir)..\Libraries\glfw-3.3.4.bin.WIN64\lib-vc2019;$(SolutionDir)..\Libraries\assimp\lib\Release;</AdditionalLibraryDirectories>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup />
+</Project>

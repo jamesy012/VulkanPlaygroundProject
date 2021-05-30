@@ -9,12 +9,17 @@ class VulkanManager {
 public:
    void Create(Window* aWindow);
    void Destroy();
+   void WaitDevice();
 
    void Update();
 
    bool RenderStart(VkCommandBuffer& aBuffer, uint32_t& aFrameIndex);
    void RenderSubmit(std::vector<VkCommandBuffer> aCommandBuffers);
    void RenderEnd();
+
+   void OneTimeCommandBufferStart(VkCommandBuffer& aBuffer);
+   void OneTimeCommandBufferEnd(VkCommandBuffer& aBuffer);
+
 
    const VkInstance GetInstance() const {
       return mInstance;
@@ -28,6 +33,9 @@ public:
    const Framebuffer* GetPresentFramebuffer(uint32_t aIndex) const {
       assert(aIndex <= mNumSwapChainImages);
       return &mPresentFramebuffer[aIndex];
+   }
+   const VmaAllocator& GetAllocator() const {
+      return mAllocator;
    }
 private:
    bool CreateInstance();
@@ -85,6 +93,9 @@ private:
    //Other
    RenderPass mPresentRenderPass;
    std::vector<Framebuffer> mPresentFramebuffer;
+
+   //Buffers
+   VmaAllocator mAllocator;
 
    //ImGui
    VkDescriptorPool mImGuiDescriptorPool = VK_NULL_HANDLE;

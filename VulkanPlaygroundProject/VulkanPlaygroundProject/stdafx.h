@@ -1,10 +1,18 @@
 #pragma once
+#pragma warning(disable: 26812)
 
 #include <iostream>
 #include <assert.h>
 #include <vector>
+#include <iostream>
 
 #include <vulkan/vulkan.h>
+#include <vk_mem_alloc.h>
+#include <glm/glm.hpp>
+
+#include "VulkanManager.h"
+
+extern class VulkanManager* _VulkanManager;
 
 #define ASSERT_RET(x) assert(false);
 #define ASSERT_RET_FALSE(x) assert(false); return false;
@@ -36,4 +44,9 @@ static VkAllocationCallbacks* CreateAllocationCallbacks() {
 static VkAllocationCallbacks* GetAllocationCallback() {
    static VkAllocationCallbacks* allocationCallback = CreateAllocationCallbacks();
    return allocationCallback;
+}
+
+
+static std::string GetWorkDir() {
+   return "../WorkDir/";
 }

@@ -4,6 +4,9 @@
 #include <optional>
 #include <set>
 
+#define VMA_IMPLEMENTATION
+#include <vk_mem_alloc.h>
+
 #include <vulkan/vulkan.h>
 
 #include <imgui.h>
@@ -11,6 +14,10 @@
 #include <backends/imgui_impl_vulkan.h>
 
 #include "Window.h"
+
+VulkanManager* _VulkanManager;
+
+#define VULKAN_API_VERSION VK_HEADER_VERSION_COMPLETE
 
 const std::vector<const char*> validationLayers = {
    "VK_LAYER_KHRONOS_validation"
@@ -38,6 +45,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
 }
 
 void VulkanManager::Create(Window* aWindow) {
+   _VulkanManager = this;
    mWindow = aWindow;
    CreateInstance();
    if (aWindow->CreateSurface(GetInstance())) {
@@ -52,6 +60,18 @@ void VulkanManager::Create(Window* aWindow) {
    CreateSyncObjects();
 
    CreateImGui();
+   
+   //vma
+   {
+      VmaAllocatorCreateInfo createInfo{};
+      createInfo.vulkanApiVersion = VULKAN_API_VERSION;
+      createInfo.device = mDevice;
+      createInfo.instance = mInstance;
+      createInfo.physicalDevice = mPhysicalDevice;
+      createInfo.pAllocationCallbacks = GetAllocationCallback();
+
+      vmaCreateAllocator(&createInfo, &mAllocator);
+   }
 
    {
       mPresentRenderPass.Create(mDevice, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, mSwapChainImageFormat);
@@ -63,35 +83,17 @@ void VulkanManager::Create(Window* aWindow) {
 
    //Pre first run setup
    {
-      VkCommandBufferAllocateInfo allocInfo{};
-      allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-      allocInfo.commandPool = mGraphicsCommandPool;
-      allocInfo.commandBufferCount = 1;
-      allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
       VkCommandBuffer buffer;
-      vkAllocateCommandBuffers(mDevice, &allocInfo, &buffer);
-      VkCommandBufferBeginInfo beginInfo{};
-      beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-      beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-      vkBeginCommandBuffer(buffer, &beginInfo);
-       {
+      OneTimeCommandBufferStart(buffer);
+      {
          ImGui_ImplVulkan_CreateFontsTexture(buffer);
       }
-      vkEndCommandBuffer(buffer);
-      VkSubmitInfo submitInfo{};
-      submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-      submitInfo.commandBufferCount = 1;
-      submitInfo.pCommandBuffers = &buffer;
-   
-      vkQueueSubmit(mGraphicsQueue.mQueue, 1, &submitInfo, VK_NULL_HANDLE);
-      vkQueueWaitIdle(mGraphicsQueue.mQueue);
-   
-      vkFreeCommandBuffers(mDevice, mGraphicsCommandPool, 1, &buffer);
+      OneTimeCommandBufferEnd(buffer);
    }
 }
 
 void VulkanManager::Destroy() {
-   vkDeviceWaitIdle(mDevice);
+   WaitDevice();
 
    //ImGui
    {
@@ -127,6 +129,8 @@ void VulkanManager::Destroy() {
    vkDestroyCommandPool(mDevice, mGraphicsCommandPool, GetAllocationCallback());
    mGraphicsCommandPool = VK_NULL_HANDLE;
 
+   vmaDestroyAllocator(mAllocator);
+
    vkDestroyDevice(mDevice, CreateAllocationCallbacks());
    mDevice = VK_NULL_HANDLE;
 
@@ -140,6 +144,10 @@ void VulkanManager::Destroy() {
    }
 
    vkDestroyInstance(mInstance, GetAllocationCallback());
+}
+
+void VulkanManager::WaitDevice() {
+   vkDeviceWaitIdle(mDevice);
 }
 
 void VulkanManager::Update() {
@@ -237,6 +245,33 @@ void VulkanManager::RenderEnd() {
    mCurrentImageIndex = -1;
 }
 
+void VulkanManager::OneTimeCommandBufferStart(VkCommandBuffer& aBuffer) {
+   VkCommandBufferAllocateInfo allocInfo{};
+   allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+   allocInfo.commandPool = mGraphicsCommandPool;
+   allocInfo.commandBufferCount = 1;
+   allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+   vkAllocateCommandBuffers(mDevice, &allocInfo, &aBuffer);
+
+   VkCommandBufferBeginInfo beginInfo{};
+   beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+   beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+   vkBeginCommandBuffer(aBuffer, &beginInfo);
+}
+
+void VulkanManager::OneTimeCommandBufferEnd(VkCommandBuffer& aBuffer) {
+   vkEndCommandBuffer(aBuffer);
+   VkSubmitInfo submitInfo{};
+   submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+   submitInfo.commandBufferCount = 1;
+   submitInfo.pCommandBuffers = &aBuffer;
+
+   vkQueueSubmit(mGraphicsQueue.mQueue, 1, &submitInfo, VK_NULL_HANDLE);
+   vkQueueWaitIdle(mGraphicsQueue.mQueue);
+
+   vkFreeCommandBuffers(mDevice, mGraphicsCommandPool, 1, &aBuffer);
+}
+
 bool CheckVkLayerSupport(const std::vector<const char*> aLayersToCheck) {
    uint32_t layerCount;
    vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
@@ -277,8 +312,8 @@ bool VulkanManager::CreateInstance() {
    appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
    appInfo.pEngineName = "No Engine";
    appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-   //appInfo.apiVersion = VK_API_VERSION_1_0;//VK_HEADER_VERSION_COMPLETE;
-   appInfo.apiVersion = VK_HEADER_VERSION_COMPLETE;
+   //appInfo.apiVersion = VK_API_VERSION_1_0;
+   appInfo.apiVersion = VULKAN_API_VERSION;
 
    VkInstanceCreateInfo createInfo{};
    createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -686,6 +721,7 @@ bool VulkanManager::CreateSyncObjects() {
       //setObjName(VK_OBJECT_TYPE_SEMAPHORE, (uint64_t)mRenderFinishedSemaphores[i], "renderFinishedSemaphores Frame:" + std::to_string(i));
       //setObjName(VK_OBJECT_TYPE_FENCE, (uint64_t)mInFlightFences[i], "inFlightFences Frame:" + std::to_string(i));
    }
+   return true;
 }
 
 bool VulkanManager::CreateImGui() {
