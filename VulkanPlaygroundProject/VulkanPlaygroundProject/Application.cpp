@@ -8,11 +8,8 @@
 
 #include "Framebuffer.h"
 #include "RenderPass.h"
-#include "Pipeline.h"
 
 #include "Vertex.h"
-#include "Buffer.h"
-BufferVertex b;
 
 void Application::Start() {
    mWindow = new Window();
@@ -27,9 +24,9 @@ void Application::Start() {
    verts[3].pos = glm::vec2(1.0f, -1.0f);
    verts[4].pos = glm::vec2(1.0f, 1.0f);
    verts[5].pos = glm::vec2(-1.0f, 1.0f);
-   b.Create(sizeof(VertexSimple)*6);
+   mScreenQuad.Create(sizeof(VertexSimple)*6);
    BufferStaging staging;
-   staging.Create(b.GetSize());
+   staging.Create(mScreenQuad.GetSize());
    void* data;
    staging.Map(&data);
    memcpy(data, verts, sizeof(VertexSimple) * 6);
@@ -40,16 +37,16 @@ void Application::Start() {
       mVkManager->OneTimeCommandBufferStart(buffer);
       {
          VkBufferCopy copyRegion{};
-         copyRegion.size = b.GetSize();
-         vkCmdCopyBuffer(buffer, staging.GetBuffer(), b.GetBuffer(), 1, &copyRegion);
+         copyRegion.size = mScreenQuad.GetSize();
+         vkCmdCopyBuffer(buffer, staging.GetBuffer(), mScreenQuad.GetBuffer(), 1, &copyRegion);
       }
       mVkManager->OneTimeCommandBufferEnd(buffer);
    }
    staging.Destroy();
 
-   Pipeline test;
-   //test.AddShader(GetWorkDir()+"test.frag");
-   //test.AddShader(GetWorkDir()+"test.vert");
+   mPipeline.AddShader(GetWorkDir()+"test.frag");
+   mPipeline.AddShader(GetWorkDir()+"test.vert");
+   mPipeline.Create(mVkManager->GetSwapchainExtent(), mVkManager->GetPresentRenderPass());
 }
 
 void Application::Run() {
@@ -65,7 +62,8 @@ void Application::Run() {
 
 void Application::Destroy() {
    mVkManager->WaitDevice();
-   b.Destroy();
+   mScreenQuad.Destroy();
+   mPipeline.Destroy();
    mVkManager->Destroy();
    mWindow->Destroy();
    delete mWindow;
@@ -100,10 +98,15 @@ void Application::Draw() {
    renderBegin.pClearValues = &clearColor;
    renderBegin.framebuffer = mVkManager->GetPresentFramebuffer(frameIndex)->GetFramebuffer();
    vkBeginCommandBuffer(buffer, &beginInfo);
-   VkBuffer vertexBuffer[] = { b.GetBuffer() };
+   vkCmdBeginRenderPass(buffer, &renderBegin, VK_SUBPASS_CONTENTS_INLINE);
+   
+   vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline.GetPipeline());
+   VkBuffer vertexBuffer[] = { mScreenQuad.GetBuffer() };
    VkDeviceSize offsets[] = { 0 };
    vkCmdBindVertexBuffers(buffer, 0, 1, vertexBuffer, offsets);
-   vkCmdBeginRenderPass(buffer, &renderBegin, VK_SUBPASS_CONTENTS_INLINE);
+
+   vkCmdDraw(buffer, 6, 1, 0, 0);
+
    vkCmdEndRenderPass(buffer);
    vkEndCommandBuffer(buffer);
 

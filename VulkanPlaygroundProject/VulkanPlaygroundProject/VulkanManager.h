@@ -24,6 +24,9 @@ public:
    const VkInstance GetInstance() const {
       return mInstance;
    }
+   const VkDevice GetDevice() const {
+      return mDevice;
+   }
    const VkExtent2D GetSwapchainExtent() const {
       return mSwapChainExtent;
    }

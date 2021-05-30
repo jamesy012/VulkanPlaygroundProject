@@ -46,7 +46,18 @@ static VkAllocationCallbacks* GetAllocationCallback() {
    return allocationCallback;
 }
 
-
 static std::string GetWorkDir() {
    return "../WorkDir/";
+}
+
+static int RoundUp(int number, int multiple) {
+   assert(multiple);
+   int isPositive = (int)(number >= 0);
+   return ((number + isPositive * (multiple - 1)) / multiple) * multiple;
+}
+
+static VkDeviceSize RoundUp(int number, VkDeviceSize multiple) {
+   assert(multiple);
+   int isPositive = (int)(number >= 0);
+   return ((number + isPositive * (multiple - 1)) / multiple) * multiple;
 }

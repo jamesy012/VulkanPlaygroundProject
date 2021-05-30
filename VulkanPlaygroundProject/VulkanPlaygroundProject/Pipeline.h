@@ -1,6 +1,28 @@
 #pragma once
+
+class RenderPass;
+
 class Pipeline {
 public:
    bool AddShader(std::string aPath);
+   bool Create(const VkExtent2D aSize, const RenderPass* aRenderPass);
+   void Destroy();
+
+   const VkPipeline GetPipeline() const {
+      return mPipeline;
+   }
+
+   const VkPipelineLayout GetPipelineLayout() const {
+      return mPipelineLayout;
+   }
+private:
+   struct Shader {
+   public:
+      VkPipelineShaderStageCreateInfo mInfo = { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };
+   };
+   std::vector<Shader> mShaders;
+
+   VkPipeline mPipeline = VK_NULL_HANDLE;
+   VkPipelineLayout mPipelineLayout = VK_NULL_HANDLE;
 };
 

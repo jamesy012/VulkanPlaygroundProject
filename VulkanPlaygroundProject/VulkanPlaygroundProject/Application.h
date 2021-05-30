@@ -1,5 +1,8 @@
 #pragma once
 
+#include "Pipeline.h"
+#include "Buffer.h"
+
 class Window;
 class VulkanManager;
 
@@ -11,8 +14,12 @@ public:
 private:
    void Draw();
 
-
    Window* mWindow;
    VulkanManager* mVkManager;
+
+private:
+   BufferVertex mScreenQuad;
+   Pipeline mPipeline;
+
 };
 
