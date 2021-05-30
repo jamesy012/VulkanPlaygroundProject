@@ -22,6 +22,8 @@ shaderc_shader_kind GetShaderCShaderKind(VkShaderStageFlagBits aType) {
 }
 
 bool Pipeline::AddShader(std::string aPath) {
+   LOG_SCOPED_NAME("Pipeline Shader Compile");
+   LOG("%s\n", aPath.c_str());
    Shader shader;
 
    std::string fileExt;
@@ -55,7 +57,6 @@ bool Pipeline::AddShader(std::string aPath) {
    //   ASSERT_RET_FALSE("Failed shader compilation");
    //}
    //std::string preProcessResult = { result.cbegin(), result.cend() };
-   //std::cout << result.GetErrorMessage() << std::endl;
 
    //result = compiler.CompileGlslToSpvAssembly(dataStream.str(), shadercType, aPath.c_str(), options);
    //
@@ -71,7 +72,6 @@ bool Pipeline::AddShader(std::string aPath) {
       ASSERT_RET_FALSE("Failed shader compilation");
    }
    std::vector<uint32_t> spvResult = { result2.cbegin(), result2.cend() };
-   std::cout << result2.GetErrorMessage() << std::endl;
 
    VkShaderModuleCreateInfo createInfo{};
    createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
@@ -85,6 +85,7 @@ bool Pipeline::AddShader(std::string aPath) {
    shader.mInfo.pName = "main";
 
    mShaders.push_back(shader);
+   LOG("Finished\n");
    return true;
 }
 
@@ -203,10 +204,13 @@ bool Pipeline::Create(const VkExtent2D aSize, const RenderPass* aRenderPass) {
    depthStencil.front = {}; // Optional
    depthStencil.back = {}; // Optional
 
+   mDynamicStates.push_back(VK_DYNAMIC_STATE_VIEWPORT);
+   mDynamicStates.push_back(VK_DYNAMIC_STATE_SCISSOR);
+
    VkPipelineDynamicStateCreateInfo dynamicState{};
-   //dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-   //dynamicState.dynamicStateCount = mDynamicStates.size();
-   //dynamicState.pDynamicStates = mDynamicStates.data();
+   dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+   dynamicState.dynamicStateCount = mDynamicStates.size();
+   dynamicState.pDynamicStates = mDynamicStates.data();
 
    VkGraphicsPipelineCreateInfo pipeline{};
    pipeline.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -220,7 +224,7 @@ bool Pipeline::Create(const VkExtent2D aSize, const RenderPass* aRenderPass) {
    pipeline.pMultisampleState = &multisampling;
    pipeline.pDepthStencilState = &depthStencil;
    pipeline.pColorBlendState = &colorBlending;
-   //pipeline.pDynamicState = &dynamicState;
+   pipeline.pDynamicState = &dynamicState;
    pipeline.renderPass = aRenderPass->GetRenderPass();
    pipeline.subpass = 0;
    pipeline.basePipelineHandle = VK_NULL_HANDLE; // Optional

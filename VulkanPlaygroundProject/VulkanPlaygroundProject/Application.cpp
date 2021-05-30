@@ -99,7 +99,10 @@ void Application::Draw() {
    renderBegin.framebuffer = mVkManager->GetPresentFramebuffer(frameIndex)->GetFramebuffer();
    vkBeginCommandBuffer(buffer, &beginInfo);
    vkCmdBeginRenderPass(buffer, &renderBegin, VK_SUBPASS_CONTENTS_INLINE);
-   
+   VkViewport viewport = mVkManager->GetSwapchainViewport();
+   VkRect2D scissor = { {}, mVkManager->GetSwapchainExtent() };
+   vkCmdSetViewport(buffer, 0, 1, &viewport);
+   vkCmdSetScissor(buffer, 0, 1, &scissor);
    vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline.GetPipeline());
    VkBuffer vertexBuffer[] = { mScreenQuad.GetBuffer() };
    VkDeviceSize offsets[] = { 0 };

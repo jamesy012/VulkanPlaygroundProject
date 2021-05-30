@@ -21,6 +21,7 @@ private:
       VkPipelineShaderStageCreateInfo mInfo = { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };
    };
    std::vector<Shader> mShaders;
+   std::vector<VkDynamicState> mDynamicStates;
 
    VkPipeline mPipeline = VK_NULL_HANDLE;
    VkPipelineLayout mPipelineLayout = VK_NULL_HANDLE;

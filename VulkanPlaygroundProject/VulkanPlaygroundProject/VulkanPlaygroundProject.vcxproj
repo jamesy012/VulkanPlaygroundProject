@@ -223,6 +223,7 @@
     <ClCompile Include="Model.cpp" />
     <ClCompile Include="Pipeline.cpp" />
     <ClCompile Include="RenderPass.cpp" />
+    <ClCompile Include="stdafx.cpp" />
     <ClCompile Include="Vertex.cpp" />
     <ClCompile Include="VulkanManager.cpp" />
     <ClCompile Include="VulkanPlaygroundProject.cpp" />

@@ -61,3 +61,51 @@ static VkDeviceSize RoundUp(int number, VkDeviceSize multiple) {
    int isPositive = (int)(number >= 0);
    return ((number + isPositive * (multiple - 1)) / multiple) * multiple;
 }
+
+//Logging
+namespace Logger {
+	extern int mPrintIndent;
+	extern std::string mLogCat;
+
+	void LogMessage(const char* aMessage, ...);
+
+	class LogScopedIndent {
+	public:
+		LogScopedIndent() {
+			Logger::mPrintIndent++;
+		}
+		~LogScopedIndent() {
+			Logger::mPrintIndent--;
+		}
+	};
+
+	class LogScopedName {
+	public:
+		LogScopedName(std::string aName) {
+			mPreviousName = Logger::mLogCat;
+			Logger::mLogCat = aName;
+		}
+		~LogScopedName() {
+			Logger::mLogCat = mPreviousName;
+
+		}
+	private:
+		std::string mPreviousName;
+	};
+
+};
+
+#define _INTERNAL_LOG_INDENT_NAMED(x,y)			Logger::LogScopedIndent x##y;
+#define LOG_SCOPED_INDENT_NAMED(x)				_INTERNAL_LOG_INDENT_NAMED(ScopedLogIndent_,x)
+#define LOG_SCOPED_INDENT()						LOG_SCOPED_INDENT_NAMED( __LINE__ )
+
+#define _INTERNAL_LOG_NAME_NAMED(var, var2, name)	Logger::LogScopedName var##var2 (name);
+#define LOG_SCOPED_NAME_NAMED(var, name)			_INTERNAL_LOG_NAME_NAMED(LogName_,var, name)
+#define LOG_SCOPED_NAME(name)						LOG_SCOPED_NAME_NAMED(__LINE__, name)
+//#define LOG_NAME(name)							Logger::LogScopedName LogName (name);
+
+#define LOG_GET_NAME ((const std::string)Logger::mLogCat)
+
+#define LOG(...) Logger::LogMessage(__VA_ARGS__);
+//#define LOG_LIT(Message, ...) Logger::LogMessage("%s\n", #Message, __VA_ARGS__);
+#define LOG_WITH_LINE(Message) Logger::LogMessage("(%s #%i) %s", __FUNCTION__, __LINE__, Message);
