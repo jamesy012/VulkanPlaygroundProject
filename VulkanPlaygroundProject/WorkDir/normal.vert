@@ -15,8 +15,6 @@ layout(location = 3) out vec3 fragPos;
 layout(location = 4) out vec3 fragTangent;
 
 void main() {
-
-
     mat4 modelScene = mat4(1.0);
     mat3 modelSceneMat3 = mat3(modelScene);
     vec4 pos = modelScene * vec4(inPosition, 1.0);

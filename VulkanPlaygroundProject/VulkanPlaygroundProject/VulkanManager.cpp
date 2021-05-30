@@ -305,6 +305,7 @@ bool VulkanManager::CreateInstance() {
    debugCreateInfo.messageSeverity = /*VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |*/ VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
    debugCreateInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
    debugCreateInfo.pfnUserCallback = DebugCallback;
+   debugCreateInfo.pNext = nullptr;
 
    VkApplicationInfo appInfo = {};
    appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -904,6 +905,11 @@ void VulkanManager::RenderImGui() {
 }
 
 void VulkanManager::SwapchainResized() {
+   VkExtent2D size = mWindow->GetFBExtent();
+   while (size.width == 0 || size.height == 0) {
+      size = mWindow->GetFBExtent();
+      mWindow->WaitEvents();
+   }
    vkDeviceWaitIdle(mDevice);
    mCurrentImageIndex = -1;
    DestroySizeDependent();

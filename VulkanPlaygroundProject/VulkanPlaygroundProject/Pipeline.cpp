@@ -21,7 +21,46 @@ shaderc_shader_kind GetShaderCShaderKind(VkShaderStageFlagBits aType) {
    return shaderc_vertex_shader;
 }
 
-bool Pipeline::AddShader(std::string aPath) {
+bool ReadFile(std::string aPath, std::stringstream& aOutput) {
+   std::ifstream fileStream(aPath);
+   if (fileStream.fail()) {
+      return false;
+   }
+   aOutput = std::stringstream();
+   aOutput << fileStream.rdbuf();
+   return true;
+}
+
+bool ReadFileBinary(std::string aPath, char* aOutput, uint32_t aSize) {
+   std::ifstream fileStream(aPath, std::ios::binary);
+   if (fileStream.fail()) {
+      return false;
+   }
+   fileStream.read(aOutput, aSize);
+   return true;
+}
+
+bool WriteFile(std::string aPath, std::string aInput) {
+   std::ofstream fileStream(aPath);
+   if (fileStream.fail()) {
+      return false;
+   }
+   fileStream << aInput;
+   fileStream.close();
+   return true;
+}
+
+bool WriteFileBinary(std::string aPath, const char* aInput, uint32_t aSize) {
+   std::ofstream fileStream(aPath, std::ios::binary);
+   if (fileStream.fail()) {
+      return false;
+   }
+   fileStream.write(aInput, aSize);
+   fileStream.close();
+   return true;
+}
+
+bool Pipeline::AddShader(std::string aPath, bool aForceReload) {
    LOG_SCOPED_NAME("Pipeline Shader Compile");
    LOG("%s\n", aPath.c_str());
    Shader shader;
@@ -44,34 +83,64 @@ bool Pipeline::AddShader(std::string aPath) {
    }
    shaderc_shader_kind shadercType = GetShaderCShaderKind(shader.mInfo.stage);
 
-   std::ifstream fileStream(aPath);
-   std::stringstream dataStream;
-   dataStream << fileStream.rdbuf();
+   bool reloadFromFile = false;
+   static const bool FORCE_RELOAD = false;
 
-   shaderc::Compiler compiler;
-   shaderc::CompileOptions options;
+   const std::string cachePath = aPath + ".cache";
+   struct _stat stat {};
+   struct _stat statCache {};
 
-   //shaderc::PreprocessedSourceCompilationResult result = compiler.PreprocessGlsl(dataStream.str(), shadercType, aPath.c_str(), options);
-   //
-   //if (result.GetCompilationStatus() != shaderc_compilation_status_success) {
-   //   ASSERT_RET_FALSE("Failed shader compilation");
-   //}
-   //std::string preProcessResult = { result.cbegin(), result.cend() };
+   if (FORCE_RELOAD || aForceReload) {
+      reloadFromFile = true;
+   } else {
+      _stat(aPath.c_str(), &stat);
+      _stat(cachePath.c_str(), &statCache);
 
-   //result = compiler.CompileGlslToSpvAssembly(dataStream.str(), shadercType, aPath.c_str(), options);
-   //
-   //if (result.GetCompilationStatus() != shaderc_compilation_status_success) {
-   //   ASSERT_RET_FALSE("Failed shader compilation");
-   //}
-   //std::string compileResult = { result.cbegin(), result.cend() };
-
-   std::string fileData = dataStream.str();
-   shaderc::SpvCompilationResult result2 = compiler.CompileGlslToSpv(fileData, shadercType, aPath.c_str(), options);
-   if (result2.GetCompilationStatus() != shaderc_compilation_status_success) {
-      std::cout << result2.GetErrorMessage() << std::endl;
-      ASSERT_RET_FALSE("Failed shader compilation");
+      reloadFromFile = (stat.st_mtime > statCache.st_mtime);
    }
-   std::vector<uint32_t> spvResult = { result2.cbegin(), result2.cend() };
+
+   std::vector<uint32_t> spvResult;
+   if(reloadFromFile)
+   {
+      LOG("Recompiling...\n");
+      std::ifstream fileStream(aPath);
+      std::stringstream dataStream;
+      dataStream << fileStream.rdbuf();
+
+      shaderc::Compiler compiler;
+      shaderc::CompileOptions options;
+      options.SetOptimizationLevel(shaderc_optimization_level::shaderc_optimization_level_performance);
+      //options.SetGenerateDebugInfo();
+      options.SetWarningsAsErrors();
+      //shaderc::PreprocessedSourceCompilationResult result = compiler.PreprocessGlsl(dataStream.str(), shadercType, aPath.c_str(), options);
+      //
+      //if (result.GetCompilationStatus() != shaderc_compilation_status_success) {
+      //   ASSERT_RET_FALSE("Failed shader compilation");
+      //}
+      //std::string preProcessResult = { result.cbegin(), result.cend() };
+
+      //result = compiler.CompileGlslToSpvAssembly(dataStream.str(), shadercType, aPath.c_str(), options);
+      //
+      //if (result.GetCompilationStatus() != shaderc_compilation_status_success) {
+      //   ASSERT_RET_FALSE("Failed shader compilation");
+      //}
+      //std::string compileResult = { result.cbegin(), result.cend() };
+
+      std::string fileData = dataStream.str();
+      shaderc::SpvCompilationResult result2 = compiler.CompileGlslToSpv(fileData, shadercType, aPath.c_str(), options);
+      if (result2.GetCompilationStatus() != shaderc_compilation_status_success) {
+         std::cout << result2.GetErrorMessage() << std::endl;
+         ASSERT_RET_FALSE("Failed shader compilation");
+      }
+      spvResult = { result2.cbegin(), result2.cend() };
+
+      WriteFileBinary(cachePath, (char*)&spvResult[0], static_cast<uint32_t>(spvResult.size()*4));
+   } else {
+      LOG("Loading from cache\n");
+      std::vector<char> cachedResult(statCache.st_size);
+      spvResult.resize(statCache.st_size/4); 
+      ReadFileBinary(cachePath, (char*)&spvResult[0], statCache.st_size);
+   }
 
    VkShaderModuleCreateInfo createInfo{};
    createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
@@ -213,7 +282,7 @@ bool Pipeline::Create(const VkExtent2D aSize, const RenderPass* aRenderPass) {
 
    VkPipelineDynamicStateCreateInfo dynamicState{};
    dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-   dynamicState.dynamicStateCount = mDynamicStates.size();
+   dynamicState.dynamicStateCount = static_cast<uint32_t>(mDynamicStates.size());
    dynamicState.pDynamicStates = mDynamicStates.data();
 
    VkGraphicsPipelineCreateInfo pipeline{};

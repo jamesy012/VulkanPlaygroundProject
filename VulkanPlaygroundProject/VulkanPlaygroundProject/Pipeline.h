@@ -5,7 +5,7 @@ struct VertexType;
 
 class Pipeline {
 public:
-   bool AddShader(std::string aPath);
+   bool AddShader(std::string aPath, bool aForceReload = false);
    void SetVertexType(VertexType& aType);
    bool Create(const VkExtent2D aSize, const RenderPass* aRenderPass);
    void Destroy();

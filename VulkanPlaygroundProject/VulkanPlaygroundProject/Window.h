@@ -14,6 +14,7 @@ public:
    bool CreateSurface(VkInstance aInstance);
 
    bool ShouldClose();
+   void WaitEvents();
    void Update();
 
    const VkSurfaceKHR GetSurface()const {
