@@ -1,20 +1,20 @@
 #include "stdafx.h"
 #include "RenderPass.h"
 
-bool RenderPass::Create(VkDevice aDevice, VkImageLayout aColorLayout, VkFormat aColorFormat) {
+bool RenderPass::Create(VkDevice aDevice, VkFormat aColorFormat, VkImageLayout aInital, VkImageLayout aFinal) {
 
    VkAttachmentDescription2 colorDescription{};
    colorDescription.sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_2;
    colorDescription.samples = VK_SAMPLE_COUNT_1_BIT;
    colorDescription.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
    colorDescription.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-   colorDescription.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-   colorDescription.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+   colorDescription.initialLayout = aInital;
+   colorDescription.finalLayout = aFinal;
    colorDescription.format = aColorFormat;
 
    VkAttachmentReference2 colorAttachment{};
    colorAttachment.sType = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2;
-   colorAttachment.layout = aColorLayout;
+   colorAttachment.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
    colorAttachment.attachment = 0;
    colorAttachment.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 
@@ -33,7 +33,10 @@ bool RenderPass::Create(VkDevice aDevice, VkImageLayout aColorLayout, VkFormat a
 
    VkResult result = vkCreateRenderPass2(aDevice, &createInfo, GetAllocationCallback(), &mRenderPass);
    ASSERT_VULKAN_SUCCESS(result);
-    return true;
+
+   mColorFormat = aColorFormat;
+
+   return true;
 }
 
 void RenderPass::Destroy(VkDevice aDevice) {

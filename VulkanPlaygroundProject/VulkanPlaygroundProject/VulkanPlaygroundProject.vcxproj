@@ -223,6 +223,7 @@
     <ClCompile Include="Model.cpp" />
     <ClCompile Include="Pipeline.cpp" />
     <ClCompile Include="RenderPass.cpp" />
+    <ClCompile Include="RenderTarget.cpp" />
     <ClCompile Include="stdafx.cpp" />
     <ClCompile Include="Vertex.cpp" />
     <ClCompile Include="VulkanManager.cpp" />
@@ -241,6 +242,7 @@
     <ClInclude Include="Model.h" />
     <ClInclude Include="Pipeline.h" />
     <ClInclude Include="RenderPass.h" />
+    <ClInclude Include="RenderTarget.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="Vertex.h" />
     <ClInclude Include="VulkanManager.h" />

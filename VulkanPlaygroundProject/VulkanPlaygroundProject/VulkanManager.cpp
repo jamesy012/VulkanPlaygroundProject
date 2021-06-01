@@ -74,12 +74,9 @@ void VulkanManager::Create(Window* aWindow) {
    }
 
    {
-      mPresentRenderPass.Create(mDevice, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, mSwapChainImageFormat);
-      mPresentFramebuffer.resize(mNumSwapChainImages);
-      for (uint32_t i = 0; i < mNumSwapChainImages; i++) {
-         mPresentFramebuffer[i].Create(mDevice,mSwapChainExtent, &mPresentRenderPass, mSwapChainImageViews[i]);
-      }
+      mPresentRenderPass.Create(mDevice, mSwapChainImageFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
    }
+   CreateSizeDependent();
 
    //Pre first run setup
    {
@@ -243,6 +240,7 @@ void VulkanManager::RenderEnd() {
    mCurrentFrameIndex = (mCurrentFrameIndex + 1) % mNumSwapChainImages;
 
    mCurrentImageIndex = -1;
+   mResizedLastRender = false;
 }
 
 void VulkanManager::OneTimeCommandBufferStart(VkCommandBuffer& aBuffer) {
@@ -607,7 +605,7 @@ bool VulkanManager::CreateSwapchain() {
    createInfo.imageFormat = surfaceFormat.format;
    createInfo.imageExtent = extent;
    createInfo.imageArrayLayers = 1;
-   createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+   createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
    QueueFamilyIndices indices = FindQueueFamilies(mPhysicalDevice, mSurface);
    uint32_t queueFamilyIndices[] = { indices.graphicsFamily.value(), indices.presentFamily.value() };
@@ -914,6 +912,7 @@ void VulkanManager::SwapchainResized() {
    mCurrentImageIndex = -1;
    DestroySizeDependent();
    CreateSizeDependent();
+   mResizedLastRender = true;
 }
 
 void VulkanManager::DestroySizeDependent() {
@@ -937,10 +936,16 @@ void VulkanManager::DestroySizeDependent() {
 }
 
 void VulkanManager::CreateSizeDependent() {
-   CreateSwapchain();
-   CreateImGuiSizeDependent();
-   mPresentFramebuffer.resize(mNumSwapChainImages);
-   for (uint32_t i = 0; i < mNumSwapChainImages; i++) {
-      mPresentFramebuffer[i].Create(mDevice, mSwapChainExtent, &mPresentRenderPass, mSwapChainImageViews[i]);
+   if (mSwapChain == VK_NULL_HANDLE) {
+      CreateSwapchain();
+   }
+   if (mImGuiFramebuffer.size() == 0) {
+      CreateImGuiSizeDependent();
+   }
+   if (mPresentFramebuffer.size() == 0) {
+      mPresentFramebuffer.resize(mNumSwapChainImages);
+      for (uint32_t i = 0; i < mNumSwapChainImages; i++) {
+         mPresentFramebuffer[i].Create(mDevice, mSwapChainExtent, &mPresentRenderPass, mSwapChainImageViews[i]);
+      }
    }
 }

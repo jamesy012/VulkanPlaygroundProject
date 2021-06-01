@@ -36,7 +36,7 @@ bool Model::LoadModel(std::string aPath) {
    }
 
    ProcessMeshs(scene);
-
+   return true;
 }
 
 void Model::ProcessMeshs(const aiScene* aScene) {

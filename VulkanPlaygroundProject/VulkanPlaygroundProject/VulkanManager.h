@@ -40,8 +40,19 @@ public:
       assert(aIndex <= mNumSwapChainImages);
       return &mPresentFramebuffer[aIndex];
    }
+   const VkImage GetPresentImage(uint32_t aIndex) const {
+      assert(aIndex <= mNumSwapChainImages);
+      return mSwapChainImages[aIndex];
+   }
    const VmaAllocator& GetAllocator() const {
       return mAllocator;
+   } 
+   const VkFormat& GetColorFormat() const {
+      return mSwapChainImageFormat;
+   }
+
+   const bool DidResizeLastFrame() const {
+      return mResizedLastRender;
    }
 private:
    bool CreateInstance();
@@ -99,6 +110,7 @@ private:
    //Other
    RenderPass mPresentRenderPass;
    std::vector<Framebuffer> mPresentFramebuffer;
+   bool mResizedLastRender = true;
 
    //Buffers
    VmaAllocator mAllocator;
