@@ -110,7 +110,7 @@ bool Pipeline::AddShader(std::string aPath, bool aForceReload) {
       shaderc::Compiler compiler;
       shaderc::CompileOptions options;
       options.SetOptimizationLevel(shaderc_optimization_level::shaderc_optimization_level_performance);
-      //options.SetGenerateDebugInfo();
+      options.SetGenerateDebugInfo();
       options.SetWarningsAsErrors();
       //shaderc::PreprocessedSourceCompilationResult result = compiler.PreprocessGlsl(dataStream.str(), shadercType, aPath.c_str(), options);
       //
@@ -162,13 +162,17 @@ void Pipeline::SetVertexType(VertexType& aType) {
    mVertexType = &aType;
 }
 
+void Pipeline::AddDescriptorSetLayout(VkDescriptorSetLayout aSetLayout) {
+   mDescriptorSets.push_back(aSetLayout);
+}
+
 bool Pipeline::Create(const VkExtent2D aSize, const RenderPass* aRenderPass) {
 
    {
       VkPipelineLayoutCreateInfo pipelineLayout{};
       pipelineLayout.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-      //pipelineLayout.setLayoutCount = mDescriptorSets.size();
-      //pipelineLayout.pSetLayouts = mDescriptorSets.data(); // Optional
+      pipelineLayout.setLayoutCount = mDescriptorSets.size();
+      pipelineLayout.pSetLayouts = mDescriptorSets.data();
       //pipelineLayout.pushConstantRangeCount = mPushConstants.size(); // Optional
       //pipelineLayout.pPushConstantRanges = mPushConstants.data(); // Optional
       vkCreatePipelineLayout(_VulkanManager->GetDevice(), &pipelineLayout, nullptr, &mPipelineLayout);

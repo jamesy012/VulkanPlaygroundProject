@@ -8,6 +8,9 @@
 
 #include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>
+
+#define GLM_FORCE_RADIANS
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
 #include <glm/ext.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -34,6 +37,8 @@ static void CheckVulkanResult(VkResult aResult) {
 #define ASSERT_VALID(x) assert(x != nullptr);
 
 //~~~~~~~ VULKAN HELPERS
+#define SIZEOF_ARRAY(x) sizeof(x) / sizeof(x[0]);
+
 static VkAllocationCallbacks* CreateAllocationCallbacks() {
    VkAllocationCallbacks callback;
    callback.pUserData = nullptr;
@@ -48,6 +53,91 @@ static VkAllocationCallbacks* CreateAllocationCallbacks() {
 static VkAllocationCallbacks* GetAllocationCallback() {
    static VkAllocationCallbacks* allocationCallback = CreateAllocationCallbacks();
    return allocationCallback;
+}
+
+static VkDescriptorSetLayoutBinding CreateDescriptorSetLayoutBinding(VkDescriptorType aType, VkShaderStageFlags aStageFlags, uint32_t aBinding) {
+   VkDescriptorSetLayoutBinding binding{};
+   binding.binding = aBinding;
+   binding.descriptorCount = 1;
+   binding.descriptorType = aType;
+   binding.stageFlags = aStageFlags;
+   return binding;
+}
+
+static VkWriteDescriptorSet  CreateWriteDescriptorSet(VkDescriptorType aType, VkDescriptorSet aDstSet, VkDescriptorBufferInfo* aBufferInfo, uint32_t aBinding) {
+   VkWriteDescriptorSet set{};
+   set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+   set.descriptorCount = 1;
+   set.pBufferInfo = aBufferInfo;
+   set.descriptorType = aType;
+
+   set.dstBinding = aBinding;
+   set.dstSet = aDstSet;
+   return set;
+}
+
+static void SetImageLayout(VkCommandBuffer aBuffer, VkImage aImage, VkImageAspectFlags aAspectMask, VkImageLayout aOldImageLayout,
+                    VkImageLayout aNewImageLayout, VkPipelineStageFlags aSrcStages, VkPipelineStageFlags aDestStages) {
+
+   VkImageMemoryBarrier image_memory_barrier = {};
+   image_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+   image_memory_barrier.pNext = NULL;
+   image_memory_barrier.srcAccessMask = 0;
+   image_memory_barrier.dstAccessMask = 0;
+   image_memory_barrier.oldLayout = aOldImageLayout;
+   image_memory_barrier.newLayout = aNewImageLayout;
+   image_memory_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+   image_memory_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+   image_memory_barrier.image = aImage;
+   image_memory_barrier.subresourceRange.aspectMask = aAspectMask;
+   image_memory_barrier.subresourceRange.baseMipLevel = 0;
+   image_memory_barrier.subresourceRange.levelCount = 1;
+   image_memory_barrier.subresourceRange.baseArrayLayer = 0;
+   image_memory_barrier.subresourceRange.layerCount = 1;
+
+   switch (aOldImageLayout) {
+      case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+         image_memory_barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+         break;
+
+      case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
+         image_memory_barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+         break;
+
+      case VK_IMAGE_LAYOUT_PREINITIALIZED:
+         image_memory_barrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
+         break;
+
+      default:
+         break;
+   }
+
+   switch (aNewImageLayout) {
+      case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
+         image_memory_barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+         break;
+
+      case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
+         image_memory_barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+         break;
+
+      case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+         image_memory_barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+         break;
+
+      case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+         image_memory_barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+         break;
+
+      case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+         image_memory_barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+         break;
+
+      default:
+         break;
+   }
+
+   vkCmdPipelineBarrier(aBuffer, aSrcStages, aDestStages, 0, 0, NULL, 0, NULL, 1, &image_memory_barrier);
 }
 
 //~~~~~~~~~~ PROJECT HELPERS

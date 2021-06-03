@@ -12,72 +12,30 @@
 #include "Vertex.h"
 #include "RenderTarget.h"
 
+#include "Buffer.h"
+
 RenderPass rp;
 RenderTarget rt;
 
-void SetImageLayout(VkCommandBuffer aBuffer, VkImage aImage, VkImageAspectFlags aAspectMask, VkImageLayout aOldImageLayout,
-                      VkImageLayout aNewImageLayout, VkPipelineStageFlags aSrcStages, VkPipelineStageFlags aDestStages) {
+#define MAX_DESCRIPTOR_SETS 50
+VkDescriptorPoolSize poolSizes[1] = { { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, MAX_DESCRIPTOR_SETS } };
+VkDescriptorPool mDescriptorPool;
+VkDescriptorSetLayout mDescriptorSet;
+VkDescriptorSet mSceneSet;
+VkDescriptorSet mObjectSet;
+BufferUniform mSceneBuffer;
+BufferUniform mObjectBuffer;
 
-   VkImageMemoryBarrier image_memory_barrier = {};
-   image_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-   image_memory_barrier.pNext = NULL;
-   image_memory_barrier.srcAccessMask = 0;
-   image_memory_barrier.dstAccessMask = 0;
-   image_memory_barrier.oldLayout = aOldImageLayout;
-   image_memory_barrier.newLayout = aNewImageLayout;
-   image_memory_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-   image_memory_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-   image_memory_barrier.image = aImage;
-   image_memory_barrier.subresourceRange.aspectMask = aAspectMask;
-   image_memory_barrier.subresourceRange.baseMipLevel = 0;
-   image_memory_barrier.subresourceRange.levelCount = 1;
-   image_memory_barrier.subresourceRange.baseArrayLayer = 0;
-   image_memory_barrier.subresourceRange.layerCount = 1;
+struct SceneUBO {
+   glm::mat4 m_ViewProj;
+};
 
-   switch (aOldImageLayout) {
-      case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
-         image_memory_barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-         break;
+struct ObjectUBO {
+   glm::mat4 m_Model;
+};
 
-      case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
-         image_memory_barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-         break;
-
-      case VK_IMAGE_LAYOUT_PREINITIALIZED:
-         image_memory_barrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
-         break;
-
-      default:
-         break;
-   }
-
-   switch (aNewImageLayout) {
-      case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
-         image_memory_barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-         break;
-
-      case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
-         image_memory_barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-         break;
-
-      case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
-         image_memory_barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-         break;
-
-      case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
-         image_memory_barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-         break;
-
-      case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
-         image_memory_barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-         break;
-
-      default:
-         break;
-   }
-
-   vkCmdPipelineBarrier(aBuffer, aSrcStages, aDestStages, 0, 0, NULL, 0, NULL, 1, &image_memory_barrier);
-}
+SceneUBO mSceneUbo{};
+ObjectUBO mObjectUbo{};
 
 void Application::Start() {
    mWindow = new Window();
@@ -95,10 +53,13 @@ void Application::Start() {
    mScreenQuad.Create(sizeof(VertexSimple)*6);
    BufferStaging staging;
    staging.Create(mScreenQuad.GetSize());
-   void* data;
-   staging.Map(&data);
-   memcpy(data, verts, sizeof(VertexSimple) * 6);
-   staging.UnMap();
+   {
+      void* data;
+      staging.Map(&data);
+      memcpy(data, verts, sizeof(VertexSimple) * 6);
+      staging.UnMap();
+   }
+
    //Pre first run setup
    {
       VkCommandBuffer buffer;
@@ -112,20 +73,58 @@ void Application::Start() {
    }
    staging.Destroy();
 
+   rp.Create(mVkManager->GetDevice(), mVkManager->GetColorFormat(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_FORMAT_D32_SFLOAT_S8_UINT);
+   rt.Create(mVkManager->GetDevice(), &rp, mVkManager->GetSwapchainExtent(), true);
+
+   VkDescriptorSetLayoutBinding sceneLayout = CreateDescriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT, 0);
+   VkDescriptorSetLayoutBinding objectLayout = CreateDescriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT, 1);
+   VkDescriptorSetLayoutBinding bindings[] = { sceneLayout, objectLayout };
+   VkDescriptorSetLayoutCreateInfo layoutInfo{};
+   layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+   layoutInfo.bindingCount = 2;
+   layoutInfo.pBindings = bindings;
+   vkCreateDescriptorSetLayout(mVkManager->GetDevice(), &layoutInfo, GetAllocationCallback(), &mDescriptorSet);
+
    mPipeline.AddShader(GetWorkDir() + "normal.vert");
    mPipeline.AddShader(GetWorkDir() + "normal.frag");
    mPipeline.SetVertexType(VertexTypeDefault);
-   mPipeline.Create(mVkManager->GetSwapchainExtent(), mVkManager->GetPresentRenderPass());
+   mPipeline.AddDescriptorSetLayout(mDescriptorSet);
+   mPipeline.Create(mVkManager->GetSwapchainExtent(), &rp);
 
    mPipelineTest.AddShader(GetWorkDir() + "test.vert");
    mPipelineTest.AddShader(GetWorkDir() + "test.frag");
    mPipelineTest.SetVertexType(VertexTypeSimple);
-   mPipelineTest.Create(mVkManager->GetSwapchainExtent(), mVkManager->GetPresentRenderPass());
+   mPipelineTest.Create(mVkManager->GetSwapchainExtent(), &rp);
 
-   mModelTest.LoadModel(GetWorkDir()+"Sponza/glTF/Sponza.gltf");
+   mModelTest.LoadModel(GetWorkDir()+"Sponza/Sponza.obj");
 
-   rp.Create(mVkManager->GetDevice(), mVkManager->GetColorFormat(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-   rt.Create(mVkManager->GetDevice(), &rp, mVkManager->GetSwapchainExtent(), false);
+   mSceneBuffer.Create(sizeof(SceneUBO) * 3);
+   mObjectBuffer.Create(sizeof(ObjectUBO) * 100);
+
+   VkDescriptorPoolCreateInfo poolCreate{};
+   poolCreate.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+   poolCreate.maxSets = MAX_DESCRIPTOR_SETS;
+   poolCreate.poolSizeCount = SIZEOF_ARRAY(poolSizes);
+   poolCreate.pPoolSizes = poolSizes;
+   vkCreateDescriptorPool(mVkManager->GetDevice(), &poolCreate, GetAllocationCallback(), &mDescriptorPool);
+
+   VkDescriptorSetAllocateInfo setAllocate{};
+   setAllocate.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+   setAllocate.descriptorPool = mDescriptorPool;
+   setAllocate.descriptorSetCount = 1;
+   setAllocate.pSetLayouts = &mDescriptorSet;
+   vkAllocateDescriptorSets(mVkManager->GetDevice(), &setAllocate, &mSceneSet);
+   VkDescriptorBufferInfo sceneBufferInfo{};
+   sceneBufferInfo.buffer = mSceneBuffer.GetBuffer();
+   sceneBufferInfo.range = sizeof(SceneUBO);
+   VkDescriptorBufferInfo objectBufferInfo{};
+   objectBufferInfo.buffer = mObjectBuffer.GetBuffer();
+   objectBufferInfo.range = sizeof(ObjectUBO);
+   VkWriteDescriptorSet sceneSet = CreateWriteDescriptorSet(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, mSceneSet, &sceneBufferInfo, 0);
+   VkWriteDescriptorSet objectSet = CreateWriteDescriptorSet(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, mSceneSet, &objectBufferInfo, 1);
+   VkWriteDescriptorSet writeSets[] = { sceneSet, objectSet };
+   vkUpdateDescriptorSets(mVkManager->GetDevice(), 2, writeSets, 0, nullptr);
+  
 }
 
 void Application::Run() {
@@ -141,6 +140,15 @@ void Application::Run() {
 
 void Application::Destroy() {
    mVkManager->WaitDevice();
+
+   {
+      VkDescriptorSet sets[] = { mSceneSet, mObjectSet };
+      //vkFreeDescriptorSets(mVkManager->GetDevice(), mDescriptorPool, 2, sets); //needs VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT
+      mSceneBuffer.Destroy();
+      mObjectBuffer.Destroy();
+      vkDestroyDescriptorSetLayout(mVkManager->GetDevice(), mDescriptorSet, GetAllocationCallback());
+      vkDestroyDescriptorPool(mVkManager->GetDevice(), mDescriptorPool, GetAllocationCallback());
+   }
 
    rt.Destroy();
    rp.Destroy(mVkManager->GetDevice());
@@ -163,6 +171,25 @@ void Application::Draw() {
    static uint32_t frameCounter = 0;
    frameCounter++;
 
+   //update
+   {
+      static glm::vec3 pos = glm::vec3(500, 500, 100);
+      ImGui::Begin("Camera");
+      ImGui::DragFloat3("Pos", glm::value_ptr(pos));//, 0.01f);
+      ImGui::End();
+      glm::mat4 proj = glm::perspective(glm::radians(45.0f), mVkManager->GetSwapchainAspect(), 0.1f, 10000.0f);
+      proj[1][1] *= -1;
+      glm::mat4 view = glm::lookAt(pos, glm::vec3(0, 0, 0), glm::vec3(0, 1.0f, 0));
+      mSceneUbo.m_ViewProj = proj * view;
+
+      {
+         void* data;
+         mSceneBuffer.Map(&data);
+         memcpy((char*)data + (frameIndex * sizeof(SceneUBO)), &mSceneUbo, sizeof(SceneUBO));
+         mSceneBuffer.UnMap();
+      }
+   }
+
    VkCommandBufferBeginInfo beginInfo{};
    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
    beginInfo.flags = 0; // Optional
@@ -175,18 +202,20 @@ void Application::Draw() {
       }
    }
 
-   VkClearValue clearColor{};
-   clearColor.color.float32[0] = abs(sin((frameCounter * 0.5f) / 5000.0f));
-   clearColor.color.float32[1] = abs(sin((frameCounter * 0.2f) / 5000.0f));
-   clearColor.color.float32[2] = abs(sin((frameCounter * 0.1f) / 5000.0f));
-   clearColor.color.float32[3] = 1.0f;
+   VkClearValue clearColor[2];
+   clearColor[0].color.float32[0] = abs(sin((frameCounter * 0.5f) / 5000.0f));
+   clearColor[0].color.float32[1] = abs(sin((frameCounter * 0.2f) / 5000.0f));
+   clearColor[0].color.float32[2] = abs(sin((frameCounter * 0.1f) / 5000.0f));
+   clearColor[0].color.float32[3] = 1.0f;
+   clearColor[1].depthStencil.depth = 1.0f;
+   clearColor[1].depthStencil.stencil = 0.0f;
 
    VkRenderPassBeginInfo renderBegin{};
    renderBegin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
    renderBegin.renderArea.extent = rt.GetSize();
    renderBegin.renderPass = rp.GetRenderPass();//mVkManager->GetPresentRenderPass()->GetRenderPass();
-   renderBegin.clearValueCount = 1;
-   renderBegin.pClearValues = &clearColor;
+   renderBegin.clearValueCount = 2;
+   renderBegin.pClearValues = clearColor;
    renderBegin.framebuffer = rt.GetFramebuffer().GetFramebuffer();//mVkManager->GetPresentFramebuffer(frameIndex)->GetFramebuffer();
    vkCmdBeginRenderPass(buffer, &renderBegin, VK_SUBPASS_CONTENTS_INLINE);
    VkViewport viewport = rt.GetViewport();
@@ -201,6 +230,8 @@ void Application::Draw() {
    vkCmdDraw(buffer, 6, 1, 0, 0);
 
    vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline.GetPipeline());
+   uint32_t descriptorSetOffsets[] = { (frameIndex * sizeof(SceneUBO)),0};
+   vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline.GetPipelineLayout(), 0, 1, &mSceneSet, 2, descriptorSetOffsets);
    mModelTest.Render(buffer, mPipeline.GetPipelineLayout(), RenderMode::NORMAL);
 
    vkCmdEndRenderPass(buffer);

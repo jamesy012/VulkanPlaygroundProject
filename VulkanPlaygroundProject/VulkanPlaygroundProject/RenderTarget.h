@@ -21,11 +21,12 @@ public:
    }
 
 private:
-   VkImage mColor;
+   VkImage mColor = VK_NULL_HANDLE;
    VmaAllocation mColorAllocation;
-   VkImage mDepth;
-   VkImageView mColorView;
-   VkImageView mDepthView;
+   VkImage mDepth = VK_NULL_HANDLE;
+   VmaAllocation mDepthAllocation;
+   VkImageView mColorView = VK_NULL_HANDLE;
+   VkImageView mDepthView = VK_NULL_HANDLE;
    Framebuffer mFramebuffer;
    VkExtent2D mExtent;
 };

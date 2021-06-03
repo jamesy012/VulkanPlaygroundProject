@@ -945,7 +945,8 @@ void VulkanManager::CreateSizeDependent() {
    if (mPresentFramebuffer.size() == 0) {
       mPresentFramebuffer.resize(mNumSwapChainImages);
       for (uint32_t i = 0; i < mNumSwapChainImages; i++) {
-         mPresentFramebuffer[i].Create(mDevice, mSwapChainExtent, &mPresentRenderPass, mSwapChainImageViews[i]);
+         std::vector<VkImageView> view = { mSwapChainImageViews[i] };
+         mPresentFramebuffer[i].Create(mDevice, mSwapChainExtent, &mPresentRenderPass, view);
       }
    }
 }

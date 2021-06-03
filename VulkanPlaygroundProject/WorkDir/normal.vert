@@ -14,11 +14,15 @@ layout(location = 2) out vec3 fragNormal;
 layout(location = 3) out vec3 fragPos;
 layout(location = 4) out vec3 fragTangent;
 
+layout(set = 0, binding = 0) uniform SceneBuffer{   
+	mat4 viewproj; 
+} sceneData;
+
 void main() {
     mat4 modelScene = mat4(1.0);
     mat3 modelSceneMat3 = mat3(modelScene);
     vec4 pos = modelScene * vec4(inPosition, 1.0);
-    gl_Position = modelScene * pos;
+    gl_Position = sceneData.viewproj * pos;
 
     fragPos = pos.xyz;
     fragNormal = normalize(modelSceneMat3 * inNorm);

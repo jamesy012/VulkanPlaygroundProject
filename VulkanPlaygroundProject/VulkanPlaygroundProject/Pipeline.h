@@ -7,6 +7,7 @@ class Pipeline {
 public:
    bool AddShader(std::string aPath, bool aForceReload = false);
    void SetVertexType(VertexType& aType);
+   void AddDescriptorSetLayout(VkDescriptorSetLayout aSetLayout);
    bool Create(const VkExtent2D aSize, const RenderPass* aRenderPass);
    void Destroy();
 
@@ -24,6 +25,7 @@ private:
    };
    std::vector<Shader> mShaders;
    std::vector<VkDynamicState> mDynamicStates;
+   std::vector<VkDescriptorSetLayout> mDescriptorSets;
    VertexType* mVertexType;
 
    VkPipeline mPipeline = VK_NULL_HANDLE;

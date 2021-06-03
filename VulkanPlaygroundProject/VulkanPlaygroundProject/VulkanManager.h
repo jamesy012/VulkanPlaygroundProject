@@ -4,6 +4,7 @@
 #include "Framebuffer.h"
 
 class Window;
+class RenderPass;
 
 class VulkanManager {
 public:
@@ -30,8 +31,8 @@ public:
    const VkExtent2D GetSwapchainExtent() const {
       return mSwapChainExtent;
    }
-   const VkViewport GetSwapchainViewport() const {
-      return {0,0,static_cast<float>(mSwapChainExtent.width), static_cast<float>(mSwapChainExtent.height), 0, 1};
+   const float GetSwapchainAspect() const {
+      return mSwapChainExtent.width / (float)mSwapChainExtent.height;
    }
    const RenderPass* GetPresentRenderPass() const {
       return &mPresentRenderPass;

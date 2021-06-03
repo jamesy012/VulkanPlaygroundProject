@@ -13,3 +13,6 @@
 [submodule "Libraries/VulkanMemoryAllocator"]
 	path = Libraries/VulkanMemoryAllocator
 	url = https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
+[submodule "VulkanPlaygroundProject/WorkDir/sponza"]
+	path = VulkanPlaygroundProject/WorkDir/sponza
+	url = https://github.com/jimmiebergmann/Sponza.git
