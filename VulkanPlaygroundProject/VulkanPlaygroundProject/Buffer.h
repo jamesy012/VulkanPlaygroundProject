@@ -1,4 +1,5 @@
 #pragma once
+
 class Buffer {
 public:
    virtual bool Create(VkDeviceSize aSize) = 0;
@@ -59,9 +60,84 @@ public:
    }
 };
 
-class BufferUniform : public Buffer {
+class BufferUniform : protected Buffer {
 public:
+   bool Create(uint32_t aCount, VkDeviceSize aStructSize, VkDescriptorSet aDescriptorSet, uint32_t aBinding) {
+      mStructSize = aStructSize;
+      mAllignedStructSize = RoundUp(aStructSize, _VulkanManager->GetUniformBufferAllignment());
+      mCount = aCount;
+      bool res = Create(aCount * (uint32_t)mAllignedStructSize);
+      if (!res) {
+         return false;
+      }
+
+
+      mDescriptorSet = aDescriptorSet;
+      mBinding = aBinding;
+
+      VkDescriptorBufferInfo bufferInfo{};
+      bufferInfo.buffer = GetBuffer();
+      bufferInfo.range = mStructSize;
+      VkWriteDescriptorSet sceneSet = CreateWriteDescriptorSet(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, aDescriptorSet, &bufferInfo, aBinding);
+      vkUpdateDescriptorSets(_VulkanManager->GetDevice(), 1, &sceneSet, 0, nullptr);
+      return true;
+   }
+
+   void Destroy() {
+      //vkFreeDescriptorSets(_VulkanManager->GetDevice(), mDescriptorPool, 1, &mDescriptorSet); //needs VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT and needs to know the pool too
+      Buffer::Destroy();
+   }
+
+   const VkDescriptorSet GetDescriptorSet() const {
+      return mDescriptorSet;
+   }
+
+   const uint32_t GetStructSize() const {
+      return mStructSize;
+   }
+
+protected:
    bool Create(VkDeviceSize aSize) override {
       return Buffer::Create(aSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
    }
+   uint32_t mCount;
+   VkDeviceSize mStructSize;
+   VkDeviceSize mAllignedStructSize;
+
+   VkDescriptorSet mDescriptorSet;
+   uint32_t mBinding;
+};
+
+class BufferRingUniform : public BufferUniform {
+public:
+
+   const uint32_t GetCurrentOffset() const {
+      return mCurrentOffset;
+   }
+
+   void Get(void** aData) {
+      uint32_t offset;
+      Get(aData, offset);
+   }
+
+   void Get(void** aData, uint32_t& aOffset) {
+      assert(mInUse == false);
+      mInUse = true;
+      void* data;
+      Map(&data);
+      mCurrentOffset = aOffset = (mAllignedStructSize * mOffsetCount++);
+      *aData = ((char*)data + aOffset);
+      if (mOffsetCount >= mCount) {
+         mOffsetCount = 0;
+      }
+   }
+
+   void Return() {
+      UnMap();
+      mInUse = false;
+   }
+private:
+   uint32_t mCurrentOffset;
+   uint16_t mOffsetCount = 0;
+   bool mInUse = false;
 };

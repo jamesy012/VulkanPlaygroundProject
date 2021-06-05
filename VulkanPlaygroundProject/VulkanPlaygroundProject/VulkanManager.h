@@ -51,9 +51,11 @@ public:
    const VkFormat& GetColorFormat() const {
       return mSwapChainImageFormat;
    }
-
    const bool DidResizeLastFrame() const {
       return mResizedLastRender;
+   }
+   const VkDeviceSize GetUniformBufferAllignment() const {
+      return mDeviceProperties.limits.minUniformBufferOffsetAlignment;
    }
 private:
    bool CreateInstance();

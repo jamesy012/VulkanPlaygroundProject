@@ -6,6 +6,43 @@
 struct aiScene;
 struct aiNode;
 
+struct Descriptor {
+public:
+   //typedef std::function<void(void*)> DescriptorCallback;
+   typedef std::function<void()> DescriptorCallback;
+   Descriptor(VkCommandBuffer aCommandBuffer, VkPipelineLayout aPipelineLayout, BufferRingUniform* aSceneBuffer, BufferRingUniform* aObjectBuffer, DescriptorCallback aSetup) {
+      mCommandBuffer = aCommandBuffer;
+      mPipelineLayout = aPipelineLayout;
+      mSceneBuffer = aSceneBuffer;
+      mObjectBuffer = aObjectBuffer;
+      mModelRenderUniformCallback = aSetup;
+
+      mDescriptorSet = aSceneBuffer->GetDescriptorSet();
+   }
+
+   void UpdateObjectAndBind(void* aData) {
+      void* objectUbo;
+      mObjectBuffer->Get((void**)&objectUbo);
+      memcpy(objectUbo, aData, mObjectBuffer->GetStructSize());
+      mObjectBuffer->Return();
+      BindDescriptorSet();
+   }
+
+   void BindDescriptorSet() {
+      uint32_t descriptorSetOffsets[] = { mSceneBuffer->GetCurrentOffset(), mObjectBuffer->GetCurrentOffset() };
+      vkCmdBindDescriptorSets(mCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipelineLayout, 0, 1, &mDescriptorSet, 2, descriptorSetOffsets);
+   }
+
+   DescriptorCallback mModelRenderUniformCallback;
+   BufferRingUniform* mSceneBuffer;
+   BufferRingUniform* mObjectBuffer;
+   VkCommandBuffer mCommandBuffer;
+   VkPipelineLayout mPipelineLayout;
+private:
+   VkDescriptorSet mDescriptorSet;
+};
+
+
 class Model {
    //~~~~~~~~~~ NODE/MESH
    struct Mesh {
@@ -44,7 +81,7 @@ class Model {
 
 public:
    bool LoadModel(std::string aPath);
-   void Render(VkCommandBuffer aCommandBuffer, VkPipelineLayout aPipelineLayout, RenderMode aRenderMode);
+   void Render(Descriptor* aRenderDescriptor, RenderMode aRenderMode);
 
    void SetPosition(glm::vec3 aPos) {
       mDirty = true;
@@ -104,7 +141,7 @@ public:
    }
 
 private:
-   void Render(VkCommandBuffer aCommandBuffer, VkPipelineLayout aPipelineLayout, RenderMode aRenderMode, Node* aNode, glm::mat4 aMatrix);
+   void Render(Descriptor* aRenderDescriptor, RenderMode aRenderMode, Node* aNode, glm::mat4 aMatrix);
    void ProcessMeshs(const aiScene* aScene);
    void ProcessMesh(const aiScene* aScene, const aiNode* aNode, Node* aParent);
 

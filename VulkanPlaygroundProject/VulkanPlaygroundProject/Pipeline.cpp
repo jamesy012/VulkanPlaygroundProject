@@ -226,7 +226,7 @@ bool Pipeline::Create(const VkExtent2D aSize, const RenderPass* aRenderPass) {
    rasterizer.rasterizerDiscardEnable = VK_FALSE;
    rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
    rasterizer.lineWidth = 1.0f;
-   rasterizer.cullMode = VK_CULL_MODE_FRONT_BIT;// mCullMode;
+   rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;// mCullMode;
    rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
    rasterizer.depthBiasEnable = VK_TRUE;
    rasterizer.depthBiasConstantFactor = 0.0f; // Optional

@@ -128,16 +128,23 @@ void Model::ProcessMesh(const aiScene* aScene, const aiNode* aNode, Node* aParen
    }
 }
 
-void Model::Render(VkCommandBuffer aCommandBuffer, VkPipelineLayout aPipelineLayout, RenderMode aRenderMode) {
+void Model::Render(Descriptor* aRenderDescriptor, RenderMode aRenderMode) {
    assert(aRenderMode != RenderMode::ALL);
    assert((aRenderMode & (aRenderMode-1)) == 0);
    if (!(mRenderModes & aRenderMode)) {
       return;
    }
-   mVertexBuffer.Bind(aCommandBuffer);
-   mIndexBuffer.Bind(aCommandBuffer);
+   mVertexBuffer.Bind(aRenderDescriptor->mCommandBuffer);
+   mIndexBuffer.Bind(aRenderDescriptor->mCommandBuffer);
 
-   Render(aCommandBuffer, aPipelineLayout, aRenderMode, mBase, glm::identity<glm::mat4>());
+   if (mDirty) {
+      mBase->mRenderMatrix = glm::translate(glm::mat4(1), mPosition);
+      mBase->mRenderMatrix *= glm::mat4(glm::quat(glm::radians(mRotation)));
+      mBase->mRenderMatrix = glm::scale(mBase->mRenderMatrix, mScale);
+      mDirty = false;
+   }
+
+   Render(aRenderDescriptor, aRenderMode, mBase, glm::identity<glm::mat4>());
 
 }
 
@@ -148,15 +155,19 @@ void Model::Destroy() {
    mIndices.clear();
 }
 
-void Model::Render(VkCommandBuffer aCommandBuffer, VkPipelineLayout aPipelineLayout, RenderMode aRenderMode, Node* aNode, glm::mat4 aMatrix) {
+void Model::Render(Descriptor* aRenderDescriptor, RenderMode aRenderMode, Node* aNode, glm::mat4 aMatrix) {
+   ObjectUBO ubo;
+   ubo.m_Model = aMatrix * aNode->GetMatrix();
+
    if (!aNode->mMesh.empty()) {
+      aRenderDescriptor->UpdateObjectAndBind(&ubo);
 
       for (int i = 0; i < aNode->mMesh.size(); i++) {
-         vkCmdDrawIndexed(aCommandBuffer, static_cast<uint32_t>(aNode->mMesh[i].mCount), 1, aNode->mMesh[i].mStartIndex, 0, 0);
+         vkCmdDrawIndexed(aRenderDescriptor->mCommandBuffer, static_cast<uint32_t>(aNode->mMesh[i].mCount), 1, aNode->mMesh[i].mStartIndex, 0, 0);
       }
    }
 
    for (int i = 0; i < aNode->mChildren.size(); i++) {
-      Render(aCommandBuffer, aPipelineLayout, aRenderMode, aNode->mChildren[i], glm::identity<glm::mat4>());
+      Render(aRenderDescriptor, aRenderMode, aNode->mChildren[i], ubo.m_Model);
    }
 }

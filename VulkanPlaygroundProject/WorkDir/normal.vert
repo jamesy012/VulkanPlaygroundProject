@@ -18,8 +18,12 @@ layout(set = 0, binding = 0) uniform SceneBuffer{
 	mat4 viewproj; 
 } sceneData;
 
+layout(set = 0, binding = 1) uniform ObjectBuffer{   
+	mat4 modelMatrix; 
+} objectData;
+
 void main() {
-    mat4 modelScene = mat4(1.0);
+    mat4 modelScene = objectData.modelMatrix;
     mat3 modelSceneMat3 = mat3(modelScene);
     vec4 pos = modelScene * vec4(inPosition, 1.0);
     gl_Position = sceneData.viewproj * pos;

@@ -5,6 +5,8 @@
 #include <assert.h>
 #include <vector>
 #include <iostream>
+#include <functional>
+
 
 #include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>
@@ -35,6 +37,17 @@ static void CheckVulkanResult(VkResult aResult) {
 #define ASSERT_VULKAN_SUCCESS(x) assert(x == VK_SUCCESS);
 #define ASSERT_VULKAN_SUCCESS_RET_FALSE(x) if(x != VK_SUCCESS){ASSERT_RET_FALSE("")};
 #define ASSERT_VALID(x) assert(x != nullptr);
+
+//~~~~~~~ OBJECTS
+
+struct SceneUBO {
+   glm::mat4 m_ViewProj;
+};
+
+struct ObjectUBO {
+   glm::mat4 m_Model;
+};
+
 
 //~~~~~~~ VULKAN HELPERS
 #define SIZEOF_ARRAY(x) sizeof(x) / sizeof(x[0]);
@@ -160,9 +173,7 @@ static int RoundUp(int number, int multiple) {
 }
 
 static VkDeviceSize RoundUp(int number, VkDeviceSize multiple) {
-   assert(multiple);
-   int isPositive = (int)(number >= 0);
-   return ((number + isPositive * (multiple - 1)) / multiple) * multiple;
+   return RoundUp(number, (int)multiple);
 }
 
 //~~~~~~ Logging

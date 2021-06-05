@@ -23,16 +23,8 @@ VkDescriptorPool mDescriptorPool;
 VkDescriptorSetLayout mDescriptorSet;
 VkDescriptorSet mSceneSet;
 VkDescriptorSet mObjectSet;
-BufferUniform mSceneBuffer;
-BufferUniform mObjectBuffer;
-
-struct SceneUBO {
-   glm::mat4 m_ViewProj;
-};
-
-struct ObjectUBO {
-   glm::mat4 m_Model;
-};
+BufferRingUniform mSceneBuffer;
+BufferRingUniform mObjectBuffer;
 
 SceneUBO mSceneUbo{};
 ObjectUBO mObjectUbo{};
@@ -98,8 +90,6 @@ void Application::Start() {
 
    mModelTest.LoadModel(GetWorkDir()+"Sponza/Sponza.obj");
 
-   mSceneBuffer.Create(sizeof(SceneUBO) * 3);
-   mObjectBuffer.Create(sizeof(ObjectUBO) * 100);
 
    VkDescriptorPoolCreateInfo poolCreate{};
    poolCreate.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -114,16 +104,10 @@ void Application::Start() {
    setAllocate.descriptorSetCount = 1;
    setAllocate.pSetLayouts = &mDescriptorSet;
    vkAllocateDescriptorSets(mVkManager->GetDevice(), &setAllocate, &mSceneSet);
-   VkDescriptorBufferInfo sceneBufferInfo{};
-   sceneBufferInfo.buffer = mSceneBuffer.GetBuffer();
-   sceneBufferInfo.range = sizeof(SceneUBO);
-   VkDescriptorBufferInfo objectBufferInfo{};
-   objectBufferInfo.buffer = mObjectBuffer.GetBuffer();
-   objectBufferInfo.range = sizeof(ObjectUBO);
-   VkWriteDescriptorSet sceneSet = CreateWriteDescriptorSet(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, mSceneSet, &sceneBufferInfo, 0);
-   VkWriteDescriptorSet objectSet = CreateWriteDescriptorSet(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, mSceneSet, &objectBufferInfo, 1);
-   VkWriteDescriptorSet writeSets[] = { sceneSet, objectSet };
-   vkUpdateDescriptorSets(mVkManager->GetDevice(), 2, writeSets, 0, nullptr);
+
+
+   mSceneBuffer.Create(3, sizeof(SceneUBO), mSceneSet, 0);
+   mObjectBuffer.Create(100, sizeof(ObjectUBO), mSceneSet, 1);
   
 }
 
@@ -173,7 +157,7 @@ void Application::Draw() {
 
    //update
    {
-      static glm::vec3 pos = glm::vec3(500, 500, 100);
+      static glm::vec3 pos = glm::vec3(130, 50, 150);
       ImGui::Begin("Camera");
       ImGui::DragFloat3("Pos", glm::value_ptr(pos));//, 0.01f);
       ImGui::End();
@@ -184,10 +168,12 @@ void Application::Draw() {
 
       {
          void* data;
-         mSceneBuffer.Map(&data);
-         memcpy((char*)data + (frameIndex * sizeof(SceneUBO)), &mSceneUbo, sizeof(SceneUBO));
-         mSceneBuffer.UnMap();
+         mSceneBuffer.Get(&data);
+         memcpy(data, &mSceneUbo, sizeof(SceneUBO));
+         mSceneBuffer.Return();
       }
+
+      mModelTest.SetRotation(glm::vec3(0, frameCounter * 0.07f, 0));
    }
 
    VkCommandBufferBeginInfo beginInfo{};
@@ -230,9 +216,11 @@ void Application::Draw() {
    vkCmdDraw(buffer, 6, 1, 0, 0);
 
    vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline.GetPipeline());
-   uint32_t descriptorSetOffsets[] = { (frameIndex * sizeof(SceneUBO)),0};
-   vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline.GetPipelineLayout(), 0, 1, &mSceneSet, 2, descriptorSetOffsets);
-   mModelTest.Render(buffer, mPipeline.GetPipelineLayout(), RenderMode::NORMAL);
+   //uint32_t descriptorSetOffsets[] = { (frameIndex * sizeof(SceneUBO)),0};
+   //vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline.GetPipelineLayout(), 0, 1, &mSceneSet, 2, descriptorSetOffsets);
+
+   Descriptor des = Descriptor(buffer, mPipeline.GetPipelineLayout(), &mSceneBuffer, &mObjectBuffer, []() {});
+   mModelTest.Render(&des, RenderMode::NORMAL);
 
    vkCmdEndRenderPass(buffer);
 
