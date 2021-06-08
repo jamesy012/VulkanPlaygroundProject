@@ -3,19 +3,18 @@
 #include "Vertex.h"
 #include "Buffer.h"
 
+#include "Image.h"
+
 struct aiScene;
 struct aiNode;
 
-struct Descriptor {
+struct DescriptorUBO {
 public:
-   //typedef std::function<void(void*)> DescriptorCallback;
-   typedef std::function<void()> DescriptorCallback;
-   Descriptor(VkCommandBuffer aCommandBuffer, VkPipelineLayout aPipelineLayout, BufferRingUniform* aSceneBuffer, BufferRingUniform* aObjectBuffer, DescriptorCallback aSetup) {
+   DescriptorUBO(VkCommandBuffer aCommandBuffer, VkPipelineLayout aPipelineLayout, BufferRingUniform* aSceneBuffer, BufferRingUniform* aObjectBuffer) {
       mCommandBuffer = aCommandBuffer;
       mPipelineLayout = aPipelineLayout;
       mSceneBuffer = aSceneBuffer;
       mObjectBuffer = aObjectBuffer;
-      mModelRenderUniformCallback = aSetup;
 
       mDescriptorSet = aSceneBuffer->GetDescriptorSet();
    }
@@ -33,7 +32,6 @@ public:
       vkCmdBindDescriptorSets(mCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipelineLayout, 0, 1, &mDescriptorSet, 2, descriptorSetOffsets);
    }
 
-   DescriptorCallback mModelRenderUniformCallback;
    BufferRingUniform* mSceneBuffer;
    BufferRingUniform* mObjectBuffer;
    VkCommandBuffer mCommandBuffer;
@@ -54,9 +52,8 @@ class Model {
 
    struct Node {
       Node() {
-         mRenderMatrix = /*m_Matrix =*/ glm::identity<glm::mat4>();
+         mRenderMatrix = glm::identity<glm::mat4>();
       }
-
 
       glm::mat4 GetMatrixWithParents() {
          Node* parent = mParent;
@@ -79,9 +76,29 @@ class Model {
       std::vector<Mesh> mMesh;
    };
 
+   enum class ImageType {
+      DIFFUSE,
+      NORMAL
+   };
+
+   struct Material {
+      std::vector<Image*> mDiffuse;
+      std::vector<Image*> mNormal;
+   };
+
+   struct ImageLoader {
+      std::string mPath;
+      std::vector<Material*> mMaterialRef;
+      ImageType mType;
+   };
+
+   std::vector<ImageLoader> mImageLoader;
+   std::vector<Image> mImages;//break out to image manager class?
+   std::vector<Material> mMaterials;
+
 public:
    bool LoadModel(std::string aPath);
-   void Render(Descriptor* aRenderDescriptor, RenderMode aRenderMode);
+   void Render(DescriptorUBO* aRenderDescriptor, RenderMode aRenderMode);
 
    void SetPosition(glm::vec3 aPos) {
       mDirty = true;
@@ -141,9 +158,11 @@ public:
    }
 
 private:
-   void Render(Descriptor* aRenderDescriptor, RenderMode aRenderMode, Node* aNode, glm::mat4 aMatrix);
+   void Render(DescriptorUBO* aRenderDescriptor, RenderMode aRenderMode, Node* aNode, glm::mat4 aMatrix);
    void ProcessMeshs(const aiScene* aScene);
    void ProcessMesh(const aiScene* aScene, const aiNode* aNode, Node* aParent);
+   void ProcessMaterials(const aiScene* aScene);
+   void LoadImages();
 
    std::vector<Mesh*> mMeshs;
    Node* mBase;

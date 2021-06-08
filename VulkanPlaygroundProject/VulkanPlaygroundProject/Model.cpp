@@ -14,6 +14,8 @@ static inline glm::mat4 mat4_cast(const aiMatrix4x4& m) { return glm::transpose(
 static inline glm::mat4 mat4_cast(const aiMatrix3x3& m) { return glm::transpose(glm::make_mat3(&m.a1)); }
 
 bool Model::LoadModel(std::string aPath) {
+   LOG_SCOPED_NAME("Model Loading");
+   LOG("%s\n", aPath.c_str());
    Assimp::Importer importer;
    const aiScene* scene = importer.ReadFile(aPath,
                              aiProcess_CalcTangentSpace |
@@ -34,8 +36,13 @@ bool Model::LoadModel(std::string aPath) {
       index = mName.find_last_of('.');
       mName = mName.substr(0, index);
    }
-
+   LOG("Starting Mesh\n");
    ProcessMeshs(scene);
+   LOG("Starting Materials\n");
+   ProcessMaterials(scene);
+   LOG("Starting Images\n");
+   LoadImages();
+   LOG("Done\n");
    return true;
 }
 
@@ -128,7 +135,79 @@ void Model::ProcessMesh(const aiScene* aScene, const aiNode* aNode, Node* aParen
    }
 }
 
-void Model::Render(Descriptor* aRenderDescriptor, RenderMode aRenderMode) {
+void Model::ProcessMaterials(const aiScene* aScene) {
+   mMaterials.resize(aScene->mNumMaterials);
+
+   for (unsigned int matIdx = 0; matIdx < aScene->mNumMaterials; matIdx++) {
+      aiMaterial* assimpMaterial = aScene->mMaterials[matIdx];
+      Material* material = &mMaterials[matIdx];
+      const int numTypes = 2;
+      const aiTextureType assimpTypes[numTypes] = { aiTextureType_DIFFUSE, aiTextureType_NORMALS };
+      for (int imgType = 0; imgType < numTypes; imgType++) {
+         const int numTextures = assimpMaterial->GetTextureCount(assimpTypes[imgType]);
+
+         for (int imgIdx = 0; imgIdx < numTextures; imgIdx++) {
+            aiString path;
+            //These cause a memory fault when used??
+            //aiTextureMapping mapping;
+            //unsigned int uvIndex;
+            //ai_real blend;
+            //aiTextureOp op;
+            //aiTextureMapMode mapMode;
+
+            //if (assimpMaterial->GetTexture(assimpTypes[i], imgIdx, &path, &mapping, &uvIndex, &blend, &op, &mapMode) == AI_FAILURE) {
+            if (assimpMaterial->GetTexture(assimpTypes[imgType], imgIdx, &path) == AI_FAILURE) {
+               continue;
+            }
+
+            std::string filePath = path.C_Str();
+            ImageLoader* imgLoader = nullptr;
+            for (size_t i = 0; i < mImageLoader.size(); i++) {
+               if (mImageLoader[i].mPath.compare(filePath) == 0) {
+                  imgLoader = &mImageLoader[i];
+                  break;
+               }
+            }
+
+            //we have already seen this image
+            if (imgLoader == nullptr) {
+               ImageLoader loader;
+               loader.mPath = filePath;
+               loader.mType = ImageType(imgType);
+               mImageLoader.push_back(loader);
+               imgLoader = &mImageLoader[mImageLoader.size() - 1];
+            }
+            imgLoader->mMaterialRef.push_back(material);
+         }
+      }
+   }
+}
+
+void Model::LoadImages() {
+   mImages.resize(mImageLoader.size());
+   for (size_t i = 0; i < mImageLoader.size(); i++) {
+      const ImageLoader& imgLoader = mImageLoader[i];
+      Image* img = &mImages[i];
+
+      img->LoadImage(mPath + imgLoader.mPath);
+
+      for (size_t materials = 0; materials < imgLoader.mMaterialRef.size(); materials++) {
+         switch (imgLoader.mType) {
+            case ImageType::DIFFUSE:
+               imgLoader.mMaterialRef[materials]->mDiffuse.push_back(img);
+               break;
+            case ImageType::NORMAL:
+               imgLoader.mMaterialRef[materials]->mNormal.push_back(img);
+               break;
+            default:
+               assert(false);
+         }
+      }
+
+   }
+}
+
+void Model::Render(DescriptorUBO* aRenderDescriptor, RenderMode aRenderMode) {
    assert(aRenderMode != RenderMode::ALL);
    assert((aRenderMode & (aRenderMode-1)) == 0);
    if (!(mRenderModes & aRenderMode)) {
@@ -149,13 +228,16 @@ void Model::Render(Descriptor* aRenderDescriptor, RenderMode aRenderMode) {
 }
 
 void Model::Destroy() {
+   for (size_t i = 0; i < mImages.size(); i++) {
+      mImages[i].Destroy();
+   }
    mVertexBuffer.Destroy();
    mIndexBuffer.Destroy();
    mVertices.clear();
    mIndices.clear();
 }
 
-void Model::Render(Descriptor* aRenderDescriptor, RenderMode aRenderMode, Node* aNode, glm::mat4 aMatrix) {
+void Model::Render(DescriptorUBO* aRenderDescriptor, RenderMode aRenderMode, Node* aNode, glm::mat4 aMatrix) {
    ObjectUBO ubo;
    ubo.m_Model = aMatrix * aNode->GetMatrix();
 

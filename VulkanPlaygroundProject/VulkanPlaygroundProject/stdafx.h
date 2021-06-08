@@ -89,6 +89,18 @@ static VkWriteDescriptorSet  CreateWriteDescriptorSet(VkDescriptorType aType, Vk
    return set;
 }
 
+static VkWriteDescriptorSet  CreateWriteDescriptorSet(VkDescriptorType aType, VkDescriptorSet aDstSet, VkDescriptorImageInfo* aImageInfo, uint32_t aBinding) {
+   VkWriteDescriptorSet set{};
+   set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+   set.descriptorCount = 1;
+   set.pImageInfo = aImageInfo;
+   set.descriptorType = aType;
+
+   set.dstBinding = aBinding;
+   set.dstSet = aDstSet;
+   return set;
+}
+
 static void SetImageLayout(VkCommandBuffer aBuffer, VkImage aImage, VkImageAspectFlags aAspectMask, VkImageLayout aOldImageLayout,
                     VkImageLayout aNewImageLayout, VkPipelineStageFlags aSrcStages, VkPipelineStageFlags aDestStages) {
 

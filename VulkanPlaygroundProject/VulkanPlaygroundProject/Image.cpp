@@ -60,9 +60,24 @@ void Image::LoadImage(std::string aPath) {
    }
 
    staging.Destroy();
+
+   {
+      VkImageViewCreateInfo imageViewInfo{};
+      imageViewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+      imageViewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+      imageViewInfo.format = VK_FORMAT_R8G8B8A8_SRGB;
+      imageViewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+      imageViewInfo.subresourceRange.baseArrayLayer = 0;
+      imageViewInfo.subresourceRange.layerCount = 1;
+      imageViewInfo.subresourceRange.baseMipLevel = 0;
+      imageViewInfo.subresourceRange.levelCount = 1;
+      imageViewInfo.image = mImage;
+      vkCreateImageView(_VulkanManager->GetDevice(), &imageViewInfo, GetAllocationCallback(), &mImageView);
+   }
 }
 
 void Image::Destroy() {
+   vkDestroyImageView(_VulkanManager->GetDevice(), mImageView, GetAllocationCallback());
    vmaDestroyImage(_VulkanManager->GetAllocator(), mImage, mAllocation);
 }
 
@@ -72,7 +87,7 @@ bool Image::CreateImage() {
    imageInfo.extent.width = mWidth;
    imageInfo.extent.height = mHeight;
    imageInfo.extent.depth = 1;
-   imageInfo.format = VK_FORMAT_R8G8B8A8_UINT;
+   imageInfo.format = VK_FORMAT_R8G8B8A8_SRGB;
    imageInfo.mipLevels = 1;
    imageInfo.arrayLayers = 1;
    imageInfo.tiling = VK_IMAGE_TILING_LINEAR;

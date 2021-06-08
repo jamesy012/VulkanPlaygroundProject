@@ -17,13 +17,17 @@
 
 RenderPass rp;
 RenderTarget rt;
+Image img;
+
+VkSampler sampler;
 
 #define MAX_DESCRIPTOR_SETS 50
 VkDescriptorPoolSize poolSizes[2] = { { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, MAX_DESCRIPTOR_SETS }, { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, MAX_DESCRIPTOR_SETS} };
 VkDescriptorPool mDescriptorPool;
 VkDescriptorSetLayout mObjectDescriptorSet;
+VkDescriptorSetLayout mMaterialDescriptorSet;
 VkDescriptorSet mSceneSet;
-VkDescriptorSet mObjectSet;
+VkDescriptorSet mMaterialSet;
 BufferRingUniform mSceneBuffer;
 BufferRingUniform mObjectBuffer;
 
@@ -43,7 +47,7 @@ void Application::Start() {
    verts[3].pos = glm::vec2(1.0f, -1.0f);
    verts[4].pos = glm::vec2(1.0f, 1.0f);
    verts[5].pos = glm::vec2(-1.0f, 1.0f);
-   mScreenQuad.Create(sizeof(VertexSimple)*6);
+   mScreenQuad.Create(sizeof(VertexSimple) * 6);
    BufferStaging staging;
    staging.Create(mScreenQuad.GetSize());
    {
@@ -69,50 +73,97 @@ void Application::Start() {
    rp.Create(mVkManager->GetDevice(), mVkManager->GetColorFormat(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_FORMAT_D32_SFLOAT_S8_UINT);
    rt.Create(mVkManager->GetDevice(), &rp, mVkManager->GetSwapchainExtent(), true);
 
-   VkDescriptorSetLayoutBinding sceneLayout = CreateDescriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT, 0);
-   VkDescriptorSetLayoutBinding objectLayout = CreateDescriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT, 1);
-   VkDescriptorSetLayoutBinding bindings[] = { sceneLayout, objectLayout };
-   VkDescriptorSetLayoutCreateInfo layoutInfo{};
-   layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-   layoutInfo.bindingCount = 2;
-   layoutInfo.pBindings = bindings;
-   vkCreateDescriptorSetLayout(mVkManager->GetDevice(), &layoutInfo, GetAllocationCallback(), &mObjectDescriptorSet);
+   {
+      {
+         VkSamplerCreateInfo samplerInfo{};
+         samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+         samplerInfo.magFilter = VK_FILTER_LINEAR;
+         samplerInfo.minFilter = VK_FILTER_LINEAR;
+         samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+         samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+         samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+         samplerInfo.anisotropyEnable = VK_TRUE;
 
-   mPipeline.AddShader(GetWorkDir() + "normal.vert");
-   mPipeline.AddShader(GetWorkDir() + "normal.frag");
-   mPipeline.SetVertexType(VertexTypeDefault);
-   mPipeline.AddDescriptorSetLayout(mObjectDescriptorSet);
-   mPipeline.Create(mVkManager->GetSwapchainExtent(), &rp);
+         VkPhysicalDeviceProperties properties{};
+         //vkGetPhysicalDeviceProperties(physicalDevice, &properties);
+         //samplerInfo.maxAnisotropy = properties.limits.maxSamplerAnisotropy;
+         samplerInfo.maxAnisotropy = 1;
+         samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+         samplerInfo.unnormalizedCoordinates = VK_FALSE;
+         samplerInfo.compareEnable = VK_FALSE;
+         samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+         samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+         samplerInfo.mipLodBias = 0.0f;
+         samplerInfo.minLod = 0.0f;
+         samplerInfo.maxLod = 0.0f;
 
-   mPipelineTest.AddShader(GetWorkDir() + "test.vert");
-   mPipelineTest.AddShader(GetWorkDir() + "test.frag");
-   mPipelineTest.SetVertexType(VertexTypeSimple);
-   mPipelineTest.Create(mVkManager->GetSwapchainExtent(), &rp);
+         if (vkCreateSampler(mVkManager->GetDevice(), &samplerInfo, nullptr, &sampler) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create texture gltfSampler!");
+         }
+      }
 
-   mModelTest.LoadModel(GetWorkDir()+"Sponza/Sponza.obj");
+      {
+         VkDescriptorSetLayoutBinding sceneLayout = CreateDescriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT, 0);
+         VkDescriptorSetLayoutBinding objectLayout = CreateDescriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT, 1);
+         VkDescriptorSetLayoutBinding bindings[] = { sceneLayout, objectLayout };
+         VkDescriptorSetLayoutCreateInfo layoutInfo{};
+         layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+         layoutInfo.bindingCount = 2;
+         layoutInfo.pBindings = bindings;
+         vkCreateDescriptorSetLayout(mVkManager->GetDevice(), &layoutInfo, GetAllocationCallback(), &mObjectDescriptorSet);
+      }
+      {
+         VkDescriptorSetLayoutBinding materialLayout = CreateDescriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0);
+         VkDescriptorSetLayoutBinding bindings[] = { materialLayout };
+         VkDescriptorSetLayoutCreateInfo layoutInfo{};
+         layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+         layoutInfo.bindingCount = 1;
+         layoutInfo.pBindings = bindings;
+         vkCreateDescriptorSetLayout(mVkManager->GetDevice(), &layoutInfo, GetAllocationCallback(), &mMaterialDescriptorSet);
+      }
+      
+      {
+         mPipeline.AddShader(GetWorkDir() + "normal.vert");
+         mPipeline.AddShader(GetWorkDir() + "normal.frag");
+         mPipeline.SetVertexType(VertexTypeDefault);
+         mPipeline.AddDescriptorSetLayout(mObjectDescriptorSet);
+         mPipeline.AddDescriptorSetLayout(mMaterialDescriptorSet);
+         mPipeline.Create(mVkManager->GetSwapchainExtent(), &rp);
+
+         mPipelineTest.AddShader(GetWorkDir() + "test.vert");
+         mPipelineTest.AddShader(GetWorkDir() + "test.frag");
+         mPipelineTest.SetVertexType(VertexTypeSimple);
+         mPipelineTest.Create(mVkManager->GetSwapchainExtent(), &rp);
+      }
+
+      mModelTest.LoadModel(GetWorkDir() + "Sponza/Sponza.obj");
+
+      {
+         VkDescriptorPoolCreateInfo poolCreate{};
+         poolCreate.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+         poolCreate.maxSets = MAX_DESCRIPTOR_SETS;
+         poolCreate.poolSizeCount = SIZEOF_ARRAY(poolSizes);
+         poolCreate.pPoolSizes = poolSizes;
+         vkCreateDescriptorPool(mVkManager->GetDevice(), &poolCreate, GetAllocationCallback(), &mDescriptorPool);
+
+         VkDescriptorSetAllocateInfo setAllocate{};
+         setAllocate.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+         setAllocate.descriptorPool = mDescriptorPool;
+         setAllocate.descriptorSetCount = 1;
+         setAllocate.pSetLayouts = &mObjectDescriptorSet;
+         vkAllocateDescriptorSets(mVkManager->GetDevice(), &setAllocate, &mSceneSet);
+
+         setAllocate.pSetLayouts = &mMaterialDescriptorSet;
+         vkAllocateDescriptorSets(mVkManager->GetDevice(), &setAllocate, &mMaterialSet);
 
 
-   VkDescriptorPoolCreateInfo poolCreate{};
-   poolCreate.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-   poolCreate.maxSets = MAX_DESCRIPTOR_SETS;
-   poolCreate.poolSizeCount = SIZEOF_ARRAY(poolSizes);
-   poolCreate.pPoolSizes = poolSizes;
-   vkCreateDescriptorPool(mVkManager->GetDevice(), &poolCreate, GetAllocationCallback(), &mDescriptorPool);
-
-   VkDescriptorSetAllocateInfo setAllocate{};
-   setAllocate.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-   setAllocate.descriptorPool = mDescriptorPool;
-   setAllocate.descriptorSetCount = 1;
-   setAllocate.pSetLayouts = &mObjectDescriptorSet;
-   vkAllocateDescriptorSets(mVkManager->GetDevice(), &setAllocate, &mSceneSet);
-
-
-   mSceneBuffer.Create(3, sizeof(SceneUBO), mSceneSet, 0);
-   mObjectBuffer.Create(100, sizeof(ObjectUBO), mSceneSet, 1);
+         mSceneBuffer.Create(3, sizeof(SceneUBO), mSceneSet, 0);
+         mObjectBuffer.Create(100, sizeof(ObjectUBO), mSceneSet, 1);
+      }
+   }
   
-   Image img;
    img.LoadImage(GetWorkDir() + "Sponza/textures/background.tga");
-   img.Destroy();
+   ImageDes imageDes(&img, mMaterialSet, sampler, 0);
 }
 
 void Application::Run() {
@@ -129,12 +180,16 @@ void Application::Run() {
 void Application::Destroy() {
    mVkManager->WaitDevice();
 
+   vkDestroySampler(mVkManager->GetDevice(), sampler, GetAllocationCallback());
+   img.Destroy();
+
    {
-      VkDescriptorSet sets[] = { mSceneSet, mObjectSet };
+      VkDescriptorSet sets[] = { mSceneSet, mMaterialSet };
       //vkFreeDescriptorSets(mVkManager->GetDevice(), mDescriptorPool, 2, sets); //needs VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT
       mSceneBuffer.Destroy();
       mObjectBuffer.Destroy();
       vkDestroyDescriptorSetLayout(mVkManager->GetDevice(), mObjectDescriptorSet, GetAllocationCallback());
+      vkDestroyDescriptorSetLayout(mVkManager->GetDevice(), mMaterialDescriptorSet, GetAllocationCallback());
       vkDestroyDescriptorPool(mVkManager->GetDevice(), mDescriptorPool, GetAllocationCallback());
    }
 
@@ -222,8 +277,9 @@ void Application::Draw() {
    vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline.GetPipeline());
    //uint32_t descriptorSetOffsets[] = { (frameIndex * sizeof(SceneUBO)),0};
    //vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline.GetPipelineLayout(), 0, 1, &mSceneSet, 2, descriptorSetOffsets);
+   vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline.GetPipelineLayout(), 1, 1, &mMaterialSet, 0, nullptr);
 
-   Descriptor des = Descriptor(buffer, mPipeline.GetPipelineLayout(), &mSceneBuffer, &mObjectBuffer, []() {});
+   DescriptorUBO des = DescriptorUBO(buffer, mPipeline.GetPipelineLayout(), &mSceneBuffer, &mObjectBuffer);
    mObjectBuffer.Get();
    mModelTest.Render(&des, RenderMode::NORMAL);
    mObjectBuffer.Return();
