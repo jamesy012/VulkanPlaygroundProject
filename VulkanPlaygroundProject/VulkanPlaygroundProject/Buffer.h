@@ -29,6 +29,9 @@ private:
    VmaAllocation mAllocation;
    VkDeviceSize mSize = 0;
    VkDeviceSize mAllocatedSize = 0;
+   //number of times this is mapped, to track when to unmap or map the data
+   uint32_t mMapCounter = 0;
+   void* mMapPtr = nullptr;
 };
 
 class BufferVertex : public Buffer {
@@ -115,18 +118,22 @@ public:
       return mCurrentOffset;
    }
 
+   void Get() {
+      Map(nullptr);
+   }
+
    void Get(void** aData) {
       uint32_t offset;
       Get(aData, offset);
    }
 
    void Get(void** aData, uint32_t& aOffset) {
-      assert(mInUse == false);
-      mInUse = true;
       void* data;
       Map(&data);
       mCurrentOffset = aOffset = (mAllignedStructSize * mOffsetCount++);
-      *aData = ((char*)data + aOffset);
+      if (aData != nullptr) {
+         *aData = ((char*)data + aOffset);
+      }
       if (mOffsetCount >= mCount) {
          mOffsetCount = 0;
       }
@@ -134,10 +141,8 @@ public:
 
    void Return() {
       UnMap();
-      mInUse = false;
    }
 private:
    uint32_t mCurrentOffset;
    uint16_t mOffsetCount = 0;
-   bool mInUse = false;
 };

@@ -38,9 +38,16 @@ void Buffer::Destroy() {
 }
 
 void Buffer::Map(void** aData) {
-   vmaMapMemory(_VulkanManager->GetAllocator(), mAllocation, aData);
+   if (mMapCounter++ == 0) {
+      vmaMapMemory(_VulkanManager->GetAllocator(), mAllocation, &mMapPtr);
+   }
+   if (aData != nullptr) {
+      *aData = mMapPtr;
+   }
 }
 
 void Buffer::UnMap() {
-   vmaUnmapMemory(_VulkanManager->GetAllocator(), mAllocation);
+   if (--mMapCounter == 0) {
+      vmaUnmapMemory(_VulkanManager->GetAllocator(), mAllocation);
+   }
 }

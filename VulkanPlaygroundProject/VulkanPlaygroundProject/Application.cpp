@@ -13,14 +13,15 @@
 #include "RenderTarget.h"
 
 #include "Buffer.h"
+#include "Image.h"
 
 RenderPass rp;
 RenderTarget rt;
 
 #define MAX_DESCRIPTOR_SETS 50
-VkDescriptorPoolSize poolSizes[1] = { { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, MAX_DESCRIPTOR_SETS } };
+VkDescriptorPoolSize poolSizes[2] = { { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, MAX_DESCRIPTOR_SETS }, { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, MAX_DESCRIPTOR_SETS} };
 VkDescriptorPool mDescriptorPool;
-VkDescriptorSetLayout mDescriptorSet;
+VkDescriptorSetLayout mObjectDescriptorSet;
 VkDescriptorSet mSceneSet;
 VkDescriptorSet mObjectSet;
 BufferRingUniform mSceneBuffer;
@@ -75,12 +76,12 @@ void Application::Start() {
    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
    layoutInfo.bindingCount = 2;
    layoutInfo.pBindings = bindings;
-   vkCreateDescriptorSetLayout(mVkManager->GetDevice(), &layoutInfo, GetAllocationCallback(), &mDescriptorSet);
+   vkCreateDescriptorSetLayout(mVkManager->GetDevice(), &layoutInfo, GetAllocationCallback(), &mObjectDescriptorSet);
 
    mPipeline.AddShader(GetWorkDir() + "normal.vert");
    mPipeline.AddShader(GetWorkDir() + "normal.frag");
    mPipeline.SetVertexType(VertexTypeDefault);
-   mPipeline.AddDescriptorSetLayout(mDescriptorSet);
+   mPipeline.AddDescriptorSetLayout(mObjectDescriptorSet);
    mPipeline.Create(mVkManager->GetSwapchainExtent(), &rp);
 
    mPipelineTest.AddShader(GetWorkDir() + "test.vert");
@@ -102,13 +103,16 @@ void Application::Start() {
    setAllocate.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
    setAllocate.descriptorPool = mDescriptorPool;
    setAllocate.descriptorSetCount = 1;
-   setAllocate.pSetLayouts = &mDescriptorSet;
+   setAllocate.pSetLayouts = &mObjectDescriptorSet;
    vkAllocateDescriptorSets(mVkManager->GetDevice(), &setAllocate, &mSceneSet);
 
 
    mSceneBuffer.Create(3, sizeof(SceneUBO), mSceneSet, 0);
    mObjectBuffer.Create(100, sizeof(ObjectUBO), mSceneSet, 1);
   
+   Image img;
+   img.LoadImage(GetWorkDir() + "Sponza/textures/background.tga");
+   img.Destroy();
 }
 
 void Application::Run() {
@@ -130,7 +134,7 @@ void Application::Destroy() {
       //vkFreeDescriptorSets(mVkManager->GetDevice(), mDescriptorPool, 2, sets); //needs VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT
       mSceneBuffer.Destroy();
       mObjectBuffer.Destroy();
-      vkDestroyDescriptorSetLayout(mVkManager->GetDevice(), mDescriptorSet, GetAllocationCallback());
+      vkDestroyDescriptorSetLayout(mVkManager->GetDevice(), mObjectDescriptorSet, GetAllocationCallback());
       vkDestroyDescriptorPool(mVkManager->GetDevice(), mDescriptorPool, GetAllocationCallback());
    }
 
@@ -220,7 +224,9 @@ void Application::Draw() {
    //vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline.GetPipelineLayout(), 0, 1, &mSceneSet, 2, descriptorSetOffsets);
 
    Descriptor des = Descriptor(buffer, mPipeline.GetPipelineLayout(), &mSceneBuffer, &mObjectBuffer, []() {});
+   mObjectBuffer.Get();
    mModelTest.Render(&des, RenderMode::NORMAL);
+   mObjectBuffer.Return();
 
    vkCmdEndRenderPass(buffer);
 
