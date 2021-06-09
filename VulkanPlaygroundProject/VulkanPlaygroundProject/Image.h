@@ -28,14 +28,11 @@ private:
    int mSize;
 };
 
-class ImageDes {
-public:
-   ImageDes(Image* aImage, VkDescriptorSet aDescriptorSet, VkSampler aSampler, uint32_t aBinding) {
-      VkDescriptorImageInfo imageInfo{};
-      imageInfo.imageView = aImage->GetImageView();
-      imageInfo.imageLayout = aImage->GetImageLayout();
-      imageInfo.sampler = aSampler;
-      VkWriteDescriptorSet sceneSet = CreateWriteDescriptorSet(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, aDescriptorSet, &imageInfo, aBinding);
-      vkUpdateDescriptorSets(_VulkanManager->GetDevice(), 1, &sceneSet, 0, nullptr);
-   }
-};
+static void UpdateImageDescriptorSet(Image* aImage, VkDescriptorSet aDescriptorSet, VkSampler aSampler, uint32_t aBinding) {
+   VkDescriptorImageInfo imageInfo{};
+   imageInfo.imageView = aImage->GetImageView();
+   imageInfo.imageLayout = aImage->GetImageLayout();
+   imageInfo.sampler = aSampler;
+   VkWriteDescriptorSet sceneSet = CreateWriteDescriptorSet(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, aDescriptorSet, &imageInfo, aBinding);
+   vkUpdateDescriptorSets(_VulkanManager->GetDevice(), 1, &sceneSet, 0, nullptr);
+}

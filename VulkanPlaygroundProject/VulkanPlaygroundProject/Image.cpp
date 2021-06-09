@@ -24,6 +24,8 @@ void Image::LoadImage(std::string aPath) {
       staging.UnMap();
    }
 
+   stbi_image_free(pixels);
+
    CreateImage();
 
    {

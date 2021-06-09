@@ -13,7 +13,7 @@ static inline glm::quat quat_cast(const aiQuaternion& q) { return glm::quat(q.w,
 static inline glm::mat4 mat4_cast(const aiMatrix4x4& m) { return glm::transpose(glm::make_mat4(&m.a1)); }
 static inline glm::mat4 mat4_cast(const aiMatrix3x3& m) { return glm::transpose(glm::make_mat3(&m.a1)); }
 
-bool Model::LoadModel(std::string aPath) {
+bool Model::LoadModel(std::string aPath, VkDescriptorSetLayout aMaterialDescriptorSet) {
    LOG_SCOPED_NAME("Model Loading");
    LOG("%s\n", aPath.c_str());
    Assimp::Importer importer;
@@ -42,6 +42,23 @@ bool Model::LoadModel(std::string aPath) {
    ProcessMaterials(scene);
    LOG("Starting Images\n");
    LoadImages();
+
+   {
+      for (size_t i = 0; i < mMaterials.size(); i++) {
+         VkDescriptorSetAllocateInfo setAllocate{};
+         setAllocate.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+         setAllocate.descriptorPool = _VulkanManager->GetDescriptorPool();
+         setAllocate.descriptorSetCount = 1;
+         setAllocate.pSetLayouts = &aMaterialDescriptorSet;
+         vkAllocateDescriptorSets(_VulkanManager->GetDevice(), &setAllocate, &mMaterials[i].mDescriptorSet);
+
+         if (!mMaterials[i].mDiffuse.empty()) {
+            UpdateImageDescriptorSet(mMaterials[i].mDiffuse[0], mMaterials[i].mDescriptorSet, _VulkanManager->GetDefaultSampler(), 0);
+         }
+      }
+
+   }
+
    LOG("Done\n");
    return true;
 }
@@ -245,6 +262,11 @@ void Model::Render(DescriptorUBO* aRenderDescriptor, RenderMode aRenderMode, Nod
       aRenderDescriptor->UpdateObjectAndBind(&ubo);
 
       for (int i = 0; i < aNode->mMesh.size(); i++) {
+         Material& material = mMaterials[aNode->mMesh[i].mMaterialID];
+         if (!material.mDiffuse.empty()) {
+            vkCmdBindDescriptorSets(aRenderDescriptor->mCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, aRenderDescriptor->mPipelineLayout, 1, 1, &material.mDescriptorSet, 0, nullptr);
+         }
+
          vkCmdDrawIndexed(aRenderDescriptor->mCommandBuffer, static_cast<uint32_t>(aNode->mMesh[i].mCount), 1, aNode->mMesh[i].mStartIndex, 0, 0);
       }
    }

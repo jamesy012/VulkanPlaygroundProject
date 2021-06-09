@@ -44,6 +44,7 @@ private:
 class Model {
    //~~~~~~~~~~ NODE/MESH
    struct Mesh {
+      Mesh() {};
       int mMaterialID;
       int mCount;
       int mStartIndex;
@@ -84,6 +85,8 @@ class Model {
    struct Material {
       std::vector<Image*> mDiffuse;
       std::vector<Image*> mNormal;
+
+      VkDescriptorSet mDescriptorSet;
    };
 
    struct ImageLoader {
@@ -97,7 +100,7 @@ class Model {
    std::vector<Material> mMaterials;
 
 public:
-   bool LoadModel(std::string aPath);
+   bool LoadModel(std::string aPath, VkDescriptorSetLayout aMaterialDescriptorSet);
    void Render(DescriptorUBO* aRenderDescriptor, RenderMode aRenderMode);
 
    void SetPosition(glm::vec3 aPos) {

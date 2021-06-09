@@ -19,11 +19,6 @@ RenderPass rp;
 RenderTarget rt;
 Image img;
 
-VkSampler sampler;
-
-#define MAX_DESCRIPTOR_SETS 50
-VkDescriptorPoolSize poolSizes[2] = { { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, MAX_DESCRIPTOR_SETS }, { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, MAX_DESCRIPTOR_SETS} };
-VkDescriptorPool mDescriptorPool;
 VkDescriptorSetLayout mObjectDescriptorSet;
 VkDescriptorSetLayout mMaterialDescriptorSet;
 VkDescriptorSet mSceneSet;
@@ -75,34 +70,6 @@ void Application::Start() {
 
    {
       {
-         VkSamplerCreateInfo samplerInfo{};
-         samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-         samplerInfo.magFilter = VK_FILTER_LINEAR;
-         samplerInfo.minFilter = VK_FILTER_LINEAR;
-         samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-         samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-         samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-         samplerInfo.anisotropyEnable = VK_TRUE;
-
-         VkPhysicalDeviceProperties properties{};
-         //vkGetPhysicalDeviceProperties(physicalDevice, &properties);
-         //samplerInfo.maxAnisotropy = properties.limits.maxSamplerAnisotropy;
-         samplerInfo.maxAnisotropy = 1;
-         samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-         samplerInfo.unnormalizedCoordinates = VK_FALSE;
-         samplerInfo.compareEnable = VK_FALSE;
-         samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
-         samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-         samplerInfo.mipLodBias = 0.0f;
-         samplerInfo.minLod = 0.0f;
-         samplerInfo.maxLod = 0.0f;
-
-         if (vkCreateSampler(mVkManager->GetDevice(), &samplerInfo, nullptr, &sampler) != VK_SUCCESS) {
-            throw std::runtime_error("failed to create texture gltfSampler!");
-         }
-      }
-
-      {
          VkDescriptorSetLayoutBinding sceneLayout = CreateDescriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT, 0);
          VkDescriptorSetLayoutBinding objectLayout = CreateDescriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT, 1);
          VkDescriptorSetLayoutBinding bindings[] = { sceneLayout, objectLayout };
@@ -136,19 +103,12 @@ void Application::Start() {
          mPipelineTest.Create(mVkManager->GetSwapchainExtent(), &rp);
       }
 
-      mModelTest.LoadModel(GetWorkDir() + "Sponza/Sponza.obj");
+      mModelTest.LoadModel(GetWorkDir() + "Sponza/Sponza.obj", mMaterialDescriptorSet);
 
       {
-         VkDescriptorPoolCreateInfo poolCreate{};
-         poolCreate.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-         poolCreate.maxSets = MAX_DESCRIPTOR_SETS;
-         poolCreate.poolSizeCount = SIZEOF_ARRAY(poolSizes);
-         poolCreate.pPoolSizes = poolSizes;
-         vkCreateDescriptorPool(mVkManager->GetDevice(), &poolCreate, GetAllocationCallback(), &mDescriptorPool);
-
          VkDescriptorSetAllocateInfo setAllocate{};
          setAllocate.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-         setAllocate.descriptorPool = mDescriptorPool;
+         setAllocate.descriptorPool = mVkManager->GetDescriptorPool();
          setAllocate.descriptorSetCount = 1;
          setAllocate.pSetLayouts = &mObjectDescriptorSet;
          vkAllocateDescriptorSets(mVkManager->GetDevice(), &setAllocate, &mSceneSet);
@@ -163,7 +123,7 @@ void Application::Start() {
    }
   
    img.LoadImage(GetWorkDir() + "Sponza/textures/background.tga");
-   ImageDes imageDes(&img, mMaterialSet, sampler, 0);
+   UpdateImageDescriptorSet(&img, mMaterialSet, mVkManager->GetDefaultSampler(), 0);
 }
 
 void Application::Run() {
@@ -180,7 +140,6 @@ void Application::Run() {
 void Application::Destroy() {
    mVkManager->WaitDevice();
 
-   vkDestroySampler(mVkManager->GetDevice(), sampler, GetAllocationCallback());
    img.Destroy();
 
    {
@@ -190,7 +149,6 @@ void Application::Destroy() {
       mObjectBuffer.Destroy();
       vkDestroyDescriptorSetLayout(mVkManager->GetDevice(), mObjectDescriptorSet, GetAllocationCallback());
       vkDestroyDescriptorSetLayout(mVkManager->GetDevice(), mMaterialDescriptorSet, GetAllocationCallback());
-      vkDestroyDescriptorPool(mVkManager->GetDevice(), mDescriptorPool, GetAllocationCallback());
    }
 
    rt.Destroy();

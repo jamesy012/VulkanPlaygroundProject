@@ -19,6 +19,9 @@ VulkanManager* _VulkanManager;
 
 #define VULKAN_API_VERSION VK_HEADER_VERSION_COMPLETE
 
+#define MAX_DESCRIPTOR_SETS 50
+constexpr VkDescriptorPoolSize poolSizes[2] = { { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, MAX_DESCRIPTOR_SETS }, { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, MAX_DESCRIPTOR_SETS } };
+
 const std::vector<const char*> validationLayers = {
    "VK_LAYER_KHRONOS_validation"
 };
@@ -78,6 +81,42 @@ void VulkanManager::Create(Window* aWindow) {
    }
    CreateSizeDependent();
 
+   //descriptor
+   {
+      VkDescriptorPoolCreateInfo poolCreate{};
+      poolCreate.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+      poolCreate.maxSets = MAX_DESCRIPTOR_SETS;
+      poolCreate.poolSizeCount = SIZEOF_ARRAY(poolSizes);
+      poolCreate.pPoolSizes = poolSizes;
+      vkCreateDescriptorPool(GetDevice(), &poolCreate, GetAllocationCallback(), &mDescriptorPool);
+   }
+
+   {
+      VkSamplerCreateInfo samplerInfo{};
+      samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+      samplerInfo.magFilter = VK_FILTER_LINEAR;
+      samplerInfo.minFilter = VK_FILTER_LINEAR;
+      samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+      samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+      samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+      samplerInfo.anisotropyEnable = VK_TRUE;
+
+      VkPhysicalDeviceProperties properties{};
+      samplerInfo.maxAnisotropy = mDeviceProperties.limits.maxSamplerAnisotropy;
+      samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+      samplerInfo.unnormalizedCoordinates = VK_FALSE;
+      samplerInfo.compareEnable = VK_FALSE;
+      samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+      samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+      samplerInfo.mipLodBias = 0.0f;
+      samplerInfo.minLod = 0.0f;
+      samplerInfo.maxLod = 0.0f;
+
+      if (vkCreateSampler(GetDevice(), &samplerInfo, nullptr, &mDefaultSampler) != VK_SUCCESS) {
+         throw std::runtime_error("failed to create texture gltfSampler!");
+      }
+   }
+
    //Pre first run setup
    {
       VkCommandBuffer buffer;
@@ -91,6 +130,9 @@ void VulkanManager::Create(Window* aWindow) {
 
 void VulkanManager::Destroy() {
    WaitDevice();
+
+   vkDestroySampler(GetDevice(), mDefaultSampler, GetAllocationCallback());
+   vkDestroyDescriptorPool(GetDevice(), mDescriptorPool, GetAllocationCallback());
 
    //ImGui
    {

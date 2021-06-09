@@ -57,6 +57,13 @@ public:
    const VkDeviceSize GetUniformBufferAllignment() const {
       return mDeviceProperties.limits.minUniformBufferOffsetAlignment;
    }
+   const VkDescriptorPool GetDescriptorPool() const {
+      return mDescriptorPool;
+   } 
+   const VkSampler GetDefaultSampler() const {
+      return mDefaultSampler;
+   }
+
 private:
    bool CreateInstance();
    bool CreateDevice();
@@ -114,6 +121,8 @@ private:
    RenderPass mPresentRenderPass;
    std::vector<Framebuffer> mPresentFramebuffer;
    bool mResizedLastRender = true;
+   VkDescriptorPool mDescriptorPool;
+   VkSampler mDefaultSampler;
 
    //Buffers
    VmaAllocator mAllocator;
