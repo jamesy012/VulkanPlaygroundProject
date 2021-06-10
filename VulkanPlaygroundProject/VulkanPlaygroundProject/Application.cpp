@@ -5,35 +5,18 @@
 
 #include "VulkanManager.h"
 #include "Window.h"
-
-#include "Framebuffer.h"
-#include "RenderPass.h"
+#include "InputHandler.h"
 
 #include "Vertex.h"
-#include "RenderTarget.h"
 
-#include "Buffer.h"
-#include "Image.h"
-
-RenderPass rp;
-RenderTarget rt;
-Image img;
-
-VkDescriptorSetLayout mObjectDescriptorSet;
-VkDescriptorSetLayout mMaterialDescriptorSet;
-VkDescriptorSet mSceneSet;
-VkDescriptorSet mMaterialSet;
-BufferRingUniform mSceneBuffer;
-BufferRingUniform mObjectBuffer;
-
-SceneUBO mSceneUbo{};
-ObjectUBO mObjectUbo{};
 
 void Application::Start() {
    mWindow = new Window();
    mWindow->Create(800, 600, "vulkan");
    mVkManager = new VulkanManager();
    mVkManager->Create(mWindow);
+   _CInput = new InputHandler();
+   _CInput->Startup(mWindow->GetWindow());
 
    VertexSimple verts[6];
    verts[0].pos = glm::vec2(-1.0f, -1.0f);
@@ -65,8 +48,8 @@ void Application::Start() {
    }
    staging.Destroy();
 
-   rp.Create(mVkManager->GetDevice(), mVkManager->GetColorFormat(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_FORMAT_D32_SFLOAT_S8_UINT);
-   rt.Create(mVkManager->GetDevice(), &rp, mVkManager->GetSwapchainExtent(), true);
+   mRenderPass.Create(mVkManager->GetDevice(), mVkManager->GetColorFormat(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_FORMAT_D32_SFLOAT_S8_UINT);
+   mRenderTarget.Create(mVkManager->GetDevice(), &mRenderPass, mVkManager->GetSwapchainExtent(), true);
 
    {
       {
@@ -95,15 +78,13 @@ void Application::Start() {
          mPipeline.SetVertexType(VertexTypeDefault);
          mPipeline.AddDescriptorSetLayout(mObjectDescriptorSet);
          mPipeline.AddDescriptorSetLayout(mMaterialDescriptorSet);
-         mPipeline.Create(mVkManager->GetSwapchainExtent(), &rp);
+         mPipeline.Create(mVkManager->GetSwapchainExtent(), &mRenderPass);
 
          mPipelineTest.AddShader(GetWorkDir() + "test.vert");
          mPipelineTest.AddShader(GetWorkDir() + "test.frag");
          mPipelineTest.SetVertexType(VertexTypeSimple);
-         mPipelineTest.Create(mVkManager->GetSwapchainExtent(), &rp);
+         mPipelineTest.Create(mVkManager->GetSwapchainExtent(), &mRenderPass);
       }
-
-      mModelTest.LoadModel(GetWorkDir() + "Sponza/Sponza.obj", mMaterialDescriptorSet);
 
       {
          VkDescriptorSetAllocateInfo setAllocate{};
@@ -122,8 +103,14 @@ void Application::Start() {
       }
    }
   
-   img.LoadImage(GetWorkDir() + "Sponza/textures/background.tga");
-   UpdateImageDescriptorSet(&img, mMaterialSet, mVkManager->GetDefaultSampler(), 0);
+   mTestImg.LoadImage(GetWorkDir() + "Sponza/textures/background.tga");
+   UpdateImageDescriptorSet(&mTestImg, mMaterialSet, mVkManager->GetDefaultSampler(), 0);
+
+   mModelTest.LoadModel(GetWorkDir() + "Sponza/Sponza.obj", mMaterialDescriptorSet);
+   mModelTest.SetScale(0.05f);
+
+   //mFlyCamera.SetPosition(glm::vec3(130, 50, 150));
+   //mFlyCamera.SetFarClip(10000.0f);
 }
 
 void Application::Run() {
@@ -131,37 +118,31 @@ void Application::Run() {
       mWindow->Update();
       mVkManager->Update();
 
-      ImGui::ShowDemoWindow(0);
+      _CInput->Update();
+
+      Update();
 
       Draw();
    }
 }
 
-void Application::Destroy() {
-   mVkManager->WaitDevice();
+static uint32_t frameCounter = 0;
 
-   img.Destroy();
+void Application::Update() {
+
+   mFlyCamera.UpdateInput();
+   mSceneUbo.m_ViewProj = mFlyCamera.GetPV();
 
    {
-      VkDescriptorSet sets[] = { mSceneSet, mMaterialSet };
-      //vkFreeDescriptorSets(mVkManager->GetDevice(), mDescriptorPool, 2, sets); //needs VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT
-      mSceneBuffer.Destroy();
-      mObjectBuffer.Destroy();
-      vkDestroyDescriptorSetLayout(mVkManager->GetDevice(), mObjectDescriptorSet, GetAllocationCallback());
-      vkDestroyDescriptorSetLayout(mVkManager->GetDevice(), mMaterialDescriptorSet, GetAllocationCallback());
+      void* data;
+      mSceneBuffer.Get(&data);
+      memcpy(data, &mSceneUbo, sizeof(SceneUBO));
+      mSceneBuffer.Return();
    }
 
-   rt.Destroy();
-   rp.Destroy(mVkManager->GetDevice());
-   mScreenQuad.Destroy();
-   mPipeline.Destroy();
-   mPipelineTest.Destroy();
-   mModelTest.Destroy();
-   mVkManager->Destroy();
-   mWindow->Destroy();
-   delete mWindow;
-   delete mVkManager;
+   //mModelTest.SetRotation(glm::vec3(0, frameCounter * 0.07f, 0));
 }
+
 
 void Application::Draw() {
    uint32_t frameIndex;
@@ -169,29 +150,7 @@ void Application::Draw() {
    if (mVkManager->RenderStart(buffer, frameIndex) == false) {
       ASSERT_RET("Failed to start render");
    }
-   static uint32_t frameCounter = 0;
    frameCounter++;
-
-   //update
-   {
-      static glm::vec3 pos = glm::vec3(130, 50, 150);
-      ImGui::Begin("Camera");
-      ImGui::DragFloat3("Pos", glm::value_ptr(pos));//, 0.01f);
-      ImGui::End();
-      glm::mat4 proj = glm::perspective(glm::radians(45.0f), mVkManager->GetSwapchainAspect(), 0.1f, 10000.0f);
-      proj[1][1] *= -1;
-      glm::mat4 view = glm::lookAt(pos, glm::vec3(0, 0, 0), glm::vec3(0, 1.0f, 0));
-      mSceneUbo.m_ViewProj = proj * view;
-
-      {
-         void* data;
-         mSceneBuffer.Get(&data);
-         memcpy(data, &mSceneUbo, sizeof(SceneUBO));
-         mSceneBuffer.Return();
-      }
-
-      mModelTest.SetRotation(glm::vec3(0, frameCounter * 0.07f, 0));
-   }
 
    VkCommandBufferBeginInfo beginInfo{};
    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -211,18 +170,18 @@ void Application::Draw() {
    clearColor[0].color.float32[2] = abs(sin((frameCounter * 0.1f) / 5000.0f));
    clearColor[0].color.float32[3] = 1.0f;
    clearColor[1].depthStencil.depth = 1.0f;
-   clearColor[1].depthStencil.stencil = 0.0f;
+   clearColor[1].depthStencil.stencil = 0;
 
    VkRenderPassBeginInfo renderBegin{};
    renderBegin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-   renderBegin.renderArea.extent = rt.GetSize();
-   renderBegin.renderPass = rp.GetRenderPass();//mVkManager->GetPresentRenderPass()->GetRenderPass();
+   renderBegin.renderArea.extent = mRenderTarget.GetSize();
+   renderBegin.renderPass = mRenderPass.GetRenderPass();//mVkManager->GetPresentRenderPass()->GetRenderPass();
    renderBegin.clearValueCount = 2;
    renderBegin.pClearValues = clearColor;
-   renderBegin.framebuffer = rt.GetFramebuffer().GetFramebuffer();//mVkManager->GetPresentFramebuffer(frameIndex)->GetFramebuffer();
+   renderBegin.framebuffer = mRenderTarget.GetFramebuffer().GetFramebuffer();//mVkManager->GetPresentFramebuffer(frameIndex)->GetFramebuffer();
    vkCmdBeginRenderPass(buffer, &renderBegin, VK_SUBPASS_CONTENTS_INLINE);
-   VkViewport viewport = rt.GetViewport();
-   VkRect2D scissor = { {}, rt.GetSize() };
+   VkViewport viewport = mRenderTarget.GetViewport();
+   VkRect2D scissor = { {}, mRenderTarget.GetSize() };
    vkCmdSetViewport(buffer, 0, 1, &viewport);
    vkCmdSetScissor(buffer, 0, 1, &scissor);
 
@@ -237,10 +196,10 @@ void Application::Draw() {
    //vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline.GetPipelineLayout(), 0, 1, &mSceneSet, 2, descriptorSetOffsets);
    vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline.GetPipelineLayout(), 1, 1, &mMaterialSet, 0, nullptr);
 
-   DescriptorUBO des = DescriptorUBO(buffer, mPipeline.GetPipelineLayout(), &mSceneBuffer, &mObjectBuffer);
-   mObjectBuffer.Get();
-   mModelTest.Render(&des, RenderMode::NORMAL);
-   mObjectBuffer.Return();
+   {
+      DescriptorUBO des = DescriptorUBO(buffer, mPipeline.GetPipelineLayout(), &mSceneBuffer, &mObjectBuffer);
+      mModelTest.Render(&des, RenderMode::NORMAL);
+   }
 
    vkCmdEndRenderPass(buffer);
 
@@ -261,8 +220,8 @@ void Application::Draw() {
    //
    SetImageLayout(buffer, mVkManager->GetPresentImage(frameIndex), VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
    VkImageBlit blit{};
-   blit.srcOffsets[1].x = rt.GetSize().width;
-   blit.srcOffsets[1].y = rt.GetSize().height;
+   blit.srcOffsets[1].x = mRenderTarget.GetSize().width;
+   blit.srcOffsets[1].y = mRenderTarget.GetSize().height;
    blit.srcOffsets[1].z = 1;
    blit.dstOffsets[1].x = mVkManager->GetSwapchainExtent().width;
    blit.dstOffsets[1].y = mVkManager->GetSwapchainExtent().height;
@@ -271,7 +230,7 @@ void Application::Draw() {
    blit.srcSubresource.layerCount = 1;
    blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
    blit.dstSubresource.layerCount = 1;
-   vkCmdBlitImage(buffer, rt.GetColorImage(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, mVkManager->GetPresentImage(frameIndex), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VkFilter::VK_FILTER_LINEAR);
+   vkCmdBlitImage(buffer, mRenderTarget.GetColorImage(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, mVkManager->GetPresentImage(frameIndex), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VkFilter::VK_FILTER_LINEAR);
    SetImageLayout(buffer, mVkManager->GetPresentImage(frameIndex), VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
 
    //barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
@@ -290,4 +249,33 @@ void Application::Draw() {
    vkEndCommandBuffer(buffer);
 
    mVkManager->RenderEnd();
+}
+
+
+void Application::Destroy() {
+   _CInput->Shutdown();
+   delete _CInput;
+   mVkManager->WaitDevice();
+
+   mTestImg.Destroy();
+
+   {
+      VkDescriptorSet sets[] = { mSceneSet, mMaterialSet };
+      //vkFreeDescriptorSets(mVkManager->GetDevice(), mDescriptorPool, 2, sets); //needs VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT
+      mSceneBuffer.Destroy();
+      mObjectBuffer.Destroy();
+      vkDestroyDescriptorSetLayout(mVkManager->GetDevice(), mObjectDescriptorSet, GetAllocationCallback());
+      vkDestroyDescriptorSetLayout(mVkManager->GetDevice(), mMaterialDescriptorSet, GetAllocationCallback());
+   }
+
+   mRenderTarget.Destroy();
+   mRenderPass.Destroy(mVkManager->GetDevice());
+   mScreenQuad.Destroy();
+   mPipeline.Destroy();
+   mPipelineTest.Destroy();
+   mModelTest.Destroy();
+   mVkManager->Destroy();
+   mWindow->Destroy();
+   delete mWindow;
+   delete mVkManager;
 }

@@ -67,7 +67,7 @@ class BufferUniform : protected Buffer {
 public:
    bool Create(uint32_t aCount, VkDeviceSize aStructSize, VkDescriptorSet aDescriptorSet, uint32_t aBinding) {
       mStructSize = aStructSize;
-      mAllignedStructSize = RoundUp(aStructSize, _VulkanManager->GetUniformBufferAllignment());
+      mAllignedStructSize = RoundUp((int)aStructSize, _VulkanManager->GetUniformBufferAllignment());
       mCount = aCount;
       bool res = Create(aCount * (uint32_t)mAllignedStructSize);
       if (!res) {
@@ -95,7 +95,7 @@ public:
       return mDescriptorSet;
    }
 
-   const uint32_t GetStructSize() const {
+   const VkDeviceSize GetStructSize() const {
       return mStructSize;
    }
 
@@ -130,7 +130,7 @@ public:
    void Get(void** aData, uint32_t& aOffset) {
       void* data;
       Map(&data);
-      mCurrentOffset = aOffset = (mAllignedStructSize * mOffsetCount++);
+      mCurrentOffset = aOffset = (uint32_t)(mAllignedStructSize * mOffsetCount++);
       if (aData != nullptr) {
          *aData = ((char*)data + aOffset);
       }

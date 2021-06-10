@@ -17,6 +17,12 @@ public:
       mObjectBuffer = aObjectBuffer;
 
       mDescriptorSet = aSceneBuffer->GetDescriptorSet();
+
+      mObjectBuffer->Get();
+   }
+
+   ~DescriptorUBO() {
+      mObjectBuffer->Return();
    }
 
    void UpdateObjectAndBind(void* aData) {
