@@ -7,9 +7,9 @@
 #include "imgui.h"
 
 FlyCamera::FlyCamera() {
-	m_MovementSpeed = 30.0f;
-	m_TranslateSpeed = 1.0f;
-	m_RotationSpeed = 100.0f;
+	mMovementSpeed = 30.0f;
+	mTranslateSpeed = 1.0f;
+	mRotationSpeed = 100.0f;
 }
 
 
@@ -19,46 +19,46 @@ FlyCamera::~FlyCamera() {
 
 void FlyCamera::UpdateInput() {
 
-	float yaw = m_Rotation.y;
-	float pitch = m_Rotation.x;
+	float yaw = mRotation.y;
+	float pitch = mRotation.x;
 	
 	float deltaTime = ImGui::GetIO().DeltaTime;
 
 	glm::vec3 movement = glm::vec3(0);
 
 	if (_CInput->IsKeyDown(IKEY_W)) {
-		movement.z -= m_MovementSpeed * deltaTime;
+		movement.z -= mMovementSpeed * deltaTime;
 	}
 	if (_CInput->IsKeyDown(IKEY_S)) {
-		movement.z += m_MovementSpeed * deltaTime;
+		movement.z += mMovementSpeed * deltaTime;
 	}
 	if (_CInput->IsKeyDown(IKEY_Q)) {
-		movement.y -= m_MovementSpeed * deltaTime;
+		movement.y -= mMovementSpeed * deltaTime;
 	}
 	if (_CInput->IsKeyDown(IKEY_E)) {
-		movement.y += m_MovementSpeed * deltaTime;
+		movement.y += mMovementSpeed * deltaTime;
 	}
 	if (_CInput->IsKeyDown(IKEY_A)) {
-		movement.x -= m_MovementSpeed * deltaTime;
+		movement.x -= mMovementSpeed * deltaTime;
 	}
 	if (_CInput->IsKeyDown(IKEY_D)) {
-		movement.x += m_MovementSpeed * deltaTime;
+		movement.x += mMovementSpeed * deltaTime;
 	}
 
 	bool leftMouse = _CInput->IsMouseKeyDown(IMOUSEKEY_LEFTBUTTON);
 	bool rightMouse = _CInput->IsMouseKeyDown(IMOUSEKEY_RIGHTBUTTON);
 
 	if (_CInput->IsKeyDown(IKEY_LeftArrow)) {
-		m_Rotation.y += m_RotationSpeed * deltaTime;
+		mRotation.y += mRotationSpeed * deltaTime;
 	}
 	if (_CInput->IsKeyDown(IKEY_RightArrow)) {
-		m_Rotation.y -= m_RotationSpeed * deltaTime;
+		mRotation.y -= mRotationSpeed * deltaTime;
 	}
 	if (_CInput->IsKeyDown(IKEY_DownArrow)) {
-		m_Rotation.x -= m_RotationSpeed * deltaTime;
+		mRotation.x -= mRotationSpeed * deltaTime;
 	}
 	if (_CInput->IsKeyDown(IKEY_UpArrow)) {
-		m_Rotation.x += m_RotationSpeed * deltaTime;
+		mRotation.x += mRotationSpeed * deltaTime;
 	}
 
 	if (_CInput->IsKeyDown(IKEY_Z)) {
@@ -70,28 +70,28 @@ void FlyCamera::UpdateInput() {
 
 	if (!leftMouse && rightMouse) {
 		glm::vec2 mouseDelta = { _CInput->GetMouseDelta().y, _CInput->GetMouseDelta().x };
-		m_Rotation += glm::vec3((mouseDelta * -0.2f), 0);
+		mRotation += glm::vec3((mouseDelta * -0.2f), 0);
 	}
 
 	if (leftMouse && !rightMouse) {
 		glm::vec2 mouseDelta = { _CInput->GetMouseDelta().y, _CInput->GetMouseDelta().x };
-		movement.z += mouseDelta.x * m_TranslateSpeed * 0.05f;
-		m_Rotation.y += (mouseDelta.y * -0.2f);
+		movement.z += mouseDelta.x * mTranslateSpeed * 0.05f;
+		mRotation.y += (mouseDelta.y * -0.2f);
 	}
 
 	if (leftMouse && rightMouse) {
 		glm::vec2 mouseDelta = { _CInput->GetMouseDelta().y, _CInput->GetMouseDelta().x };
-		movement.y -= mouseDelta.x * m_TranslateSpeed * 0.05f;
-		movement.x += mouseDelta.y * m_TranslateSpeed * 0.05f;
+		movement.y -= mouseDelta.x * mTranslateSpeed * 0.05f;
+		movement.x += mouseDelta.y * mTranslateSpeed * 0.05f;
 	}
 
-	movement.z -= _CInput->GetMouseScroll() * m_TranslateSpeed * 0.01f;
+	movement.z -= _CInput->GetMouseScroll() * mTranslateSpeed * 0.01f;
 
-	m_Position = glm::translate(GetModelMatrix(), movement)[3];
+	mPosition = glm::translate(GetModelMatrix(), movement)[3];
 
 	SetDirty();
 
-	//SetLookAt(m_Position, glm::vec3(0), glm::vec3(0, 1, 0));
+	//SetLookAt(mPosition, glm::vec3(0), glm::vec3(0, 1, 0));
 
 	//if (CameraLookAt) {
 //	if (RotateCamera) {

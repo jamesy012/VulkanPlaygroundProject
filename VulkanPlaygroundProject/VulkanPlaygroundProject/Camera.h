@@ -6,26 +6,26 @@ class Camera : public Transform {
 public:
 	Camera();
 
-	Matrix GetView();
-	Matrix GetProjection();
-	Matrix GetPV();
+	glm::mat4 GetView();
+	glm::mat4 GetProjection();
+	glm::mat4 GetPV();
 
-	void SetAspectRatio(float a_NewAspect);
-	void SetFov(float a_NewFov);
-	void SetNearClip(float a_NearClip);
-	void SetFarClip(float a_FarClip);
+	void SetAspectRatio(float aNewAspect);
+	void SetFov(float aNewFov);
+	void SetNearClip(float aNearClip);
+	void SetFarClip(float aFarClip);
 
 	float GetFov() const;
 
 private:
 	void UpdateModelMatrix() override;
 
-	Matrix m_ProjectionMatrix;
-	Matrix m_ViewMatrix;
-	Matrix m_PV;
+	glm::mat4 mProjectionMatrix;
+	glm::mat4 mViewMatrix;
+	glm::mat4 mPV;
 
-	float m_Aspect = 1.7f;
-	float m_Fov = glm::radians(90.0f);
-	float m_Near = 0.1f;
-	float m_Far = 100.0f;
+	float mAspect = 1.7f;
+	float mFov = glm::radians(70.0f);
+	float mNearClip = 0.1f;
+	float mFarClip = 100.0f;
 };

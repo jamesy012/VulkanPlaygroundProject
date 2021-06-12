@@ -10,13 +10,12 @@ struct aiNode;
 
 struct DescriptorUBO {
 public:
-   DescriptorUBO(VkCommandBuffer aCommandBuffer, VkPipelineLayout aPipelineLayout, BufferRingUniform* aSceneBuffer, BufferRingUniform* aObjectBuffer) {
+   DescriptorUBO(VkCommandBuffer aCommandBuffer, VkPipelineLayout aPipelineLayout, BufferRingUniform* aObjectBuffer) {
       mCommandBuffer = aCommandBuffer;
       mPipelineLayout = aPipelineLayout;
-      mSceneBuffer = aSceneBuffer;
       mObjectBuffer = aObjectBuffer;
 
-      mDescriptorSet = aSceneBuffer->GetDescriptorSet();
+      mDescriptorSet = aObjectBuffer->GetDescriptorSet();
 
       mObjectBuffer->Get();
    }
@@ -34,8 +33,8 @@ public:
    }
 
    void BindDescriptorSet() {
-      uint32_t descriptorSetOffsets[] = { mSceneBuffer->GetCurrentOffset(), mObjectBuffer->GetCurrentOffset() };
-      vkCmdBindDescriptorSets(mCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipelineLayout, 0, 1, &mDescriptorSet, 2, descriptorSetOffsets);
+      uint32_t descriptorSetOffsets[] = { mObjectBuffer->GetCurrentOffset() };
+      vkCmdBindDescriptorSets(mCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipelineLayout, 1, 1, &mDescriptorSet, 1, descriptorSetOffsets);
    }
 
    BufferRingUniform* mSceneBuffer;

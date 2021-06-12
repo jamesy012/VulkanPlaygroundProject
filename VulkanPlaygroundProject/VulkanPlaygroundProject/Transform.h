@@ -4,36 +4,37 @@
 #include <glm/gtc/quaternion.hpp>
 
 
-typedef glm::vec3 Vector3;
-typedef glm::mat4 Matrix;
-
 class Transform {
 public:
 	Transform();
 	~Transform();
 
-	void SetPosition(Vector3 a_NewPosition);
-	void SetRotation(Vector3 a_NewRotation);
-	void SetRotation(glm::quat a_NewRotation);
-	void SetScale(Vector3 a_NewScale);
+	void SetPosition(glm::vec3 aNewPosition);
+	void SetRotation(glm::vec3 aNewRotation);
+	void SetRotation(glm::quat aNewRotation);
+	void SetScale(glm::vec3 aNewScale);
 
-	void SetLookAt(Vector3 a_Pos, Vector3 a_At, Vector3 a_Up);
+	void SetLookAt(glm::vec3 aPos, glm::vec3 aAt, glm::vec3 aUp);
 
-	Matrix GetModelMatrix();
+	const glm::mat4 GetModelMatrix();
+	const glm::vec3 GetPostion() const;
+	const glm::vec3 GetRotation() const;
+	const glm::quat GetRotationQuat() const;
+	const glm::vec3 GetScale() const;
 
 	inline void SetDirty() {
-		m_IsDirty = true;
+		mIsDirty = true;
 	}
 
 	void Reset();
 
-	Vector3 m_Position;
-	Vector3 m_Rotation;
-	Vector3 m_Scale;
-
 protected:
+	glm::vec3 mPosition;
+	glm::vec3 mRotation;
+	glm::vec3 mScale;
+
 	virtual void UpdateModelMatrix();
 
-	bool m_IsDirty = true;
-	Matrix m_ModelMatrix;
+	bool mIsDirty = true;
+	glm::mat4 mModelMatrix;
 };

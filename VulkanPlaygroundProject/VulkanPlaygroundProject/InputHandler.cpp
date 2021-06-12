@@ -9,18 +9,18 @@
 
 InputHandler* _CInput;
 
-LPDIRECTINPUT8 m_Di;
-LPDIRECTINPUTDEVICE8 m_Keyboard;
-LPDIRECTINPUTDEVICE8 m_Mouse;
+LPDIRECTINPUT8 mDirectInput;
+LPDIRECTINPUTDEVICE8 mKeyboard;
+LPDIRECTINPUTDEVICE8 mMouse;
 
-unsigned char m_KeyboardState[256];
-unsigned char m_KeyboardStateOld[256];
-DIMOUSESTATE m_mouseState;
-DIMOUSESTATE m_mouseStateOld;
-int m_MouseX, m_MouseY;
-int m_MouseDeltaX, m_MouseDeltaY;
+unsigned char mKeyboardState[256];
+unsigned char mKeyboardStateOld[256];
+DIMOUSESTATE mMouseState;
+DIMOUSESTATE mMouseStateOld;
+int mMouseX, mMouseY;
+int mMouseDeltaX, mMouseDeltaY;
 
-unsigned char m_KeyboardRemapper[256] = { -1 };
+unsigned char mKeyboardRemapper[256] = { -1 };
 //	IKEY_Escape				/*DIK_ESCAPE		*/
 //	, IKEY_1					/*DIK_1				*/
 //	, IKEY_2					/*DIK_2				*/
@@ -169,101 +169,101 @@ unsigned char m_KeyboardRemapper[256] = { -1 };
 
 
 InputHandler::InputHandler() {
-	m_KeyboardRemapper[IKEY_Escape] = DIK_ESCAPE;
-	m_KeyboardRemapper[IKEY_1] = DIK_1;
-	m_KeyboardRemapper[IKEY_2] = DIK_2;
-	m_KeyboardRemapper[IKEY_3] = DIK_3;
-	m_KeyboardRemapper[IKEY_4] = DIK_4;
-	m_KeyboardRemapper[IKEY_5] = DIK_5;
-	m_KeyboardRemapper[IKEY_6] = DIK_6;
-	m_KeyboardRemapper[IKEY_7] = DIK_7;
-	m_KeyboardRemapper[IKEY_8] = DIK_8;
-	m_KeyboardRemapper[IKEY_9] = DIK_9;
-	m_KeyboardRemapper[IKEY_0] = DIK_0;
-	m_KeyboardRemapper[IKEY_Minus] = DIK_MINUS;
-	m_KeyboardRemapper[IKEY_Equals] = DIK_EQUALS;
-	m_KeyboardRemapper[IKEY_Backspace] = DIK_BACK;
-	m_KeyboardRemapper[IKEY_Tab] = DIK_TAB;
-	m_KeyboardRemapper[IKEY_Q] = DIK_Q;
-	m_KeyboardRemapper[IKEY_W] = DIK_W;
-	m_KeyboardRemapper[IKEY_E] = DIK_E;
-	m_KeyboardRemapper[IKEY_R] = DIK_R;
-	m_KeyboardRemapper[IKEY_T] = DIK_T;
-	m_KeyboardRemapper[IKEY_Y] = DIK_Y;
-	m_KeyboardRemapper[IKEY_U] = DIK_U;
-	m_KeyboardRemapper[IKEY_I] = DIK_I;
-	m_KeyboardRemapper[IKEY_O] = DIK_O;
-	m_KeyboardRemapper[IKEY_P] = DIK_P;
-	m_KeyboardRemapper[IKEY_OpenSquareBracket] = DIK_LBRACKET;
-	m_KeyboardRemapper[IKEY_CloseSquareBracket] = DIK_RBRACKET;
-	m_KeyboardRemapper[IKEY_Enter] = DIK_RETURN;
-	m_KeyboardRemapper[IKEY_LeftCtrl] = DIK_LCONTROL;
-	m_KeyboardRemapper[IKEY_A] = DIK_A;
-	m_KeyboardRemapper[IKEY_S] = DIK_S;
-	m_KeyboardRemapper[IKEY_D] = DIK_D;
-	m_KeyboardRemapper[IKEY_F] = DIK_F;
-	m_KeyboardRemapper[IKEY_G] = DIK_G;
-	m_KeyboardRemapper[IKEY_H] = DIK_H;
-	m_KeyboardRemapper[IKEY_J] = DIK_J;
-	m_KeyboardRemapper[IKEY_K] = DIK_K;
-	m_KeyboardRemapper[IKEY_L] = DIK_L;
-	m_KeyboardRemapper[IKEY_SemiColon] = DIK_SEMICOLON;
-	m_KeyboardRemapper[IKEY_Apostrophe] = DIK_APOSTROPHE;
-	m_KeyboardRemapper[IKEY_Tilde] = DIK_GRAVE;
-	m_KeyboardRemapper[IKEY_LeftShift] = DIK_LSHIFT;
-	m_KeyboardRemapper[IKEY_BackSlash] = DIK_BACKSLASH;
-	m_KeyboardRemapper[IKEY_Z] = DIK_Z;
-	m_KeyboardRemapper[IKEY_X] = DIK_X;
-	m_KeyboardRemapper[IKEY_C] = DIK_C;
-	m_KeyboardRemapper[IKEY_V] = DIK_V;
-	m_KeyboardRemapper[IKEY_B] = DIK_B;
-	m_KeyboardRemapper[IKEY_N] = DIK_N;
-	m_KeyboardRemapper[IKEY_M] = DIK_M;
-	m_KeyboardRemapper[IKEY_Comma] = DIK_COMMA;
-	m_KeyboardRemapper[IKEY_Period] = DIK_PERIOD;
-	m_KeyboardRemapper[IKEY_ForwardSlash] = DIK_SLASH;
-	m_KeyboardRemapper[IKEY_RightShift] = DIK_RSHIFT;
-	m_KeyboardRemapper[IKEY_PAD_Asterisk] = DIK_MULTIPLY;
-	m_KeyboardRemapper[IKEY_Space] = DIK_SPACE;
-	m_KeyboardRemapper[IKEY_CapsLock] = DIK_CAPITAL;
-	m_KeyboardRemapper[IKEY_F1] = DIK_F1;
-	m_KeyboardRemapper[IKEY_F2] = DIK_F2;
-	m_KeyboardRemapper[IKEY_F3] = DIK_F3;
-	m_KeyboardRemapper[IKEY_F4] = DIK_F4;
-	m_KeyboardRemapper[IKEY_F5] = DIK_F5;
-	m_KeyboardRemapper[IKEY_F6] = DIK_F6;
-	m_KeyboardRemapper[IKEY_F7] = DIK_F7;
-	m_KeyboardRemapper[IKEY_F8] = DIK_F8;
-	m_KeyboardRemapper[IKEY_F9] = DIK_F9;
-	m_KeyboardRemapper[IKEY_F10] = DIK_F10;
-	m_KeyboardRemapper[IKEY_NumLock] = DIK_NUMLOCK;
-	m_KeyboardRemapper[IKEY_ScrollLock] = DIK_SCROLL;
-	m_KeyboardRemapper[IKEY_PAD_7] = DIK_NUMPAD7;
-	m_KeyboardRemapper[IKEY_PAD_8] = DIK_NUMPAD8;
-	m_KeyboardRemapper[IKEY_PAD_9] = DIK_NUMPAD9;
-	m_KeyboardRemapper[IKEY_PAD_Minus] = DIK_SUBTRACT;
-	m_KeyboardRemapper[IKEY_PAD_4] = DIK_NUMPAD4;
-	m_KeyboardRemapper[IKEY_PAD_5] = DIK_NUMPAD5;
-	m_KeyboardRemapper[IKEY_PAD_6] = DIK_NUMPAD6;
-	m_KeyboardRemapper[IKEY_PAD_Plus] = DIK_ADD;
-	m_KeyboardRemapper[IKEY_PAD_1] = DIK_NUMPAD1;
-	m_KeyboardRemapper[IKEY_PAD_2] = DIK_NUMPAD2;
-	m_KeyboardRemapper[IKEY_PAD_3] = DIK_NUMPAD3;
-	m_KeyboardRemapper[IKEY_PAD_0] = DIK_NUMPAD0;
-	m_KeyboardRemapper[IKEY_PAD_Period] = DIK_DECIMAL;
-	m_KeyboardRemapper[IKEY_F11] = DIK_F11;
-	m_KeyboardRemapper[IKEY_F12] = DIK_F12;
-	m_KeyboardRemapper[IKEY_PAD_Enter] = DIK_NUMPADENTER;
-	m_KeyboardRemapper[IKEY_RightCtrl] = DIK_RCONTROL;
-	m_KeyboardRemapper[IKEY_PAD_ForwardSlash] = DIK_DIVIDE;
-	m_KeyboardRemapper[IKEY_Home] = DIK_HOME;
-	m_KeyboardRemapper[IKEY_UpArrow] = DIK_UP;
-	m_KeyboardRemapper[IKEY_LeftArrow] = DIK_LEFT;
-	m_KeyboardRemapper[IKEY_RightArrow] = DIK_RIGHT;
-	m_KeyboardRemapper[IKEY_End] = DIK_END;
-	m_KeyboardRemapper[IKEY_DownArrow] = DIK_DOWN;
-	m_KeyboardRemapper[IKEY_Insert] = DIK_INSERT;
-	m_KeyboardRemapper[IKEY_Delete] = DIK_DELETE;
+	mKeyboardRemapper[IKEY_Escape] = DIK_ESCAPE;
+	mKeyboardRemapper[IKEY_1] = DIK_1;
+	mKeyboardRemapper[IKEY_2] = DIK_2;
+	mKeyboardRemapper[IKEY_3] = DIK_3;
+	mKeyboardRemapper[IKEY_4] = DIK_4;
+	mKeyboardRemapper[IKEY_5] = DIK_5;
+	mKeyboardRemapper[IKEY_6] = DIK_6;
+	mKeyboardRemapper[IKEY_7] = DIK_7;
+	mKeyboardRemapper[IKEY_8] = DIK_8;
+	mKeyboardRemapper[IKEY_9] = DIK_9;
+	mKeyboardRemapper[IKEY_0] = DIK_0;
+	mKeyboardRemapper[IKEY_Minus] = DIK_MINUS;
+	mKeyboardRemapper[IKEY_Equals] = DIK_EQUALS;
+	mKeyboardRemapper[IKEY_Backspace] = DIK_BACK;
+	mKeyboardRemapper[IKEY_Tab] = DIK_TAB;
+	mKeyboardRemapper[IKEY_Q] = DIK_Q;
+	mKeyboardRemapper[IKEY_W] = DIK_W;
+	mKeyboardRemapper[IKEY_E] = DIK_E;
+	mKeyboardRemapper[IKEY_R] = DIK_R;
+	mKeyboardRemapper[IKEY_T] = DIK_T;
+	mKeyboardRemapper[IKEY_Y] = DIK_Y;
+	mKeyboardRemapper[IKEY_U] = DIK_U;
+	mKeyboardRemapper[IKEY_I] = DIK_I;
+	mKeyboardRemapper[IKEY_O] = DIK_O;
+	mKeyboardRemapper[IKEY_P] = DIK_P;
+	mKeyboardRemapper[IKEY_OpenSquareBracket] = DIK_LBRACKET;
+	mKeyboardRemapper[IKEY_CloseSquareBracket] = DIK_RBRACKET;
+	mKeyboardRemapper[IKEY_Enter] = DIK_RETURN;
+	mKeyboardRemapper[IKEY_LeftCtrl] = DIK_LCONTROL;
+	mKeyboardRemapper[IKEY_A] = DIK_A;
+	mKeyboardRemapper[IKEY_S] = DIK_S;
+	mKeyboardRemapper[IKEY_D] = DIK_D;
+	mKeyboardRemapper[IKEY_F] = DIK_F;
+	mKeyboardRemapper[IKEY_G] = DIK_G;
+	mKeyboardRemapper[IKEY_H] = DIK_H;
+	mKeyboardRemapper[IKEY_J] = DIK_J;
+	mKeyboardRemapper[IKEY_K] = DIK_K;
+	mKeyboardRemapper[IKEY_L] = DIK_L;
+	mKeyboardRemapper[IKEY_SemiColon] = DIK_SEMICOLON;
+	mKeyboardRemapper[IKEY_Apostrophe] = DIK_APOSTROPHE;
+	mKeyboardRemapper[IKEY_Tilde] = DIK_GRAVE;
+	mKeyboardRemapper[IKEY_LeftShift] = DIK_LSHIFT;
+	mKeyboardRemapper[IKEY_BackSlash] = DIK_BACKSLASH;
+	mKeyboardRemapper[IKEY_Z] = DIK_Z;
+	mKeyboardRemapper[IKEY_X] = DIK_X;
+	mKeyboardRemapper[IKEY_C] = DIK_C;
+	mKeyboardRemapper[IKEY_V] = DIK_V;
+	mKeyboardRemapper[IKEY_B] = DIK_B;
+	mKeyboardRemapper[IKEY_N] = DIK_N;
+	mKeyboardRemapper[IKEY_M] = DIK_M;
+	mKeyboardRemapper[IKEY_Comma] = DIK_COMMA;
+	mKeyboardRemapper[IKEY_Period] = DIK_PERIOD;
+	mKeyboardRemapper[IKEY_ForwardSlash] = DIK_SLASH;
+	mKeyboardRemapper[IKEY_RightShift] = DIK_RSHIFT;
+	mKeyboardRemapper[IKEY_PAD_Asterisk] = DIK_MULTIPLY;
+	mKeyboardRemapper[IKEY_Space] = DIK_SPACE;
+	mKeyboardRemapper[IKEY_CapsLock] = DIK_CAPITAL;
+	mKeyboardRemapper[IKEY_F1] = DIK_F1;
+	mKeyboardRemapper[IKEY_F2] = DIK_F2;
+	mKeyboardRemapper[IKEY_F3] = DIK_F3;
+	mKeyboardRemapper[IKEY_F4] = DIK_F4;
+	mKeyboardRemapper[IKEY_F5] = DIK_F5;
+	mKeyboardRemapper[IKEY_F6] = DIK_F6;
+	mKeyboardRemapper[IKEY_F7] = DIK_F7;
+	mKeyboardRemapper[IKEY_F8] = DIK_F8;
+	mKeyboardRemapper[IKEY_F9] = DIK_F9;
+	mKeyboardRemapper[IKEY_F10] = DIK_F10;
+	mKeyboardRemapper[IKEY_NumLock] = DIK_NUMLOCK;
+	mKeyboardRemapper[IKEY_ScrollLock] = DIK_SCROLL;
+	mKeyboardRemapper[IKEY_PAD_7] = DIK_NUMPAD7;
+	mKeyboardRemapper[IKEY_PAD_8] = DIK_NUMPAD8;
+	mKeyboardRemapper[IKEY_PAD_9] = DIK_NUMPAD9;
+	mKeyboardRemapper[IKEY_PAD_Minus] = DIK_SUBTRACT;
+	mKeyboardRemapper[IKEY_PAD_4] = DIK_NUMPAD4;
+	mKeyboardRemapper[IKEY_PAD_5] = DIK_NUMPAD5;
+	mKeyboardRemapper[IKEY_PAD_6] = DIK_NUMPAD6;
+	mKeyboardRemapper[IKEY_PAD_Plus] = DIK_ADD;
+	mKeyboardRemapper[IKEY_PAD_1] = DIK_NUMPAD1;
+	mKeyboardRemapper[IKEY_PAD_2] = DIK_NUMPAD2;
+	mKeyboardRemapper[IKEY_PAD_3] = DIK_NUMPAD3;
+	mKeyboardRemapper[IKEY_PAD_0] = DIK_NUMPAD0;
+	mKeyboardRemapper[IKEY_PAD_Period] = DIK_DECIMAL;
+	mKeyboardRemapper[IKEY_F11] = DIK_F11;
+	mKeyboardRemapper[IKEY_F12] = DIK_F12;
+	mKeyboardRemapper[IKEY_PAD_Enter] = DIK_NUMPADENTER;
+	mKeyboardRemapper[IKEY_RightCtrl] = DIK_RCONTROL;
+	mKeyboardRemapper[IKEY_PAD_ForwardSlash] = DIK_DIVIDE;
+	mKeyboardRemapper[IKEY_Home] = DIK_HOME;
+	mKeyboardRemapper[IKEY_UpArrow] = DIK_UP;
+	mKeyboardRemapper[IKEY_LeftArrow] = DIK_LEFT;
+	mKeyboardRemapper[IKEY_RightArrow] = DIK_RIGHT;
+	mKeyboardRemapper[IKEY_End] = DIK_END;
+	mKeyboardRemapper[IKEY_DownArrow] = DIK_DOWN;
+	mKeyboardRemapper[IKEY_Insert] = DIK_INSERT;
+	mKeyboardRemapper[IKEY_Delete] = DIK_DELETE;
 }
 
 
@@ -275,47 +275,47 @@ bool InputHandler::Startup(GLFWwindow* a_InputWindow) {
 	HWND hwnd = glfwGetWin32Window(a_InputWindow);
 	HRESULT hr;
 
-	hr = DirectInput8Create(hInstance, DIRECTINPUT_VERSION, IID_IDirectInput8, (VOID**)&m_Di, NULL);
+	hr = DirectInput8Create(hInstance, DIRECTINPUT_VERSION, IID_IDirectInput8, (VOID**)&mDirectInput, NULL);
 	if (FAILED(hr)) {
 		return false;
 	}
 
-	hr = m_Di->CreateDevice(GUID_SysKeyboard, &m_Keyboard, NULL);
+	hr = mDirectInput->CreateDevice(GUID_SysKeyboard, &mKeyboard, NULL);
 	if (FAILED(hr)) {
 		return false;
 	}
 
-	hr = m_Keyboard->SetDataFormat(&c_dfDIKeyboard);
+	hr = mKeyboard->SetDataFormat(&c_dfDIKeyboard);
 	if (FAILED(hr)) {
 		return false;
 	}
 
-	hr = m_Keyboard->SetCooperativeLevel(hwnd, DISCL_BACKGROUND | DISCL_NONEXCLUSIVE);//DISCL_NONEXCLUSIVE | DISCL_BACKGROUND
+	hr = mKeyboard->SetCooperativeLevel(hwnd, DISCL_BACKGROUND | DISCL_NONEXCLUSIVE);//DISCL_NONEXCLUSIVE | DISCL_BACKGROUND
 	if (FAILED(hr)) {
 		return false;
 	}
 
-	hr = m_Keyboard->Acquire();
+	hr = mKeyboard->Acquire();
 	if (FAILED(hr)) {
 		return false;
 	}
 
-	hr = m_Di->CreateDevice(GUID_SysMouse, &m_Mouse, NULL);
+	hr = mDirectInput->CreateDevice(GUID_SysMouse, &mMouse, NULL);
 	if (FAILED(hr)) {
 		return false;
 	}
 
-	hr = m_Mouse->SetDataFormat(&c_dfDIMouse);
+	hr = mMouse->SetDataFormat(&c_dfDIMouse);
 	if (FAILED(hr)) {
 		return false;
 	}
 
-	hr = m_Mouse->SetCooperativeLevel(hwnd, DISCL_BACKGROUND | DISCL_NONEXCLUSIVE);//DISCL_NONEXCLUSIVE | DISCL_BACKGROUND
+	hr = mMouse->SetCooperativeLevel(hwnd, DISCL_BACKGROUND | DISCL_NONEXCLUSIVE);//DISCL_NONEXCLUSIVE | DISCL_BACKGROUND
 	if (FAILED(hr)) {
 		return false;
 	}
 
-	hr = m_Mouse->Acquire();
+	hr = mMouse->Acquire();
 	if (FAILED(hr)) {
 		return false;
 	}
@@ -326,21 +326,21 @@ bool InputHandler::Startup(GLFWwindow* a_InputWindow) {
 }
 
 void InputHandler::Shutdown() {
-	if (m_Mouse) {
-		m_Mouse->Unacquire();
-		m_Mouse->Release();
-		m_Mouse = nullptr;
+	if (mMouse) {
+		mMouse->Unacquire();
+		mMouse->Release();
+		mMouse = nullptr;
 	}
 
-	if (m_Keyboard) {
-		m_Keyboard->Unacquire();
-		m_Keyboard->Release();
-		m_Keyboard = nullptr;
+	if (mKeyboard) {
+		mKeyboard->Unacquire();
+		mKeyboard->Release();
+		mKeyboard = nullptr;
 	}
 
-	if (m_Di) {
-		m_Di->Release();
-		m_Di = nullptr;
+	if (mDirectInput) {
+		mDirectInput->Release();
+		mDirectInput = nullptr;
 	}
 }
 
@@ -350,45 +350,51 @@ void InputHandler::Update() {
 	ReadMouse();
 
 	//// Update the location of the mouse cursor based on the change of the mouse location during the frame.
-	//m_MouseX += m_mouseState.lX;
-	//m_MouseY += m_mouseState.lY;
+	//mMouseX += mMouseState.lX;
+	//mMouseY += mMouseState.lY;
 	//
 	//// Ensure the mouse location doesn't exceed the screen width or height.
-	//if (m_MouseX < 0) { m_MouseX = 0; }
-	//if (m_MouseY < 0) { m_MouseY = 0; }
+	//if (mMouseX < 0) { mMouseX = 0; }
+	//if (mMouseY < 0) { mMouseY = 0; }
 	//
-	//if (m_MouseX > m_MainWindow->m_WindowWidth) { m_MouseX = m_MainWindow->m_WindowWidth; }
-	//if (m_MouseY > m_MainWindow->m_WindowHeight) { m_MouseY = m_MainWindow->m_WindowHeight; }
+	//if (mMouseX > m_MainWindow->m_WindowWidth) { mMouseX = m_MainWindow->m_WindowWidth; }
+	//if (mMouseY > m_MainWindow->m_WindowHeight) { mMouseY = m_MainWindow->m_WindowHeight; }
+
+	if (mDelayedGetNewValues != mGetNewValues) {
+		mMouseDeltaX = mMouseDeltaY = 0;
+		mMouseX = mMouseY = 0;
+		mDelayedGetNewValues = mGetNewValues;
+	}
 
 }
 
-bool InputHandler::IsKeyDown(IKeys a_Key) {
-	return m_KeyboardState[m_KeyboardRemapper[a_Key]];
+bool InputHandler::IsKeyDown(IKeys aKey) {
+	return mKeyboardState[mKeyboardRemapper[aKey]];
 }
 
-bool InputHandler::WasKeyPressed(IKeys a_Key) {
-	const int index = m_KeyboardRemapper[a_Key];
-	return m_KeyboardState[index] && !m_KeyboardStateOld[index];
+bool InputHandler::WasKeyPressed(IKeys aKey) {
+	const int index = mKeyboardRemapper[aKey];
+	return mKeyboardState[index] && !mKeyboardStateOld[index];
 }
 
 glm::vec2 InputHandler::GetMousePos() {
-	return glm::vec2(m_MouseX, m_MouseY);
+	return glm::vec2(mMouseX, mMouseY);
 }
 
 glm::vec2 InputHandler::GetMouseDelta() {
-	return glm::vec2(m_MouseDeltaX, m_MouseDeltaY);
+	return glm::vec2(mMouseDeltaX, mMouseDeltaY);
 }
 
-bool InputHandler::IsMouseKeyDown(IMouseKeys a_Key) {
-	return m_mouseState.rgbButtons[a_Key] & 0x80;
+bool InputHandler::IsMouseKeyDown(IMouseKeys aKey) {
+	return mMouseState.rgbButtons[aKey] & 0x80;
 }
 
-bool InputHandler::WasMouseKeyPressed(IMouseKeys a_Key) {
-	return (m_mouseState.rgbButtons[a_Key] & 0x80) && !(m_mouseStateOld.rgbButtons[a_Key] & 0x80);
+bool InputHandler::WasMouseKeyPressed(IMouseKeys aKey) {
+	return (mMouseState.rgbButtons[aKey] & 0x80) && !(mMouseStateOld.rgbButtons[aKey] & 0x80);
 }
 
 float InputHandler::GetMouseScroll() {
-	return m_mouseState.lZ;
+	return mMouseState.lZ;
 }
 
 std::string InputHandler::GetKeysDown() {
@@ -432,17 +438,17 @@ std::string InputHandler::GetKeysDown() {
 bool InputHandler::ReadKeyboard() {
 	HRESULT hr;
 
-	memcpy(m_KeyboardStateOld, m_KeyboardState, sizeof(m_KeyboardState));
-	if (!m_GetNewValues) {
-		memset(m_KeyboardState, 0, sizeof(m_KeyboardState));
+	memcpy(mKeyboardStateOld, mKeyboardState, sizeof(mKeyboardState));
+	if (!mGetNewValues) {
+		memset(mKeyboardState, 0, sizeof(mKeyboardState));
 		return false;
 	}
 	// Read the keyboard device.
-	hr = m_Keyboard->GetDeviceState(sizeof(m_KeyboardState), (LPVOID)&m_KeyboardState);
+	hr = mKeyboard->GetDeviceState(sizeof(mKeyboardState), (LPVOID)&mKeyboardState);
 	if (FAILED(hr)) {
 		// If the keyboard lost focus or was not acquired then try to get control back.
 		if ((hr == DIERR_INPUTLOST) || (hr == DIERR_NOTACQUIRED)) {
-			m_Keyboard->Acquire();
+			mKeyboard->Acquire();
 		} else {
 			return false;
 		}
@@ -456,36 +462,33 @@ bool InputHandler::ReadMouse() {
 
 	//POINT pos;
 	//if (::GetCursorPos(&pos) && ::ScreenToClient(Win32Application::GetHwnd(), &pos)) {
-	//	m_MouseDeltaX = m_MouseX - pos.x;
-	//	m_MouseDeltaY = m_MouseY - pos.y;
+	//	mMouseDeltaX = m_MouseX - pos.x;
+	//	mMouseDeltaY = m_MouseY - pos.y;
 	//	m_MouseX = (float)pos.x;
 	//	m_MouseY = (float)pos.y;
 	//}
 
-	if (m_Mouse == nullptr) {
+	if (mMouse == nullptr) {
 		return false;
 	}
 
-	memcpy(&m_mouseStateOld, &m_mouseState, sizeof(m_mouseState));
-	if (!m_GetNewValues) {
-		memset(&m_mouseState, 0, sizeof(m_mouseState));
+	memcpy(&mMouseStateOld, &mMouseState, sizeof(mMouseState));
+	if (!mGetNewValues) {
+		memset(&mMouseState, 0, sizeof(mMouseState));
 		return false;
 	}
 	// Read the mouse device.
-	hr = m_Mouse->GetDeviceState(sizeof(DIMOUSESTATE), (LPVOID)&m_mouseState);
+	hr = mMouse->GetDeviceState(sizeof(DIMOUSESTATE), (LPVOID)&mMouseState);
 	if (FAILED(hr)) {
 		// If the mouse lost focus or was not acquired then try to get control back.
 		if ((hr == DIERR_INPUTLOST) || (hr == DIERR_NOTACQUIRED)) {
-			m_Mouse->Acquire();
+			mMouse->Acquire();
 		} else {
 			return false;
 		}
 	} else {
-		m_MouseDeltaX = m_mouseState.lX;
-		m_MouseDeltaY = m_mouseState.lY;
-		m_MouseX + m_MouseDeltaX;
-		m_MouseY + m_MouseDeltaY;
-		//move m_MouseX and co to be here and use m_MouseState instead
+		mMouseDeltaX = mMouseState.lX;
+		mMouseDeltaY = mMouseState.lY;
 	}
 	return true;
 }

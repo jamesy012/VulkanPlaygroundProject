@@ -58,6 +58,10 @@ const VkExtent2D Window::GetFBExtent() const {
    return actualExtent;
 }
 
+const bool Window::IsFocused() const {
+   return glfwGetWindowAttrib(mWindow, GLFW_FOCUSED);
+}
+
 const char** Window::GetGLFWVulkanExtentensions(uint32_t* aCount) {
    return glfwGetRequiredInstanceExtensions(aCount);
 }

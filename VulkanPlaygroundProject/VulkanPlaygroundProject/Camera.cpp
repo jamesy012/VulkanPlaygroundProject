@@ -3,56 +3,56 @@
 
 void Camera::UpdateModelMatrix() {
 	Transform::UpdateModelMatrix();
-	m_ViewMatrix = glm::inverse(m_ModelMatrix);
-	m_ProjectionMatrix = glm::perspective(m_Fov, m_Aspect, m_Near, m_Far);
-	m_ProjectionMatrix[1][1] *= -1;//vulkan flip
-	m_PV = m_ProjectionMatrix * m_ViewMatrix;
+	mViewMatrix = glm::inverse(mModelMatrix);
+	mProjectionMatrix = glm::perspective(mFov, mAspect, mNearClip, mFarClip);
+	mProjectionMatrix[1][1] *= -1;//vulkan flip
+	mPV = mProjectionMatrix * mViewMatrix;
 }
 
 Camera::Camera() {
 }
 
-Matrix Camera::GetView() {
-	if (m_IsDirty) {
+glm::mat4 Camera::GetView() {
+	if (mIsDirty) {
 		UpdateModelMatrix();
 	}
-	return m_ViewMatrix;
+	return mViewMatrix;
 }
 
-Matrix Camera::GetProjection() {
-	if (m_IsDirty) {
+glm::mat4 Camera::GetProjection() {
+	if (mIsDirty) {
 		UpdateModelMatrix();
 	}
-	return m_ProjectionMatrix;
+	return mProjectionMatrix;
 }
 
-Matrix Camera::GetPV() {
-	if (m_IsDirty) {
+glm::mat4 Camera::GetPV() {
+	if (mIsDirty) {
 		UpdateModelMatrix();
 	}
-	return m_PV;
+	return mPV;
 }
 
-void Camera::SetAspectRatio(float a_NewAspect) {
-	m_Aspect = a_NewAspect;
+void Camera::SetAspectRatio(float aNewAspect) {
+	mAspect = aNewAspect;
 	SetDirty();
 }
 
-void Camera::SetFov(float a_NewFov) {
-	m_Fov = glm::clamp(glm::radians(a_NewFov), 0.1f, 179.9f);
+void Camera::SetFov(float aNewFov) {
+	mFov = glm::clamp(glm::radians(aNewFov), 0.1f, 179.9f);
 	SetDirty();
 }
 
-void Camera::SetNearClip(float a_NearClip) {
-	m_Near = a_NearClip;
+void Camera::SetNearClip(float aNearClip) {
+	mNearClip = aNearClip;
 	SetDirty();
 }
 
-void Camera::SetFarClip(float a_FarClip) {
-	m_Far = a_FarClip;
+void Camera::SetFarClip(float aFarClip) {
+	mFarClip = aFarClip;
 	SetDirty();
 }
 
 float Camera::GetFov() const {
-	return glm::degrees(m_Fov);
+	return glm::degrees(mFov);
 }

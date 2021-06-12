@@ -22,6 +22,7 @@ public:
    void Destroy();
 private:
    void Draw();
+   void ImGui();
    void Update();
 
    Window* mWindow;
@@ -33,9 +34,11 @@ private:
    Pipeline mPipeline;
    Model mModelTest;
 
+   VkDescriptorSetLayout mSceneDescriptorSet;
    VkDescriptorSetLayout mObjectDescriptorSet;
    VkDescriptorSetLayout mMaterialDescriptorSet;
    VkDescriptorSet mSceneSet;
+   VkDescriptorSet mObjectSet;
    VkDescriptorSet mMaterialSet;
    BufferRingUniform mSceneBuffer;
    BufferRingUniform mObjectBuffer;

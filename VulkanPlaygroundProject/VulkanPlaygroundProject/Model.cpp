@@ -264,7 +264,7 @@ void Model::Render(DescriptorUBO* aRenderDescriptor, RenderMode aRenderMode, Nod
       for (int i = 0; i < aNode->mMesh.size(); i++) {
          Material& material = mMaterials[aNode->mMesh[i].mMaterialID];
          if (!material.mDiffuse.empty()) {
-            vkCmdBindDescriptorSets(aRenderDescriptor->mCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, aRenderDescriptor->mPipelineLayout, 1, 1, &material.mDescriptorSet, 0, nullptr);
+            vkCmdBindDescriptorSets(aRenderDescriptor->mCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, aRenderDescriptor->mPipelineLayout, 2, 1, &material.mDescriptorSet, 0, nullptr);
          }
 
          vkCmdDrawIndexed(aRenderDescriptor->mCommandBuffer, static_cast<uint32_t>(aNode->mMesh[i].mCount), 1, aNode->mMesh[i].mStartIndex, 0, 0);

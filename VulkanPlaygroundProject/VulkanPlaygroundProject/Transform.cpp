@@ -10,37 +10,37 @@ Transform::Transform() {
 Transform::~Transform() {
 }
 
-void Transform::SetPosition(Vector3 a_NewPosition) {
-	m_Position = a_NewPosition;
+void Transform::SetPosition(glm::vec3 aNewPosition) {
+	mPosition = aNewPosition;
 	SetDirty();
 }
 
-void Transform::SetRotation(Vector3 a_NewRotation) {
-	m_Rotation = a_NewRotation;
+void Transform::SetRotation(glm::vec3 aNewRotation) {
+	mRotation = aNewRotation;
 	SetDirty();
 }
 
-void Transform::SetRotation(glm::quat a_NewRotation) {
-#ifdef USE_QUATERNIONS
+void Transform::SetRotation(glm::quat aNewRotation) {
+#if defined(USE_QUATERNIONS)
 	m_Rotation = a_Quat;
 #else
-	m_Rotation = glm::degrees(glm::eulerAngles(a_NewRotation));
+	mRotation = glm::degrees(glm::eulerAngles(aNewRotation));
 #endif // USE_QUATERNIONS
 
 	SetDirty();
 }
 
-void Transform::SetScale(Vector3 a_NewScale) {
-	m_Scale = a_NewScale;
+void Transform::SetScale(glm::vec3 aNewScale) {
+	mScale = aNewScale;
 	SetDirty();
 }
 
-void Transform::SetLookAt(Vector3 a_Pos, Vector3 a_At, Vector3 a_Up) {
-	glm::mat4 lookAt = glm::lookAt(a_Pos, a_At, a_Up);
+void Transform::SetLookAt(glm::vec3 aPos, glm::vec3 aAt, glm::vec3 aUp) {
+	glm::mat4 lookAt = glm::lookAt(aPos, aAt, aUp);
 
 	glm::quat rotation = glm::quat(glm::inverse(lookAt));
 
-#ifdef USE_QUATERNIONS
+#if defined(USE_QUATERNIONS)
 	setRotation(rotation);
 #else
 	glm::vec3 quatRot = glm::degrees(glm::eulerAngles(rotation));
@@ -55,33 +55,64 @@ void Transform::SetLookAt(Vector3 a_Pos, Vector3 a_At, Vector3 a_Up) {
 	}
 #endif // USE_QUATERNIONS
 
-	SetPosition(a_Pos);
-	//SetScale(Vector3(1));
+	SetPosition(aPos);
+	//SetScale(glm::vec3(1));
 }
 
-Matrix Transform::GetModelMatrix() {
-	if (m_IsDirty) {
+const glm::mat4 Transform::GetModelMatrix() {
+	if (mIsDirty) {
 		UpdateModelMatrix();
 	}
-	return m_ModelMatrix;
+	return mModelMatrix;
+}
+
+const glm::vec3 Transform::GetPostion() const {
+	return mPosition;
+}
+
+const glm::vec3 Transform::GetRotation() const {
+#if defined(USE_QUATERNIONS)
+	return glm::degrees(glm::eulerAngles(mRotation));
+#else
+	return mRotation;
+#endif
+}
+
+const glm::quat Transform::GetRotationQuat() const {
+#if defined(USE_QUATERNIONS)
+	return mRotation;
+#else
+	return glm::quat(mRotation);
+#endif
+}
+
+const glm::vec3 Transform::GetScale() const {
+	return mScale;
 }
 
 void Transform::Reset() {
-	m_Position = Vector3(0);
-	m_Rotation = Vector3(0);
-	m_Scale = Vector3(1);
+	mPosition = glm::vec3(0);
+#if defined(USE_QUATERNIONS)
+	mRotation = glm::quat(0);
+#else
+	mRotation = glm::vec3(0);
+#endif
+	mScale = glm::vec3(1);
 }
 
 void Transform::UpdateModelMatrix() {
-	m_ModelMatrix = glm::translate(glm::mat4(1), m_Position);
-
+	mModelMatrix = glm::translate(glm::mat4(1), mPosition);
+#if defined(USE_QUATERNIONS)
+	mModelMatrix *= mRotation;
+#else
 	glm::mat4 rotmat = glm::mat4(1);
-	rotmat = glm::rotate(rotmat, glm::radians(m_Rotation.y), glm::vec3(0, 1, 0));
-	rotmat = glm::rotate(rotmat, glm::radians(m_Rotation.x), glm::vec3(1, 0, 0));
-	rotmat = glm::rotate(rotmat, glm::radians(m_Rotation.z), glm::vec3(0, 0, 1));
-	m_ModelMatrix *= rotmat;
+	rotmat = glm::rotate(rotmat, glm::radians(mRotation.y), glm::vec3(0, 1, 0));
+	rotmat = glm::rotate(rotmat, glm::radians(mRotation.x), glm::vec3(1, 0, 0));
+	rotmat = glm::rotate(rotmat, glm::radians(mRotation.z), glm::vec3(0, 0, 1));
+	mModelMatrix *= rotmat;
+#endif
 
-	m_ModelMatrix = glm::scale(m_ModelMatrix, m_Scale);
+	mModelMatrix = glm::scale(mModelMatrix, mScale);
 
-	m_IsDirty = false;
+	mIsDirty = false;
 }

@@ -13,30 +13,32 @@ public:
 	InputHandler();
 	~InputHandler();
 
-	bool Startup(GLFWwindow* a_InputWindow);
+	bool Startup(GLFWwindow* aInputWindow);
 	void Shutdown();
 
 	void Update();
 
 	std::string GetKeysDown();
 
-	bool IsKeyDown(IKeys a_Key);
-	bool WasKeyPressed(IKeys a_Key);
+	bool IsKeyDown(IKeys aKey);
+	bool WasKeyPressed(IKeys aKey);
 	glm::vec2 GetMousePos();
 	glm::vec2 GetMouseDelta();
-	bool IsMouseKeyDown(IMouseKeys a_Key);
-	bool WasMouseKeyPressed(IMouseKeys a_Key);
+	bool IsMouseKeyDown(IMouseKeys aKey);
+	bool WasMouseKeyPressed(IMouseKeys aKey);
 	float GetMouseScroll();
 
-	void AllowInput(bool a_ShouldProcessInput) {
-		m_GetNewValues = a_ShouldProcessInput;
+	void AllowInput(bool aShouldProcessInput) {
+		mGetNewValues = aShouldProcessInput;
 	}
 private:
 
 	bool ReadKeyboard();
 	bool ReadMouse();
 
-	bool m_GetNewValues = true;
+	bool mGetNewValues = true;
+	//delayed by one update to stop mouse jumping
+	bool mDelayedGetNewValues = true;
 
 };
 

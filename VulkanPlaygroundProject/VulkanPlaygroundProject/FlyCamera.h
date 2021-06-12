@@ -8,8 +8,8 @@ public:
 
 	void UpdateInput();
 
-	float m_MovementSpeed;
-	float m_TranslateSpeed;
-	float m_RotationSpeed;
+	float mMovementSpeed;
+	float mTranslateSpeed;
+	float mRotationSpeed;
 };
 

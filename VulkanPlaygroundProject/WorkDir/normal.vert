@@ -18,7 +18,7 @@ layout(set = 0, binding = 0) uniform SceneBuffer{
 	mat4 viewproj; 
 } sceneData;
 
-layout(set = 0, binding = 1) uniform ObjectBuffer{   
+layout(set = 1, binding = 0) uniform ObjectBuffer{   
 	mat4 modelMatrix; 
 } objectData;
 

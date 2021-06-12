@@ -8,7 +8,7 @@ layout(location = 4) in vec3 fragTangent;
 
 layout(location = 0) out vec4 outColor;
 
-layout(set = 1, binding = 0) uniform sampler2D tex1;
+layout(set = 2, binding = 0) uniform sampler2D tex1;
 
 void main() {
     vec4 color = texture(tex1, fragTexCoord);

@@ -25,6 +25,8 @@ public:
       return mWindow;
    }
 
+   const bool IsFocused() const;
+
    static const char** GetGLFWVulkanExtentensions(uint32_t* aCount);
 
 private:

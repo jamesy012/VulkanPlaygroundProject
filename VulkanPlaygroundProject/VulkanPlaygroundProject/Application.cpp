@@ -53,12 +53,20 @@ void Application::Start() {
 
    {
       {
-         VkDescriptorSetLayoutBinding sceneLayout = CreateDescriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT, 0);
-         VkDescriptorSetLayoutBinding objectLayout = CreateDescriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT, 1);
-         VkDescriptorSetLayoutBinding bindings[] = { sceneLayout, objectLayout };
+         VkDescriptorSetLayoutBinding sceneLayout = CreateDescriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0);
+         VkDescriptorSetLayoutBinding bindings[] = { sceneLayout };
          VkDescriptorSetLayoutCreateInfo layoutInfo{};
          layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-         layoutInfo.bindingCount = 2;
+         layoutInfo.bindingCount = 1;
+         layoutInfo.pBindings = bindings;
+         vkCreateDescriptorSetLayout(mVkManager->GetDevice(), &layoutInfo, GetAllocationCallback(), &mSceneDescriptorSet);
+      }
+      {
+         VkDescriptorSetLayoutBinding objectLayout = CreateDescriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT, 0);
+         VkDescriptorSetLayoutBinding bindings[] = { objectLayout };
+         VkDescriptorSetLayoutCreateInfo layoutInfo{};
+         layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+         layoutInfo.bindingCount = 1;
          layoutInfo.pBindings = bindings;
          vkCreateDescriptorSetLayout(mVkManager->GetDevice(), &layoutInfo, GetAllocationCallback(), &mObjectDescriptorSet);
       }
@@ -76,6 +84,7 @@ void Application::Start() {
          mPipeline.AddShader(GetWorkDir() + "normal.vert");
          mPipeline.AddShader(GetWorkDir() + "normal.frag");
          mPipeline.SetVertexType(VertexTypeDefault);
+         mPipeline.AddDescriptorSetLayout(mSceneDescriptorSet);
          mPipeline.AddDescriptorSetLayout(mObjectDescriptorSet);
          mPipeline.AddDescriptorSetLayout(mMaterialDescriptorSet);
          mPipeline.Create(mVkManager->GetSwapchainExtent(), &mRenderPass);
@@ -91,15 +100,18 @@ void Application::Start() {
          setAllocate.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
          setAllocate.descriptorPool = mVkManager->GetDescriptorPool();
          setAllocate.descriptorSetCount = 1;
-         setAllocate.pSetLayouts = &mObjectDescriptorSet;
+         setAllocate.pSetLayouts = &mSceneDescriptorSet;
          vkAllocateDescriptorSets(mVkManager->GetDevice(), &setAllocate, &mSceneSet);
+
+         setAllocate.pSetLayouts = &mObjectDescriptorSet;
+         vkAllocateDescriptorSets(mVkManager->GetDevice(), &setAllocate, &mObjectSet);
 
          setAllocate.pSetLayouts = &mMaterialDescriptorSet;
          vkAllocateDescriptorSets(mVkManager->GetDevice(), &setAllocate, &mMaterialSet);
 
 
          mSceneBuffer.Create(3, sizeof(SceneUBO), mSceneSet, 0);
-         mObjectBuffer.Create(100, sizeof(ObjectUBO), mSceneSet, 1);
+         mObjectBuffer.Create(100, sizeof(ObjectUBO), mObjectSet, 0);
       }
    }
   
@@ -122,11 +134,24 @@ void Application::Run() {
 
       Update();
 
+      ImGui();
+
       Draw();
    }
 }
 
 static uint32_t frameCounter = 0;
+
+void Application::ImGui() {
+   ImGuiIO& io = ImGui::GetIO();
+   _CInput->AllowInput(!io.WantCaptureMouse && mWindow->IsFocused());
+
+
+   ImGui::Begin("stats");
+   ImGui::Text("size: %iX%i", mRenderTarget.GetSize().width, mRenderTarget.GetSize().height);
+   ImGui::Text("Window Size: %iX%i", mVkManager->GetSwapchainExtent().width, mVkManager->GetSwapchainExtent().height);
+   ImGui::End();
+}
 
 void Application::Update() {
 
@@ -186,6 +211,9 @@ void Application::Draw() {
    vkCmdSetScissor(buffer, 0, 1, &scissor);
 
    vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipelineTest.GetPipeline());
+   uint32_t descriptorSetOffsets[] = { mSceneBuffer.GetCurrentOffset() };
+   vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline.GetPipelineLayout(), 0, 1, &mSceneSet, 1, descriptorSetOffsets);
+
    VkBuffer vertexBuffer[] = { mScreenQuad.GetBuffer() };
    VkDeviceSize offsets[] = { 0 };
    vkCmdBindVertexBuffers(buffer, 0, 1, vertexBuffer, offsets);
@@ -194,10 +222,10 @@ void Application::Draw() {
    vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline.GetPipeline());
    //uint32_t descriptorSetOffsets[] = { (frameIndex * sizeof(SceneUBO)),0};
    //vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline.GetPipelineLayout(), 0, 1, &mSceneSet, 2, descriptorSetOffsets);
-   vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline.GetPipelineLayout(), 1, 1, &mMaterialSet, 0, nullptr);
+   vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline.GetPipelineLayout(), 2, 1, &mMaterialSet, 0, nullptr);
 
    {
-      DescriptorUBO des = DescriptorUBO(buffer, mPipeline.GetPipelineLayout(), &mSceneBuffer, &mObjectBuffer);
+      DescriptorUBO des = DescriptorUBO(buffer, mPipeline.GetPipelineLayout(), &mObjectBuffer);
       mModelTest.Render(&des, RenderMode::NORMAL);
    }
 
@@ -260,10 +288,11 @@ void Application::Destroy() {
    mTestImg.Destroy();
 
    {
-      VkDescriptorSet sets[] = { mSceneSet, mMaterialSet };
+      VkDescriptorSet sets[] = { mSceneSet, mObjectSet, mMaterialSet };
       //vkFreeDescriptorSets(mVkManager->GetDevice(), mDescriptorPool, 2, sets); //needs VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT
       mSceneBuffer.Destroy();
       mObjectBuffer.Destroy();
+      vkDestroyDescriptorSetLayout(mVkManager->GetDevice(), mSceneDescriptorSet, GetAllocationCallback());
       vkDestroyDescriptorSetLayout(mVkManager->GetDevice(), mObjectDescriptorSet, GetAllocationCallback());
       vkDestroyDescriptorSetLayout(mVkManager->GetDevice(), mMaterialDescriptorSet, GetAllocationCallback());
    }
