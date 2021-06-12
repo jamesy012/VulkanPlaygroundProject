@@ -161,15 +161,12 @@ static uint32_t frameCounter = 0;
 
 void Application::ImGui() {
    ImGuiIO& io = ImGui::GetIO();
-   _CInput->AllowInput(!io.WantCaptureMouse && mWindow->IsFocused());
+   _CInput->AllowInput(!io.WantCaptureMouse && mWindow->IsFocused() && mWindow->IsHovered());
 
 
    ImGui::Begin("stats");
    ImGui::Text("size: %iX%i", mRenderTarget.GetSize().width, mRenderTarget.GetSize().height);
    ImGui::Text("Window Size: %iX%i", mVkManager->GetSwapchainExtent().width, mVkManager->GetSwapchainExtent().height);
-   //ImGui::Text("Mouse Delta: %f.%f", io.MouseDelta.x, io.MouseDelta.y);
-   //io.MouseDelta = ImVec2(_CInput->GetMouseDelta().x, _CInput->GetMouseDelta().y);
-   //ImGui::Text("Mouse Delta: %f.%f", io.MouseDelta.x, io.MouseDelta.y);
    ImGui::End();
 
    ImGui::Begin("scene");

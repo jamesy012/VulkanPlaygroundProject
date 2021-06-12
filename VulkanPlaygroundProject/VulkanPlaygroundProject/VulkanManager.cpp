@@ -1,6 +1,11 @@
 #include "stdafx.h"
 #include "VulkanManager.h"
 
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <Windows.h>
+
+
 #include <optional>
 #include <set>
 
@@ -194,6 +199,48 @@ void VulkanManager::Update() {
       ImGui_ImplVulkan_NewFrame();
       ImGui_ImplGlfw_NewFrame();
       ImGui::NewFrame();
+
+      //wrap mouse around screen, keeping imgui happy
+      {
+         ImGuiIO& io = ImGui::GetIO();
+         //needs to happen for two frames in a row for imgui to not mess up values
+         static bool frameDelayMouseDeltaReset = false;
+         if (frameDelayMouseDeltaReset) {
+            io.MouseDelta = ImVec2(0, 0);
+            frameDelayMouseDeltaReset = false;
+         }
+         if (ImGui::IsMouseDragging(ImGuiMouseButton_Left) || ImGui::IsMouseDragging(ImGuiMouseButton_Right)) {
+            static POINT p = { 0, 0 };
+            static POINT pRel = { 0, 0 };
+            if (GetCursorPos(&p)) {
+               pRel = p;
+               if (ScreenToClient((HWND)mWindow->GetHWND(), &pRel)) {
+                  VkExtent2D size = mWindow->GetFBExtent();
+                  bool move = false;
+                  if (pRel.x < 2) {
+                     p.x += size.width - 5;
+                     move = true;
+                  } else if (pRel.x > size.width - 2) {
+                     p.x -= size.width - 5u;
+                     move = true;
+                  }
+                  if (pRel.y < 2) {
+                     p.y += size.height - 5;
+                     move = true;
+                  } else if (pRel.y > size.height - 2) {
+                     p.y -= size.height - 5u;
+                     move = true;
+                  }
+
+                  if (move) {
+                     SetCursorPos(p.x, p.y);
+                     io.MouseDelta = ImVec2(0, 0);
+                     frameDelayMouseDeltaReset = true;
+                  }
+               }
+            }
+         }
+      }
    }
 }
 

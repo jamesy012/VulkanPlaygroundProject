@@ -21,11 +21,14 @@ public:
       return mSurface;
    }
    const VkExtent2D GetFBExtent() const;
+
    GLFWwindow* GetWindow() const {
       return mWindow;
    }
+   const void* GetHWND() const;
 
    const bool IsFocused() const;
+   const bool IsHovered() const;
 
    static const char** GetGLFWVulkanExtentensions(uint32_t* aCount);
 

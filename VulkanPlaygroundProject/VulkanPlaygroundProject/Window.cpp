@@ -3,6 +3,8 @@
 
 #define VK_USE_PLATFORM_WIN32_KHR
 #include <GLFW/glfw3.h>
+#define GLFW_EXPOSE_NATIVE_WIN32
+#include <GLFW/glfw3native.h>
 
 void Window::Create(const int aWidth, const int aHeight, const char* aTitle) {
    glfwInit();
@@ -58,8 +60,16 @@ const VkExtent2D Window::GetFBExtent() const {
    return actualExtent;
 }
 
+const void* Window::GetHWND() const {
+   return glfwGetWin32Window(mWindow);
+}
+
 const bool Window::IsFocused() const {
    return glfwGetWindowAttrib(mWindow, GLFW_FOCUSED);
+}
+
+const bool Window::IsHovered() const {
+   return glfwGetWindowAttrib(mWindow, GLFW_HOVERED);
 }
 
 const char** Window::GetGLFWVulkanExtentensions(uint32_t* aCount) {
