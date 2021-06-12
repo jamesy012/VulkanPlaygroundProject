@@ -22,7 +22,7 @@ void Window::DestroySurface(VkInstance aInstance) {
 }
 
 void Window::SetWindowUserPtr(void* aPtr) {
-   assert(aPtr != nullptr);
+   ASSERT(aPtr != nullptr);
    glfwSetWindowUserPointer(mWindow, aPtr);
 }
 

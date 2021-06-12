@@ -30,6 +30,7 @@ private:
 
 private:
    BufferVertex mScreenQuad;
+   BufferVertex mBillboardQuad;
    Pipeline mPipelineTest;
    Pipeline mPipeline;
    Model mModelTest;
@@ -50,5 +51,7 @@ private:
    SceneUBO mSceneUbo{};
 
    FlyCamera mFlyCamera;
+
+   glm::vec3 mLightPos;
 };
 

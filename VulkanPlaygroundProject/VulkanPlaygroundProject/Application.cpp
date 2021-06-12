@@ -18,35 +18,51 @@ void Application::Start() {
    _CInput = new InputHandler();
    _CInput->Startup(mWindow->GetWindow());
 
-   VertexSimple verts[6];
-   verts[0].pos = glm::vec2(-1.0f, -1.0f);
-   verts[1].pos = glm::vec2(1.0f, -1.0f);
-   verts[2].pos = glm::vec2(-1.0f, 1.0f);
-   verts[3].pos = glm::vec2(1.0f, -1.0f);
-   verts[4].pos = glm::vec2(1.0f, 1.0f);
-   verts[5].pos = glm::vec2(-1.0f, 1.0f);
-   mScreenQuad.Create(sizeof(VertexSimple) * 6);
-   BufferStaging staging;
-   staging.Create(mScreenQuad.GetSize());
-   {
-      void* data;
-      staging.Map(&data);
-      memcpy(data, verts, sizeof(VertexSimple) * 6);
-      staging.UnMap();
-   }
-
-   //Pre first run setup
    {
       VkCommandBuffer buffer;
-      mVkManager->OneTimeCommandBufferStart(buffer);
+
       {
-         VkBufferCopy copyRegion{};
-         copyRegion.size = mScreenQuad.GetSize();
-         vkCmdCopyBuffer(buffer, staging.GetBuffer(), mScreenQuad.GetBuffer(), 1, &copyRegion);
+         VertexSimple verts[6];
+         verts[0].pos = glm::vec2(-1.0f, -1.0f);
+         verts[1].pos = glm::vec2(1.0f, -1.0f);
+         verts[2].pos = glm::vec2(-1.0f, 1.0f);
+         verts[3].pos = glm::vec2(1.0f, -1.0f);
+         verts[4].pos = glm::vec2(1.0f, 1.0f);
+         verts[5].pos = glm::vec2(-1.0f, 1.0f);
+         mScreenQuad.Create(sizeof(VertexSimple) * 6);
+         BufferStaging staging;
+         staging.Create(mScreenQuad.GetSize());
+         {
+            void* data;
+            staging.Map(&data);
+            memcpy(data, verts, sizeof(VertexSimple) * 6);
+            staging.UnMap();
+         }
+         mScreenQuad.CopyFrom(&staging);
+         staging.Destroy();
       }
-      mVkManager->OneTimeCommandBufferEnd(buffer);
+      {
+         Vertex verts[6]{};
+         verts[0].pos = glm::vec3(-1.0f, -1.0f, 0);
+         verts[1].pos = glm::vec3(1.0f, -1.0f, 0);
+         verts[2].pos = glm::vec3(-1.0f, 1.0f, 0);
+         verts[3].pos = glm::vec3(1.0f, -1.0f, 0);
+         verts[4].pos = glm::vec3(1.0f, 1.0f, 0);
+         verts[5].pos = glm::vec3(-1.0f, 1.0f, 0);
+         mBillboardQuad.Create(sizeof(Vertex) * 6);
+         BufferStaging staging;
+         staging.Create(mBillboardQuad.GetSize());
+         {
+            void* data;
+            staging.Map(&data);
+            memcpy(data, verts, sizeof(Vertex) * 6);
+            staging.UnMap();
+         }
+         mBillboardQuad.CopyFrom(&staging);
+         staging.Destroy();
+      }
    }
-   staging.Destroy();
+
 
    mRenderPass.Create(mVkManager->GetDevice(), mVkManager->GetColorFormat(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_FORMAT_D32_SFLOAT_S8_UINT);
    mRenderTarget.Create(mVkManager->GetDevice(), &mRenderPass, mVkManager->GetSwapchainExtent(), true);
@@ -111,7 +127,7 @@ void Application::Start() {
 
 
          mSceneBuffer.Create(3, sizeof(SceneUBO), mSceneSet, 0);
-         mObjectBuffer.Create(100, sizeof(ObjectUBO), mObjectSet, 0);
+         mObjectBuffer.Create(500, sizeof(ObjectUBO), mObjectSet, 0);
       }
    }
   
@@ -122,7 +138,8 @@ void Application::Start() {
    mModelTest.SetScale(0.05f);
 
    //mFlyCamera.SetPosition(glm::vec3(130, 50, 150));
-   //mFlyCamera.SetFarClip(10000.0f);
+   mFlyCamera.SetFarClip(200.0f);
+   mLightPos = glm::vec3(0, 5, 0);
 }
 
 void Application::Run() {
@@ -150,13 +167,22 @@ void Application::ImGui() {
    ImGui::Begin("stats");
    ImGui::Text("size: %iX%i", mRenderTarget.GetSize().width, mRenderTarget.GetSize().height);
    ImGui::Text("Window Size: %iX%i", mVkManager->GetSwapchainExtent().width, mVkManager->GetSwapchainExtent().height);
+   //ImGui::Text("Mouse Delta: %f.%f", io.MouseDelta.x, io.MouseDelta.y);
+   //io.MouseDelta = ImVec2(_CInput->GetMouseDelta().x, _CInput->GetMouseDelta().y);
+   //ImGui::Text("Mouse Delta: %f.%f", io.MouseDelta.x, io.MouseDelta.y);
+   ImGui::End();
+
+   ImGui::Begin("scene");
+   ImGui::DragFloat3("LightPos", glm::value_ptr(mLightPos), 0.05f);
    ImGui::End();
 }
 
 void Application::Update() {
 
    mFlyCamera.UpdateInput();
-   mSceneUbo.m_ViewProj = mFlyCamera.GetPV();
+   mSceneUbo.mViewProj = mFlyCamera.GetPV();
+   mSceneUbo.mViewPos = glm::vec4(mFlyCamera.GetPostion(),0);
+   mSceneUbo.mLightPos = glm::vec4(mLightPos,0);
 
    {
       void* data;
@@ -227,6 +253,17 @@ void Application::Draw() {
    {
       DescriptorUBO des = DescriptorUBO(buffer, mPipeline.GetPipelineLayout(), &mObjectBuffer);
       mModelTest.Render(&des, RenderMode::NORMAL);
+      {
+         ObjectUBO ubo;
+         ubo.mModel = glm::translate(glm::identity<glm::mat4>(), mLightPos);
+         ubo.mModel = ubo.mModel * glm::mat4(mFlyCamera.GetRotationQuat());
+         ubo.mModel = glm::scale(ubo.mModel, glm::vec3(0.5f));
+         des.UpdateObjectAndBind(&ubo);
+
+         vertexBuffer[0] = mBillboardQuad.GetBuffer();
+         vkCmdBindVertexBuffers(buffer, 0, 1, vertexBuffer, offsets);
+         vkCmdDraw(buffer, 6, 1, 0, 0);
+      }
    }
 
    vkCmdEndRenderPass(buffer);
@@ -299,6 +336,7 @@ void Application::Destroy() {
 
    mRenderTarget.Destroy();
    mRenderPass.Destroy(mVkManager->GetDevice());
+   mBillboardQuad.Destroy();
    mScreenQuad.Destroy();
    mPipeline.Destroy();
    mPipelineTest.Destroy();

@@ -3,31 +3,32 @@
 
 void Camera::UpdateModelMatrix() {
 	Transform::UpdateModelMatrix();
-	mViewMatrix = glm::inverse(mModelMatrix);
+	mViewMatrix = glm::inverse(GetGlobalMatrix());
 	mProjectionMatrix = glm::perspective(mFov, mAspect, mNearClip, mFarClip);
 	mProjectionMatrix[1][1] *= -1;//vulkan flip
 	mPV = mProjectionMatrix * mViewMatrix;
 }
 
 Camera::Camera() {
+	mPV = mProjectionMatrix = mViewMatrix = glm::identity<glm::mat4>();
 }
 
 glm::mat4 Camera::GetView() {
-	if (mIsDirty) {
+	if (IsDirty()) {
 		UpdateModelMatrix();
 	}
 	return mViewMatrix;
 }
 
 glm::mat4 Camera::GetProjection() {
-	if (mIsDirty) {
+	if (IsDirty()) {
 		UpdateModelMatrix();
 	}
 	return mProjectionMatrix;
 }
 
 glm::mat4 Camera::GetPV() {
-	if (mIsDirty) {
+	if (IsDirty()) {
 		UpdateModelMatrix();
 	}
 	return mPV;

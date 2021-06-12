@@ -198,14 +198,16 @@ void VulkanManager::Update() {
 }
 
 bool VulkanManager::RenderStart(VkCommandBuffer& aBuffer, uint32_t& aFrameIndex) {
-   assert(mCurrentImageIndex == -1);
+   mCurrentFrameCounter++;
+
+   ASSERT(mCurrentImageIndex == -1);
    VkResult result = vkAcquireNextImageKHR(mDevice, mSwapChain, UINT64_MAX, mImageAvailableSemaphores[mCurrentFrameIndex], VK_NULL_HANDLE, &aFrameIndex);
 
    if (result == VK_ERROR_OUT_OF_DATE_KHR) {
       SwapchainResized();
       return false;
    } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
-      assert("failed to acqure swap chain image");
+      ASSERT("failed to acqure swap chain image");
    }
 
    // Check if a previous frame is using this image (i.e. there is its fence to wait on)
@@ -222,7 +224,7 @@ bool VulkanManager::RenderStart(VkCommandBuffer& aBuffer, uint32_t& aFrameIndex)
 void VulkanManager::RenderSubmit(std::vector<VkCommandBuffer> aCommandBuffers) {
    RenderImGui();
 
-   assert(mCurrentImageIndex != -1);
+   ASSERT(mCurrentImageIndex != -1);
    VkSemaphore signalSemaphores[] = { mRenderFinishedSemaphores[mCurrentFrameIndex] };
 
    VkSubmitInfo submitInfo{};
@@ -246,12 +248,12 @@ void VulkanManager::RenderSubmit(std::vector<VkCommandBuffer> aCommandBuffers) {
    vkResetFences(mDevice, 1, &mInFlightFences[mCurrentFrameIndex]);
 
    if (vkQueueSubmit(mGraphicsQueue.mQueue, 1, &submitInfo, mInFlightFences[mCurrentFrameIndex]) != VK_SUCCESS) {
-      assert("failed to submit draw command buffer!");
+      ASSERT("failed to submit draw command buffer!");
    }
 }
 
 void VulkanManager::RenderEnd() {
-   assert(mCurrentImageIndex != -1);
+   ASSERT(mCurrentImageIndex != -1);
    RenderSubmit({ mCommandBuffers[mCurrentImageIndex] });
 
    VkSemaphore signalSemaphores[] = { mRenderFinishedSemaphores[mCurrentFrameIndex] };
@@ -277,7 +279,7 @@ void VulkanManager::RenderEnd() {
       SwapchainResized();
       return;
    } else if (result != VK_SUCCESS) {
-      assert("failed to present swap chain image");
+      ASSERT("failed to present swap chain image");
    }
    mCurrentFrameIndex = (mCurrentFrameIndex + 1) % mNumSwapChainImages;
 
@@ -670,7 +672,7 @@ bool VulkanManager::CreateSwapchain() {
    createInfo.oldSwapchain = VK_NULL_HANDLE;
 
     if (vkCreateSwapchainKHR(mDevice, &createInfo, nullptr, &mSwapChain) != VK_SUCCESS) {
-      assert("failed to create swap chain");
+      ASSERT("failed to create swap chain");
    }
 
    vkGetSwapchainImagesKHR(mDevice, mSwapChain, &mNumSwapChainImages, nullptr);
@@ -718,7 +720,7 @@ bool VulkanManager::CreateCommandPoolBuffers() {
    }
    //buffers
    {
-      assert(mNumSwapChainImages != 0);
+      ASSERT(mNumSwapChainImages != 0);
       mCommandBuffers.resize(mNumSwapChainImages);
 
       VkCommandBufferAllocateInfo allocInfo{};
@@ -728,7 +730,7 @@ bool VulkanManager::CreateCommandPoolBuffers() {
       allocInfo.commandBufferCount = mNumSwapChainImages;
 
       if (vkAllocateCommandBuffers(mDevice, &allocInfo, mCommandBuffers.data()) != VK_SUCCESS) {
-         assert("failed to allocate command buffers!");
+         ASSERT("failed to allocate command buffers!");
       }
 
       //for (size_t i = 0; i < mCommandBuffers.size(); i++) {

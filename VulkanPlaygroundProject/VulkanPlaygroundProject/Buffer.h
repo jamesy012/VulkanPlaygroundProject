@@ -136,6 +136,13 @@ public:
       }
       if (mOffsetCount >= mCount) {
          mOffsetCount = 0;
+#if defined(_DEBUG)
+         uint32_t frame = _VulkanManager->GetCurrentFrameCounter();
+         if (frame == mLastOverflowFrame) {
+            LOG("RingBuffer being used too much per frame\n");
+         }
+         mLastOverflowFrame = frame;
+#endif
       }
    }
 
@@ -145,4 +152,7 @@ public:
 private:
    uint32_t mCurrentOffset;
    uint16_t mOffsetCount = 0;
+#if defined(_DEBUG)
+   uint32_t mLastOverflowFrame = 0;
+#endif
 };

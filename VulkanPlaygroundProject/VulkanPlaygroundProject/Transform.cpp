@@ -2,12 +2,22 @@
 #include "Transform.h"
 
 #include <glm\ext.hpp>
+#include <glm/gtx/matrix_decompose.hpp>
 
 Transform::Transform() {
 	Reset();
 }
 
 Transform::~Transform() {
+}
+
+void Transform::SetMatrix(glm::mat4 aNewMatrix) {
+	glm::quat rotation;
+	glm::vec3 skew;
+	glm::vec4 perspective;
+	glm::decompose(aNewMatrix, mScale, rotation, mPosition, skew, perspective);
+	SetRotation(glm::conjugate(rotation));
+	SetDirty();
 }
 
 void Transform::SetPosition(glm::vec3 aNewPosition) {
@@ -59,11 +69,27 @@ void Transform::SetLookAt(glm::vec3 aPos, glm::vec3 aAt, glm::vec3 aUp) {
 	//SetScale(glm::vec3(1));
 }
 
-const glm::mat4 Transform::GetModelMatrix() {
+void Transform::SetParent(Transform* aParent) {
+	if (mParent == aParent) {
+		return;
+	}
+	RemoveParent();
+	AddParent(aParent);
+}
+
+const glm::mat4 Transform::GetGlobalMatrix() {
+	glm::mat4 result = GetLocalMatrix();
+	if (mParent) {
+		result *= mParent->GetGlobalMatrix();
+	}
+	return result;
+}
+
+const glm::mat4 Transform::GetLocalMatrix() {
 	if (mIsDirty) {
 		UpdateModelMatrix();
 	}
-	return mModelMatrix;
+	return mLocalMatrix;
 }
 
 const glm::vec3 Transform::GetPostion() const {
@@ -82,12 +108,21 @@ const glm::quat Transform::GetRotationQuat() const {
 #if defined(USE_QUATERNIONS)
 	return mRotation;
 #else
-	return glm::quat(mRotation);
+	return glm::quat(glm::radians(mRotation));
 #endif
 }
 
 const glm::vec3 Transform::GetScale() const {
 	return mScale;
+}
+
+void Transform::SetDirty() {
+	//if (!IsDirty()) {
+		for (size_t i = 0; i < mChildren.size(); i++) {
+			mChildren[i]->SetDirty();
+		}
+		mIsDirty = true;
+	//}
 }
 
 void Transform::Reset() {
@@ -98,21 +133,49 @@ void Transform::Reset() {
 	mRotation = glm::vec3(0);
 #endif
 	mScale = glm::vec3(1);
+	SetParent(nullptr);
 }
 
 void Transform::UpdateModelMatrix() {
-	mModelMatrix = glm::translate(glm::mat4(1), mPosition);
+	mLocalMatrix = glm::translate(glm::mat4(1), mPosition);
 #if defined(USE_QUATERNIONS)
-	mModelMatrix *= mRotation;
+	mLocalMatrix *= glm::toMat4(mRotation);
 #else
 	glm::mat4 rotmat = glm::mat4(1);
 	rotmat = glm::rotate(rotmat, glm::radians(mRotation.y), glm::vec3(0, 1, 0));
 	rotmat = glm::rotate(rotmat, glm::radians(mRotation.x), glm::vec3(1, 0, 0));
 	rotmat = glm::rotate(rotmat, glm::radians(mRotation.z), glm::vec3(0, 0, 1));
-	mModelMatrix *= rotmat;
+	mLocalMatrix *= rotmat;
 #endif
 
-	mModelMatrix = glm::scale(mModelMatrix, mScale);
+	mLocalMatrix = glm::scale(mLocalMatrix, mScale);
 
 	mIsDirty = false;
+}
+
+void Transform::RemoveChild(Transform* aChild) {
+	for (size_t i = 0; i < mChildren.size(); i++) {
+		if (mChildren[i] == aChild) {
+			mChildren.erase(mChildren.begin() + i);
+			return;
+		}
+	}
+}
+
+void Transform::RemoveParent() {
+	if (mParent == nullptr) {
+		return;
+	}
+	mParent->RemoveChild(this);
+	mParent = nullptr;
+	SetDirty();
+}
+
+void Transform::AddParent(Transform* aParent) {
+	if (aParent == nullptr) {
+		return;
+	}
+	mParent = aParent;
+	mParent->mChildren.push_back(this);
+	SetDirty();
 }

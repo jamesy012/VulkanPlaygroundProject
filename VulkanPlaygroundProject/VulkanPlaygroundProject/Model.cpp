@@ -90,10 +90,11 @@ void Model::ProcessMesh(const aiScene* aScene, const aiNode* aNode, Node* aParen
    if (aParent) {
       aParent->mChildren.push_back(node);
       node->mParent = aParent;
+      node->mTransform.SetParent(&node->mParent->mTransform);
    }
    node->mName = aNode->mName.C_Str();
 
-   node->mRenderMatrix = mat4_cast(aNode->mTransformation);
+   node->mTransform.SetMatrix(mat4_cast(aNode->mTransformation));
 
    //meshs
    node->mMesh.resize(aNode->mNumMeshes);
@@ -140,7 +141,7 @@ void Model::ProcessMesh(const aiScene* aScene, const aiNode* aNode, Node* aParen
 
       //indices
       for (unsigned int i = 0; i < assimpMesh->mNumFaces; i++) {
-         assert(assimpMesh->mFaces[i].mNumIndices == 3);
+         ASSERT(assimpMesh->mFaces[i].mNumIndices == 3);
          for (unsigned int q = 0; q < assimpMesh->mFaces[i].mNumIndices; q++) {
             mIndices.push_back(mesh.mStartVertex + assimpMesh->mFaces[i].mIndices[q]);
          }
@@ -217,7 +218,7 @@ void Model::LoadImages() {
                imgLoader.mMaterialRef[materials]->mNormal.push_back(img);
                break;
             default:
-               assert(false);
+               ASSERT(false);
          }
       }
 
@@ -225,20 +226,13 @@ void Model::LoadImages() {
 }
 
 void Model::Render(DescriptorUBO* aRenderDescriptor, RenderMode aRenderMode) {
-   assert(aRenderMode != RenderMode::ALL);
-   assert((aRenderMode & (aRenderMode-1)) == 0);
+   ASSERT(aRenderMode != RenderMode::ALL);
+   ASSERT((aRenderMode & (aRenderMode-1)) == 0);
    if (!(mRenderModes & aRenderMode)) {
       return;
    }
    mVertexBuffer.Bind(aRenderDescriptor->mCommandBuffer);
    mIndexBuffer.Bind(aRenderDescriptor->mCommandBuffer);
-
-   if (mDirty) {
-      mBase->mRenderMatrix = glm::translate(glm::mat4(1), mPosition);
-      mBase->mRenderMatrix *= glm::mat4(glm::quat(glm::radians(mRotation)));
-      mBase->mRenderMatrix = glm::scale(mBase->mRenderMatrix, mScale);
-      mDirty = false;
-   }
 
    Render(aRenderDescriptor, aRenderMode, mBase, glm::identity<glm::mat4>());
 
@@ -256,9 +250,12 @@ void Model::Destroy() {
 
 void Model::Render(DescriptorUBO* aRenderDescriptor, RenderMode aRenderMode, Node* aNode, glm::mat4 aMatrix) {
    ObjectUBO ubo;
-   ubo.m_Model = aMatrix * aNode->GetMatrix();
+   ubo.mModel = aMatrix * aNode->GetMatrix();
 
    if (!aNode->mMesh.empty()) {
+      ASSERT(ubo.mModel == aNode->GetMatrixWithParents());
+      //ObjectUBO ubo;
+      //ubo.mModel = aNode->GetMatrixWithParents();
       aRenderDescriptor->UpdateObjectAndBind(&ubo);
 
       for (int i = 0; i < aNode->mMesh.size(); i++) {
@@ -272,6 +269,6 @@ void Model::Render(DescriptorUBO* aRenderDescriptor, RenderMode aRenderMode, Nod
    }
 
    for (int i = 0; i < aNode->mChildren.size(); i++) {
-      Render(aRenderDescriptor, aRenderMode, aNode->mChildren[i], ubo.m_Model);
+      Render(aRenderDescriptor, aRenderMode, aNode->mChildren[i], ubo.mModel);
    }
 }

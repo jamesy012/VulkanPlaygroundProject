@@ -4,6 +4,7 @@
 #include "Buffer.h"
 
 #include "Image.h"
+#include "Transform.h"
 
 struct aiScene;
 struct aiNode;
@@ -50,34 +51,28 @@ class Model {
    //~~~~~~~~~~ NODE/MESH
    struct Mesh {
       Mesh() {};
-      int mMaterialID;
-      int mCount;
-      int mStartIndex;
-      int mStartVertex;
+      int mMaterialID = -1;
+      int mCount = 0;
+      int mStartIndex = 0;
+      int mStartVertex = 0;
    };
 
    struct Node {
       Node() {
-         mRenderMatrix = glm::identity<glm::mat4>();
       }
 
       glm::mat4 GetMatrixWithParents() {
-         Node* parent = mParent;
-         glm::mat4 objectParentMatrix = GetMatrix();
-         while (parent != nullptr) {
-            objectParentMatrix = parent->GetMatrix() * objectParentMatrix;
-            parent = parent->mParent;
-         }
-         return objectParentMatrix;
+         return mTransform.GetGlobalMatrix();
       }
 
       glm::mat4 GetMatrix() {
-         return mRenderMatrix;
+         return mTransform.GetLocalMatrix();
       }
 
-      Node* mParent = nullptr;
-      glm::mat4 mRenderMatrix;
       std::string mName;
+
+      Transform mTransform;
+      Node* mParent = nullptr;
       std::vector<Node*> mChildren;
       std::vector<Mesh> mMesh;
    };
@@ -109,31 +104,32 @@ public:
    void Render(DescriptorUBO* aRenderDescriptor, RenderMode aRenderMode);
 
    void SetPosition(glm::vec3 aPos) {
-      mDirty = true;
-      mPosition = aPos;
+      ASSERT_RET(mBase);
+      mBase->mTransform.SetPosition(aPos);
    }
-
    void SetRotation(glm::vec3 aRot) {
-      mDirty = true;
-      mRotation = aRot;
+      ASSERT_RET(mBase);
+      mBase->mTransform.SetRotation(aRot);
    }
-
    void SetScale(float aScale) {
-      mDirty = true;
-      mScale = glm::vec3(aScale);
+      ASSERT_RET(mBase);
+      mBase->mTransform.SetScale(aScale);
    }
    void SetScale(glm::vec3 aScale) {
-      mDirty = true;
-      mScale = aScale;
+      ASSERT_RET(mBase);
+      mBase->mTransform.SetScale(aScale);
    }
    glm::vec3 GetPosition() {
-      return mPosition;
+      ASSERT_RET_VALUE(mBase, glm::vec3(0));
+      return mBase->mTransform.GetPostion();
    }
    glm::vec3 GetRotation() {
-      return mRotation;
+      ASSERT_RET_VALUE(mBase, glm::vec3(0));
+      return mBase->mTransform.GetRotation();
    }
    glm::vec3 GetScale() {
-      return mScale;
+      ASSERT_RET_VALUE(mBase, glm::vec3(1));
+      return mBase->mTransform.GetScale();
    }
 
    void SetRenderMode(unsigned int aMode) {
@@ -188,9 +184,4 @@ private:
 
    BufferVertex mVertexBuffer;
    BufferIndex mIndexBuffer;
-
-   bool mDirty = true;
-   glm::vec3 mScale = glm::vec3(1.0f);
-   glm::vec3 mPosition = glm::vec3(0);
-   glm::vec3 mRotation = glm::vec3(0);
 };

@@ -87,7 +87,7 @@ void FlyCamera::UpdateInput() {
 
 	movement.z -= _CInput->GetMouseScroll() * mTranslateSpeed * 0.01f;
 
-	mPosition = glm::translate(GetModelMatrix(), movement)[3];
+	mPosition = glm::translate(GetLocalMatrix(), movement)[3];
 
 	SetDirty();
 

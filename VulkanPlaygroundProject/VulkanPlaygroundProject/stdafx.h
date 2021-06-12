@@ -17,13 +17,11 @@
 #include <glm/ext.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-#include "VulkanManager.h"
-
-extern class VulkanManager* _VulkanManager;
-
 //~~~~~~~ ASSERTS/Validation
-#define ASSERT_RET(x) assert(false);
-#define ASSERT_RET_FALSE(x) assert(false); return false;
+#define ASSERT(x) assert(x);
+#define ASSERT_RET(x) if(!x) {ASSERT(false); return;};
+#define ASSERT_RET_VALUE(x, ret) if(!(x)) {ASSERT(false); return (ret);};
+#define ASSERT_RET_FALSE(x) ASSERT(false); return false;
 
 static void CheckVulkanResult(VkResult aResult) {
    if (aResult == VK_SUCCESS) {
@@ -33,21 +31,29 @@ static void CheckVulkanResult(VkResult aResult) {
    assert(false);
 }
 
-#define ASSERT_VULKAN_VALUE(x) assert(x != VK_NULL_HANDLE);
-#define ASSERT_VULKAN_SUCCESS(x) assert(x == VK_SUCCESS);
+#define ASSERT_VULKAN_VALUE(x) ASSERT(x != VK_NULL_HANDLE);
+#define ASSERT_VULKAN_SUCCESS(x) ASSERT(x == VK_SUCCESS);
 #define ASSERT_VULKAN_SUCCESS_RET_FALSE(x) if(x != VK_SUCCESS){ASSERT_RET_FALSE("")};
-#define ASSERT_VALID(x) assert(x != nullptr);
+#define ASSERT_VALID(x) ASSERT(x != nullptr);
+
 
 //~~~~~~~ OBJECTS
 
 struct SceneUBO {
-   glm::mat4 m_ViewProj;
+   glm::mat4 mViewProj;
+   glm::vec4 mViewPos;
+   glm::vec4 mLightPos;
 };
 
 struct ObjectUBO {
-   glm::mat4 m_Model;
+   glm::mat4 mModel;
 };
 
+
+//~~~~~~~ VULKAN OBJECTS
+#include "VulkanManager.h"
+
+extern class VulkanManager* _VulkanManager;
 
 //~~~~~~~ VULKAN HELPERS
 #define SIZEOF_ARRAY(x) sizeof(x) / sizeof(x[0]);

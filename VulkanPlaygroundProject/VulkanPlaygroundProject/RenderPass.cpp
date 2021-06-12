@@ -45,7 +45,7 @@ bool RenderPass::Create(VkDevice aDevice, VkFormat aColorFormat, VkImageLayout a
       depthDescription.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
       depthDescription.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
       depthDescription.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-      assert(aFinal == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR || aFinal == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL || aFinal == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+      ASSERT(aFinal == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR || aFinal == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL || aFinal == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
       depthDescription.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
       depthDescription.format = aDepthFormat;
 

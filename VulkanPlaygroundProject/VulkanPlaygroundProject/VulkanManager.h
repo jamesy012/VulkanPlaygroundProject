@@ -38,11 +38,11 @@ public:
       return &mPresentRenderPass;
    }
    const Framebuffer* GetPresentFramebuffer(uint32_t aIndex) const {
-      assert(aIndex <= mNumSwapChainImages);
+      ASSERT(aIndex <= mNumSwapChainImages);
       return &mPresentFramebuffer[aIndex];
    }
    const VkImage GetPresentImage(uint32_t aIndex) const {
-      assert(aIndex <= mNumSwapChainImages);
+      ASSERT(aIndex <= mNumSwapChainImages);
       return mSwapChainImages[aIndex];
    }
    const VmaAllocator& GetAllocator() const {
@@ -62,6 +62,9 @@ public:
    } 
    const VkSampler GetDefaultSampler() const {
       return mDefaultSampler;
+   }
+   const uint32_t GetCurrentFrameCounter() const {
+      return mCurrentFrameCounter;
    }
 
 private:
@@ -113,6 +116,7 @@ private:
    std::vector<VkFence> mImagesInFlight;
    uint32_t mCurrentFrameIndex = 0;
    int32_t mCurrentImageIndex = -1;
+   uint32_t mCurrentFrameCounter = 0;
 
    //Window
    Window* mWindow;

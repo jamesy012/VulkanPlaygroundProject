@@ -12,7 +12,7 @@ void Image::LoadImage(std::string aPath) {
    mSize = mWidth * mHeight * 4;
 
    if (!pixels) {
-      assert(false);
+      ASSERT(false);
    }
 
    BufferStaging staging;

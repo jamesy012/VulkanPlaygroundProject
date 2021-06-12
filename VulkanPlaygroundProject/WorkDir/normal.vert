@@ -16,6 +16,8 @@ layout(location = 4) out vec3 fragTangent;
 
 layout(set = 0, binding = 0) uniform SceneBuffer{   
 	mat4 viewproj; 
+    vec4 viewPos;
+    vec4 lightPos;
 } sceneData;
 
 layout(set = 1, binding = 0) uniform ObjectBuffer{   

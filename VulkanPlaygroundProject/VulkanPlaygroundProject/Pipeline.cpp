@@ -16,7 +16,7 @@ shaderc_shader_kind GetShaderCShaderKind(VkShaderStageFlagBits aType) {
       case VK_SHADER_STAGE_FRAGMENT_BIT:
          return shaderc_shader_kind::shaderc_glsl_fragment_shader;
       default:
-         assert(false);
+         ASSERT(false);
    }
    return shaderc_vertex_shader;
 }
