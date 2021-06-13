@@ -1002,6 +1002,11 @@ void VulkanManager::SwapchainResized() {
 }
 
 void VulkanManager::DestroySizeDependent() {
+
+   if (mSizeDependentDestroyCallback) {
+      mSizeDependentDestroyCallback();
+   }
+
    for (uint32_t i = 0; i < mNumSwapChainImages; i++) {
       mPresentFramebuffer[i].Destroy(mDevice);
       vkDestroyFramebuffer(mDevice, mImGuiFramebuffer[i], GetAllocationCallback());
@@ -1034,5 +1039,9 @@ void VulkanManager::CreateSizeDependent() {
          std::vector<VkImageView> view = { mSwapChainImageViews[i] };
          mPresentFramebuffer[i].Create(mDevice, mSwapChainExtent, &mPresentRenderPass, view);
       }
+   }
+
+   if (mSizeDependentCreateCallback) {
+      mSizeDependentCreateCallback();
    }
 }

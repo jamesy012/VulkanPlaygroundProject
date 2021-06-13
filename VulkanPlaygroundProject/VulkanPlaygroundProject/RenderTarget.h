@@ -4,6 +4,9 @@ public:
    bool Create(VkDevice aDevice, RenderPass* aRenderPass, VkExtent2D aSize, bool aIncludeDepth);
    void Destroy();
 
+   void StartRenderPass(VkCommandBuffer aBuffer, std::vector<VkClearValue> aClearColors);
+   void EndRenderPass(VkCommandBuffer aBuffer);
+
    const Framebuffer GetFramebuffer() const {
       return mFramebuffer;
    };
@@ -29,5 +32,7 @@ private:
    VkImageView mDepthView = VK_NULL_HANDLE;
    Framebuffer mFramebuffer;
    VkExtent2D mExtent;
+
+   RenderPass* mRenderPass;
 };
 

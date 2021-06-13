@@ -48,7 +48,9 @@ private:
 	void AddParent(Transform* aParent);
 
 	bool mIsDirty = true;
+	bool mIsDirtyGlobal = true;
 	glm::mat4 mLocalMatrix = glm::identity<glm::mat4>();
+	glm::mat4 mGlobalMatrix = glm::identity<glm::mat4>();
 
 	Transform* mParent = nullptr;
 	std::vector<Transform*> mChildren;

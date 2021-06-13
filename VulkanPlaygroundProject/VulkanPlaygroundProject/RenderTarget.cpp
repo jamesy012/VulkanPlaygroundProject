@@ -63,6 +63,7 @@ bool RenderTarget::Create(VkDevice aDevice, RenderPass* aRenderPass, VkExtent2D 
    mFramebuffer.Create(aDevice, aSize, aRenderPass, imageViews);
 
    mExtent = aSize;
+   mRenderPass = aRenderPass;
 
    return true;
 }
@@ -72,10 +73,33 @@ void RenderTarget::Destroy() {
    mFramebuffer.Destroy(device);
    vkDestroyImageView(device, mColorView, GetAllocationCallback());
    vmaDestroyImage(_VulkanManager->GetAllocator(), mColor, mColorAllocation);
+   mColorView = VK_NULL_HANDLE;
+   mColor = VK_NULL_HANDLE;
+   mColorAllocation = nullptr;
    if (mDepth != VK_NULL_HANDLE) {
       vkDestroyImageView(device, mDepthView, GetAllocationCallback());
       vmaDestroyImage(_VulkanManager->GetAllocator(), mDepth, mDepthAllocation);
       mDepth = VK_NULL_HANDLE;
       mDepthView = VK_NULL_HANDLE;
+      mDepthAllocation = nullptr;
    }
+}
+
+void RenderTarget::StartRenderPass(VkCommandBuffer aBuffer, std::vector<VkClearValue> aClearColors) {
+   VkRenderPassBeginInfo renderBegin{};
+   renderBegin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+   renderBegin.renderArea.extent = GetSize();
+   renderBegin.renderPass = mRenderPass->GetRenderPass();//mVkManager->GetPresentRenderPass()->GetRenderPass();
+   renderBegin.clearValueCount = static_cast<uint32_t>(aClearColors.size());
+   renderBegin.pClearValues = aClearColors.data();
+   renderBegin.framebuffer = GetFramebuffer().GetFramebuffer();//mVkManager->GetPresentFramebuffer(frameIndex)->GetFramebuffer();
+   vkCmdBeginRenderPass(aBuffer, &renderBegin, VK_SUBPASS_CONTENTS_INLINE);
+   VkViewport viewport = GetViewport();
+   VkRect2D scissor = { {}, GetSize() };
+   vkCmdSetViewport(aBuffer, 0, 1, &viewport);
+   vkCmdSetScissor(aBuffer, 0, 1, &scissor);
+}
+
+void RenderTarget::EndRenderPass(VkCommandBuffer aBuffer) {
+   vkCmdEndRenderPass(aBuffer);
 }

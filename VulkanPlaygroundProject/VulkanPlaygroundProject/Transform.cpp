@@ -78,15 +78,18 @@ void Transform::SetParent(Transform* aParent) {
 }
 
 const glm::mat4 Transform::GetGlobalMatrix() {
-	glm::mat4 result = GetLocalMatrix();
-	if (mParent) {
-		result *= mParent->GetGlobalMatrix();
+	if (mIsDirtyGlobal) {
+		mGlobalMatrix = GetLocalMatrix();
+		if (mParent) {
+			mGlobalMatrix *= mParent->GetGlobalMatrix();
+		}
+		mIsDirtyGlobal = false;
 	}
-	return result;
+	return mGlobalMatrix;
 }
 
 const glm::mat4 Transform::GetLocalMatrix() {
-	if (mIsDirty) {
+	if (IsDirty()) {
 		UpdateModelMatrix();
 	}
 	return mLocalMatrix;
@@ -122,6 +125,7 @@ void Transform::SetDirty() {
 			mChildren[i]->SetDirty();
 		}
 		mIsDirty = true;
+		mIsDirtyGlobal = true;
 	//}
 }
 

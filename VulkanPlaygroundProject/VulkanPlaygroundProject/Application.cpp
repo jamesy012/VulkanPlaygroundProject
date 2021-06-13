@@ -62,8 +62,9 @@ void Application::Start() {
    }
 
 
-   mRenderPass.Create(mVkManager->GetDevice(), mVkManager->GetColorFormat(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_FORMAT_D32_SFLOAT_S8_UINT);
-   mRenderTarget.Create(mVkManager->GetDevice(), &mRenderPass, mVkManager->GetSwapchainExtent(), true);
+   CreateSizeDependent();
+   mVkManager->mSizeDependentCreateCallback = std::bind(&Application::CreateSizeDependent, this);
+   mVkManager->mSizeDependentDestroyCallback = std::bind(&Application::DestroySizeDependent, this);
 
    {
       {
@@ -210,6 +211,17 @@ void Application::Update() {
    //mModelTest.SetRotation(glm::vec3(0, frameCounter * 0.07f, 0));
 }
 
+void Application::CreateSizeDependent() {
+   if (!mRenderPass.IsValid()) {
+      mRenderPass.Create(mVkManager->GetDevice(), mVkManager->GetColorFormat(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_FORMAT_D32_SFLOAT_S8_UINT);
+   }
+   mRenderTarget.Create(mVkManager->GetDevice(), &mRenderPass, mVkManager->GetSwapchainExtent(), true);
+}
+
+void Application::DestroySizeDependent() {
+   mRenderTarget.Destroy();
+}
+
 
 void Application::Draw() {
    PROFILE_START_SCOPED("Draw");
@@ -232,7 +244,7 @@ void Application::Draw() {
       }
    }
 
-   VkClearValue clearColor[2];
+   std::vector<VkClearValue> clearColor = std::vector<VkClearValue>(2);
    clearColor[0].color.float32[0] = abs(sin((frameCounter * 0.5f) / 5000.0f));
    clearColor[0].color.float32[1] = abs(sin((frameCounter * 0.2f) / 5000.0f));
    clearColor[0].color.float32[2] = abs(sin((frameCounter * 0.1f) / 5000.0f));
@@ -240,31 +252,17 @@ void Application::Draw() {
    clearColor[1].depthStencil.depth = 1.0f;
    clearColor[1].depthStencil.stencil = 0;
 
-   VkRenderPassBeginInfo renderBegin{};
-   renderBegin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-   renderBegin.renderArea.extent = mRenderTarget.GetSize();
-   renderBegin.renderPass = mRenderPass.GetRenderPass();//mVkManager->GetPresentRenderPass()->GetRenderPass();
-   renderBegin.clearValueCount = 2;
-   renderBegin.pClearValues = clearColor;
-   renderBegin.framebuffer = mRenderTarget.GetFramebuffer().GetFramebuffer();//mVkManager->GetPresentFramebuffer(frameIndex)->GetFramebuffer();
-   vkCmdBeginRenderPass(buffer, &renderBegin, VK_SUBPASS_CONTENTS_INLINE);
-   VkViewport viewport = mRenderTarget.GetViewport();
-   VkRect2D scissor = { {}, mRenderTarget.GetSize() };
-   vkCmdSetViewport(buffer, 0, 1, &viewport);
-   vkCmdSetScissor(buffer, 0, 1, &scissor);
+   mRenderTarget.StartRenderPass(buffer, clearColor);
 
    vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipelineTest.GetPipeline());
+
    uint32_t descriptorSetOffsets[] = { mSceneBuffer.GetCurrentOffset() };
    vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline.GetPipelineLayout(), 0, 1, &mSceneSet, 1, descriptorSetOffsets);
 
-   VkBuffer vertexBuffer[] = { mScreenQuad.GetBuffer() };
-   VkDeviceSize offsets[] = { 0 };
-   vkCmdBindVertexBuffers(buffer, 0, 1, vertexBuffer, offsets);
+   mScreenQuad.Bind(buffer);
    vkCmdDraw(buffer, 6, 1, 0, 0);
 
    vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline.GetPipeline());
-   //uint32_t descriptorSetOffsets[] = { (frameIndex * sizeof(SceneUBO)),0};
-   //vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline.GetPipelineLayout(), 0, 1, &mSceneSet, 2, descriptorSetOffsets);
    vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline.GetPipelineLayout(), 2, 1, &mMaterialSet, 0, nullptr);
 
    {
@@ -277,29 +275,13 @@ void Application::Draw() {
          ubo.mModel = glm::scale(ubo.mModel, glm::vec3(0.5f));
          des.UpdateObjectAndBind(&ubo);
 
-         vertexBuffer[0] = mBillboardQuad.GetBuffer();
-         vkCmdBindVertexBuffers(buffer, 0, 1, vertexBuffer, offsets);
+         mBillboardQuad.Bind(buffer);
          vkCmdDraw(buffer, 6, 1, 0, 0);
       }
    }
 
-   vkCmdEndRenderPass(buffer);
+   mRenderTarget.EndRenderPass(buffer);
 
-   //VkImageMemoryBarrier barrier{};
-   //barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-   //barrier.oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-   //barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-   //barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-   //barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-   //barrier.image = mVkManager->GetPresentImage(frameIndex);
-   //barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-   //barrier.subresourceRange.baseMipLevel = 0;
-   //barrier.subresourceRange.levelCount = 1;
-   //barrier.subresourceRange.baseArrayLayer = 0;
-   //barrier.subresourceRange.layerCount = 1;
-   //
-   //vkCmdPipelineBarrier(buffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, 0, 0, 0, 1, &barrier);
-   //
    SetImageLayout(buffer, mVkManager->GetPresentImage(frameIndex), VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
    VkImageBlit blit{};
    blit.srcOffsets[1].x = mRenderTarget.GetSize().width;
@@ -315,19 +297,6 @@ void Application::Draw() {
    vkCmdBlitImage(buffer, mRenderTarget.GetColorImage(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, mVkManager->GetPresentImage(frameIndex), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VkFilter::VK_FILTER_LINEAR);
    SetImageLayout(buffer, mVkManager->GetPresentImage(frameIndex), VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
 
-   //barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-   //barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-   //vkCmdPipelineBarrier(buffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, 0, 0, 0, 1, &barrier);
-
-   //renderBegin = {};
-   //renderBegin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-   //renderBegin.renderArea.extent = mVkManager->GetSwapchainExtent();
-   //renderBegin.renderPass = mVkManager->GetPresentRenderPass()->GetRenderPass();
-   //renderBegin.clearValueCount = 1;
-   //renderBegin.pClearValues = &clearColor;
-   //renderBegin.framebuffer = mVkManager->GetPresentFramebuffer(frameIndex)->GetFramebuffer();
-   //vkCmdBeginRenderPass(buffer, &renderBegin, VK_SUBPASS_CONTENTS_INLINE);
-   //vkCmdEndRenderPass(buffer);
    vkEndCommandBuffer(buffer);
 
    mVkManager->RenderEnd();

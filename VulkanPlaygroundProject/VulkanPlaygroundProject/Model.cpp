@@ -18,10 +18,11 @@ bool Model::LoadModel(std::string aPath, VkDescriptorSetLayout aMaterialDescript
    LOG("%s\n", aPath.c_str());
    Assimp::Importer importer;
    const aiScene* scene = importer.ReadFile(aPath,
-                             aiProcess_CalcTangentSpace |
-                             aiProcess_Triangulate |
-                             aiProcess_JoinIdenticalVertices | aiProcess_GenSmoothNormals | aiProcess_FlipUVs |
-                             aiProcess_OptimizeMeshes | aiProcess_OptimizeGraph);
+                                            aiProcess_CalcTangentSpace |
+                                            aiProcess_Triangulate |
+                                            aiProcess_JoinIdenticalVertices | aiProcess_GenSmoothNormals | aiProcess_FlipUVs |
+                                            aiProcess_OptimizeMeshes | aiProcess_OptimizeGraph |
+                                            aiProcess_GenBoundingBoxes);
 
    if (scene == nullptr) {
       ASSERT_RET_FALSE("Failed to load");
@@ -146,6 +147,9 @@ void Model::ProcessMesh(const aiScene* aScene, const aiNode* aNode, Node* aParen
             mIndices.push_back(mesh.mStartVertex + assimpMesh->mFaces[i].mIndices[q]);
          }
       }
+
+      mesh.mMin = vec3_cast(assimpMesh->mAABB.mMin);
+      mesh.mMax = vec3_cast(assimpMesh->mAABB.mMax);
    }
 
    for (unsigned int i = 0; i < aNode->mNumChildren; i++) {
@@ -226,7 +230,7 @@ void Model::LoadImages() {
 }
 
 void Model::Render(DescriptorUBO* aRenderDescriptor, RenderMode aRenderMode) {
-   ASSERT_IF((aRenderMode & (aRenderMode-1)) == 0);
+   ASSERT_IF((aRenderMode & (aRenderMode - 1)) == 0);
    if (!(mRenderModes & aRenderMode)) {
       return;
    }
@@ -242,12 +246,20 @@ void Model::Render(DescriptorUBO* aRenderDescriptor, RenderMode aRenderMode) {
          aRenderDescriptor->UpdateObjectAndBind(&ubo);
 
          for (int i = 0; i < node->mMesh.size(); i++) {
-            Material& material = mMaterials[node->mMesh[i].mMaterialID];
-            if (!material.mDiffuse.empty()) {
-               vkCmdBindDescriptorSets(aRenderDescriptor->mCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, aRenderDescriptor->mPipelineLayout, 2, 1, &material.mDescriptorSet, 0, nullptr);
-            }
+            Mesh& mesh = node->mMesh[i];
+#if defined(CULLING_TEST)
+            glm::vec3 min = glm::vec4(mesh.mMin, 0) * node->mTransform.GetGlobalMatrix();
+            glm::vec3 max = glm::vec4(mesh.mMax, 0) * node->mTransform.GetGlobalMatrix();
+            if ((pos.x > min.x && pos.x < max.x) && (pos.y > min.y && pos.y < max.y) && (pos.z > min.z && pos.z < max.z))
+#endif
+            {
+               Material& material = mMaterials[node->mMesh[i].mMaterialID];
+               if (!material.mDiffuse.empty()) {
+                  vkCmdBindDescriptorSets(aRenderDescriptor->mCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, aRenderDescriptor->mPipelineLayout, 2, 1, &material.mDescriptorSet, 0, nullptr);
+               }
 
-            vkCmdDrawIndexed(aRenderDescriptor->mCommandBuffer, static_cast<uint32_t>(node->mMesh[i].mCount), 1, node->mMesh[i].mStartIndex, 0, 0);
+               vkCmdDrawIndexed(aRenderDescriptor->mCommandBuffer, static_cast<uint32_t>(node->mMesh[i].mCount), 1, node->mMesh[i].mStartIndex, 0, 0);
+            }
          }
       }
    }

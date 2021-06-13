@@ -25,6 +25,9 @@ private:
    void ImGui();
    void Update();
 
+   void CreateSizeDependent();
+   void DestroySizeDependent();
+
    Window* mWindow;
    VulkanManager* mVkManager;
 

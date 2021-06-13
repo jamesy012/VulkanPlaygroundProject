@@ -16,6 +16,9 @@ public:
    const VkImageLayout GetInitalLayoutFormat() const {
       return mInitalLayoutFormat;
    }
+   const bool IsValid() const {
+      return mRenderPass != VK_NULL_HANDLE;
+   }
 private:
    VkRenderPass mRenderPass = VK_NULL_HANDLE;
    VkFormat mColorFormat;

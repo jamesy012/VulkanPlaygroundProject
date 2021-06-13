@@ -67,6 +67,9 @@ public:
       return mCurrentFrameCounter;
    }
 
+   std::function<void(void)> mSizeDependentCreateCallback;
+   std::function<void(void)> mSizeDependentDestroyCallback;
+
 private:
    bool CreateInstance();
    bool CreateDevice();

@@ -54,6 +54,8 @@ class Model {
       int mCount = 0;
       int mStartIndex = 0;
       int mStartVertex = 0;
+      glm::vec3 mMin = glm::zero<glm::vec3>();
+      glm::vec3 mMax = glm::zero<glm::vec3>();
    };
 
    struct Node {
@@ -100,7 +102,7 @@ class Model {
 
 public:
    bool LoadModel(std::string aPath, VkDescriptorSetLayout aMaterialDescriptorSet);
-   void Render(DescriptorUBO* aRenderDescriptor, RenderMode aRenderMode);
+   void Render(DescriptorUBO* aRenderDescriptor, RenderMode aRenderMode, glm::vec3 pos);
 
    void SetPosition(glm::vec3 aPos) {
       ASSERT_RET(mBase);
