@@ -21,7 +21,7 @@ bool Model::LoadModel(std::string aPath, VkDescriptorSetLayout aMaterialDescript
                              aiProcess_CalcTangentSpace |
                              aiProcess_Triangulate |
                              aiProcess_JoinIdenticalVertices | aiProcess_GenSmoothNormals | aiProcess_FlipUVs |
-                             aiProcess_SortByPType);
+                             aiProcess_OptimizeMeshes | aiProcess_OptimizeGraph);
 
    if (scene == nullptr) {
       ASSERT_RET_FALSE("Failed to load");
@@ -226,15 +226,31 @@ void Model::LoadImages() {
 }
 
 void Model::Render(DescriptorUBO* aRenderDescriptor, RenderMode aRenderMode) {
-   ASSERT(aRenderMode != RenderMode::ALL);
    ASSERT((aRenderMode & (aRenderMode-1)) == 0);
    if (!(mRenderModes & aRenderMode)) {
       return;
    }
+   PROFILE_START_SCOPED("Model Render: " + mName);
    mVertexBuffer.Bind(aRenderDescriptor->mCommandBuffer);
    mIndexBuffer.Bind(aRenderDescriptor->mCommandBuffer);
 
-   Render(aRenderDescriptor, aRenderMode, mBase, glm::identity<glm::mat4>());
+   for (size_t i = 0; i < mNodes.size(); i++) {
+      Node* node = mNodes[i];
+      if (!node->mMesh.empty()) {
+         ObjectUBO ubo;
+         ubo.mModel = node->GetMatrixWithParents();
+         aRenderDescriptor->UpdateObjectAndBind(&ubo);
+
+         for (int i = 0; i < node->mMesh.size(); i++) {
+            Material& material = mMaterials[node->mMesh[i].mMaterialID];
+            if (!material.mDiffuse.empty()) {
+               vkCmdBindDescriptorSets(aRenderDescriptor->mCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, aRenderDescriptor->mPipelineLayout, 2, 1, &material.mDescriptorSet, 0, nullptr);
+            }
+
+            vkCmdDrawIndexed(aRenderDescriptor->mCommandBuffer, static_cast<uint32_t>(node->mMesh[i].mCount), 1, node->mMesh[i].mStartIndex, 0, 0);
+         }
+      }
+   }
 
 }
 
@@ -246,29 +262,4 @@ void Model::Destroy() {
    mIndexBuffer.Destroy();
    mVertices.clear();
    mIndices.clear();
-}
-
-void Model::Render(DescriptorUBO* aRenderDescriptor, RenderMode aRenderMode, Node* aNode, glm::mat4 aMatrix) {
-   ObjectUBO ubo;
-   ubo.mModel = aMatrix * aNode->GetMatrix();
-
-   if (!aNode->mMesh.empty()) {
-      ASSERT(ubo.mModel == aNode->GetMatrixWithParents());
-      //ObjectUBO ubo;
-      //ubo.mModel = aNode->GetMatrixWithParents();
-      aRenderDescriptor->UpdateObjectAndBind(&ubo);
-
-      for (int i = 0; i < aNode->mMesh.size(); i++) {
-         Material& material = mMaterials[aNode->mMesh[i].mMaterialID];
-         if (!material.mDiffuse.empty()) {
-            vkCmdBindDescriptorSets(aRenderDescriptor->mCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, aRenderDescriptor->mPipelineLayout, 2, 1, &material.mDescriptorSet, 0, nullptr);
-         }
-
-         vkCmdDrawIndexed(aRenderDescriptor->mCommandBuffer, static_cast<uint32_t>(aNode->mMesh[i].mCount), 1, aNode->mMesh[i].mStartIndex, 0, 0);
-      }
-   }
-
-   for (int i = 0; i < aNode->mChildren.size(); i++) {
-      Render(aRenderDescriptor, aRenderMode, aNode->mChildren[i], ubo.mModel);
-   }
 }

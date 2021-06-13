@@ -38,7 +38,6 @@ public:
       vkCmdBindDescriptorSets(mCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipelineLayout, 1, 1, &mDescriptorSet, 1, descriptorSetOffsets);
    }
 
-   BufferRingUniform* mSceneBuffer;
    BufferRingUniform* mObjectBuffer;
    VkCommandBuffer mCommandBuffer;
    VkPipelineLayout mPipelineLayout;
@@ -162,7 +161,6 @@ public:
    }
 
 private:
-   void Render(DescriptorUBO* aRenderDescriptor, RenderMode aRenderMode, Node* aNode, glm::mat4 aMatrix);
    void ProcessMeshs(const aiScene* aScene);
    void ProcessMesh(const aiScene* aScene, const aiNode* aNode, Node* aParent);
    void ProcessMaterials(const aiScene* aScene);

@@ -19,8 +19,6 @@ void Application::Start() {
    _CInput->Startup(mWindow->GetWindow());
 
    {
-      VkCommandBuffer buffer;
-
       {
          VertexSimple verts[6];
          verts[0].pos = glm::vec2(-1.0f, -1.0f);
@@ -142,8 +140,15 @@ void Application::Start() {
    mLightPos = glm::vec3(0, 5, 0);
 }
 
+static bool sStartProfile = false;
+
 void Application::Run() {
    while (!mWindow->ShouldClose()) {
+      if (sStartProfile) {
+         Profiler::Get().StartProfile();
+         sStartProfile = false;
+      }
+      PROFILE_START_SCOPED("Frame");
       mWindow->Update();
       mVkManager->Update();
 
@@ -160,6 +165,7 @@ void Application::Run() {
 static uint32_t frameCounter = 0;
 
 void Application::ImGui() {
+   PROFILE_START_SCOPED("ImGui - application update");
    ImGuiIO& io = ImGui::GetIO();
    _CInput->AllowInput(!io.WantCaptureMouse && mWindow->IsFocused() && mWindow->IsHovered());
 
@@ -167,6 +173,18 @@ void Application::ImGui() {
    ImGui::Begin("stats");
    ImGui::Text("size: %iX%i", mRenderTarget.GetSize().width, mRenderTarget.GetSize().height);
    ImGui::Text("Window Size: %iX%i", mVkManager->GetSwapchainExtent().width, mVkManager->GetSwapchainExtent().height);
+   ImGui::Text("FPS: %f(%f)", io.Framerate, io.DeltaTime);
+#if ALLOW_PROFILING
+   ImGui::Text("Profiling:");
+   ImGui::SameLine();
+   if (ImGui::Button("Begin")) {
+      sStartProfile = true;
+   }
+   ImGui::SameLine();
+   if (ImGui::Button("End")) {
+      Profiler::Get().EndProfile();
+   }
+#endif
    ImGui::End();
 
    ImGui::Begin("scene");
@@ -175,6 +193,7 @@ void Application::ImGui() {
 }
 
 void Application::Update() {
+   PROFILE_START_SCOPED("Update");
 
    mFlyCamera.UpdateInput();
    mSceneUbo.mViewProj = mFlyCamera.GetPV();
@@ -193,6 +212,7 @@ void Application::Update() {
 
 
 void Application::Draw() {
+   PROFILE_START_SCOPED("Draw");
    uint32_t frameIndex;
    VkCommandBuffer buffer;
    if (mVkManager->RenderStart(buffer, frameIndex) == false) {

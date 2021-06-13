@@ -7,7 +7,6 @@
 #include <iostream>
 #include <functional>
 
-
 #include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>
 
@@ -48,12 +47,6 @@ struct SceneUBO {
 struct ObjectUBO {
    glm::mat4 mModel;
 };
-
-
-//~~~~~~~ VULKAN OBJECTS
-#include "VulkanManager.h"
-
-extern class VulkanManager* _VulkanManager;
 
 //~~~~~~~ VULKAN HELPERS
 #define SIZEOF_ARRAY(x) sizeof(x) / sizeof(x[0]);
@@ -241,3 +234,10 @@ namespace Logger {
 #define LOG(...) Logger::LogMessage(__VA_ARGS__);
 //#define LOG_LIT(Message, ...) Logger::LogMessage("%s\n", #Message, __VA_ARGS__);
 #define LOG_WITH_LINE(Message) Logger::LogMessage("(%s #%i) %s", __FUNCTION__, __LINE__, Message);
+
+//~~~~~~~ VULKAN OBJECTS
+#include "VulkanManager.h"
+
+extern class VulkanManager* _VulkanManager;
+
+#include "Profiler.h"

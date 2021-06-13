@@ -263,6 +263,7 @@
     <ClInclude Include="InputKeys.h" />
     <ClInclude Include="Model.h" />
     <ClInclude Include="Pipeline.h" />
+    <ClInclude Include="Profiler.h" />
     <ClInclude Include="RenderPass.h" />
     <ClInclude Include="RenderTarget.h" />
     <ClInclude Include="stdafx.h" />
