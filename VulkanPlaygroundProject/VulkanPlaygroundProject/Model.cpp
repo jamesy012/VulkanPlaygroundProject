@@ -141,7 +141,7 @@ void Model::ProcessMesh(const aiScene* aScene, const aiNode* aNode, Node* aParen
 
       //indices
       for (unsigned int i = 0; i < assimpMesh->mNumFaces; i++) {
-         ASSERT(assimpMesh->mFaces[i].mNumIndices == 3);
+         ASSERT_IF(assimpMesh->mFaces[i].mNumIndices == 3);
          for (unsigned int q = 0; q < assimpMesh->mFaces[i].mNumIndices; q++) {
             mIndices.push_back(mesh.mStartVertex + assimpMesh->mFaces[i].mIndices[q]);
          }
@@ -226,7 +226,7 @@ void Model::LoadImages() {
 }
 
 void Model::Render(DescriptorUBO* aRenderDescriptor, RenderMode aRenderMode) {
-   ASSERT((aRenderMode & (aRenderMode-1)) == 0);
+   ASSERT_IF((aRenderMode & (aRenderMode-1)) == 0);
    if (!(mRenderModes & aRenderMode)) {
       return;
    }

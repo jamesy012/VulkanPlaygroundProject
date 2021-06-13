@@ -10,7 +10,7 @@ bool Framebuffer::Create(VkDevice aDevice, VkExtent2D aSize, RenderPass* aRender
    createInfo.renderPass = aRenderPass->GetRenderPass();
    createInfo.width = aSize.width;
    createInfo.height = aSize.height;
-   createInfo.attachmentCount = aViews.size();
+   createInfo.attachmentCount = static_cast<uint32_t>(aViews.size());
    createInfo.pAttachments = aViews.data();
    createInfo.layers = 1;
 

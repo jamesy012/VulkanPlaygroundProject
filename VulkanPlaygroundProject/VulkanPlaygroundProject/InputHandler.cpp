@@ -20,7 +20,7 @@ DIMOUSESTATE mMouseStateOld;
 int mMouseX, mMouseY;
 int mMouseDeltaX, mMouseDeltaY;
 
-unsigned char mKeyboardRemapper[256] = { -1 };
+unsigned char mKeyboardRemapper[256] = { 0 };
 //	IKEY_Escape				/*DIK_ESCAPE		*/
 //	, IKEY_1					/*DIK_1				*/
 //	, IKEY_2					/*DIK_2				*/
@@ -394,7 +394,7 @@ bool InputHandler::WasMouseKeyPressed(IMouseKeys aKey) {
 }
 
 float InputHandler::GetMouseScroll() {
-	return mMouseState.lZ;
+	return (float)mMouseState.lZ;
 }
 
 std::string InputHandler::GetKeysDown() {

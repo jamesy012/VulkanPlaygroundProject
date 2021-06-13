@@ -1,11 +1,6 @@
 #include "stdafx.h"
 #include "VulkanManager.h"
 
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
-#include <Windows.h>
-
-
 #include <optional>
 #include <set>
 
@@ -220,14 +215,14 @@ void VulkanManager::Update() {
                   if (pRel.x < 2) {
                      p.x += size.width - 5;
                      move = true;
-                  } else if (pRel.x > size.width - 2) {
+                  } else if ((uint32_t)pRel.x > size.width - 2) {
                      p.x -= size.width - 5u;
                      move = true;
                   }
                   if (pRel.y < 2) {
                      p.y += size.height - 5;
                      move = true;
-                  } else if (pRel.y > size.height - 2) {
+                  } else if ((uint32_t)pRel.y > size.height - 2) {
                      p.y -= size.height - 5u;
                      move = true;
                   }
@@ -247,7 +242,7 @@ void VulkanManager::Update() {
 bool VulkanManager::RenderStart(VkCommandBuffer& aBuffer, uint32_t& aFrameIndex) {
    mCurrentFrameCounter++;
 
-   ASSERT(mCurrentImageIndex == -1);
+   ASSERT_IF(mCurrentImageIndex == -1);
    VkResult result = vkAcquireNextImageKHR(mDevice, mSwapChain, UINT64_MAX, mImageAvailableSemaphores[mCurrentFrameIndex], VK_NULL_HANDLE, &aFrameIndex);
 
    if (result == VK_ERROR_OUT_OF_DATE_KHR) {
@@ -271,7 +266,7 @@ bool VulkanManager::RenderStart(VkCommandBuffer& aBuffer, uint32_t& aFrameIndex)
 void VulkanManager::RenderSubmit(std::vector<VkCommandBuffer> aCommandBuffers) {
    RenderImGui();
 
-   ASSERT(mCurrentImageIndex != -1);
+   ASSERT_IF(mCurrentImageIndex != -1);
    VkSemaphore signalSemaphores[] = { mRenderFinishedSemaphores[mCurrentFrameIndex] };
 
    VkSubmitInfo submitInfo{};
@@ -300,7 +295,7 @@ void VulkanManager::RenderSubmit(std::vector<VkCommandBuffer> aCommandBuffers) {
 }
 
 void VulkanManager::RenderEnd() {
-   ASSERT(mCurrentImageIndex != -1);
+   ASSERT_IF(mCurrentImageIndex != -1);
    RenderSubmit({ mCommandBuffers[mCurrentImageIndex] });
 
    VkSemaphore signalSemaphores[] = { mRenderFinishedSemaphores[mCurrentFrameIndex] };
@@ -767,7 +762,7 @@ bool VulkanManager::CreateCommandPoolBuffers() {
    }
    //buffers
    {
-      ASSERT(mNumSwapChainImages != 0);
+      ASSERT_IF(mNumSwapChainImages != 0);
       mCommandBuffers.resize(mNumSwapChainImages);
 
       VkCommandBufferAllocateInfo allocInfo{};

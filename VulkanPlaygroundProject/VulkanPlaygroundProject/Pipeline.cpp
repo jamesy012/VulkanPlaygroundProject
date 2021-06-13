@@ -171,7 +171,7 @@ bool Pipeline::Create(const VkExtent2D aSize, const RenderPass* aRenderPass) {
    {
       VkPipelineLayoutCreateInfo pipelineLayout{};
       pipelineLayout.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-      pipelineLayout.setLayoutCount = mDescriptorSets.size();
+      pipelineLayout.setLayoutCount = static_cast<uint32_t>(mDescriptorSets.size());
       pipelineLayout.pSetLayouts = mDescriptorSets.data();
       //pipelineLayout.pushConstantRangeCount = mPushConstants.size(); // Optional
       //pipelineLayout.pPushConstantRanges = mPushConstants.data(); // Optional

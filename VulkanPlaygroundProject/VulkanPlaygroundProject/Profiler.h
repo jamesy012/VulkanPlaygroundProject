@@ -3,10 +3,10 @@
 #include <string>
 #include <map>
 #include <vector>
-#include <chrono>
 #include <algorithm>
 #include <fstream>
 #include <assert.h>
+#include <profileapi.h>
 
 #include <thread>
 
@@ -33,10 +33,10 @@ class Profiler {
       std::string name;
       std::string function;
       std::thread::id id;
-      std::chrono::time_point<std::chrono::high_resolution_clock> start;
-      std::chrono::time_point<std::chrono::high_resolution_clock> end;
+      LARGE_INTEGER start = LARGE_INTEGER();
+      LARGE_INTEGER end = LARGE_INTEGER();
       //float duration;
-      int stack;
+      int stack = 0;
    };
 public:
 
@@ -65,9 +65,7 @@ public:
          if (inStack) {
             continue;
          }
-         long long start = std::chrono::time_point_cast<std::chrono::microseconds>(e.start).time_since_epoch().count();
-         long long end = std::chrono::time_point_cast<std::chrono::microseconds>(e.end).time_since_epoch().count();
-         long long dur = end - start;
+         LONGLONG dur = (e.end.QuadPart - e.start.QuadPart) / mFrequency;
          if (i != 0) {
             mOutputStream << ",";
          }
@@ -81,7 +79,7 @@ public:
             mThreads[e.id] = std::to_string(std::hash<std::thread::id>{}(e.id));
          }
          mOutputStream << "\"tid\":\"" << mThreads[e.id] << "\",";
-         mOutputStream << "\"ts\":" << start << ",";
+         mOutputStream << "\"ts\":" << (e.start.QuadPart) / mFrequency << ",";
          mOutputStream << "\"args\": {";
          mOutputStream << "\"Function\":\"" << e.function << "\"";
          mOutputStream << "}";
@@ -100,7 +98,7 @@ public:
             mOutputStream << ",";
          }
          Event& e = mMarkers[i];
-         long long start = std::chrono::time_point_cast<std::chrono::microseconds>(e.start).time_since_epoch().count();
+         long long start = mStartTime.QuadPart / mFrequency;
          mOutputStream << "{";
          mOutputStream << "\"cat\":\"marker\",";
          mOutputStream << "\"name\":\"" << e.name << "\",";
@@ -135,7 +133,10 @@ public:
       if (mStartProfile) {
          mRunning = true;
          mStartProfile = false;
-         mStartTime = std::chrono::high_resolution_clock::now();
+         LARGE_INTEGER frequency;
+         QueryPerformanceFrequency(&frequency);
+         mFrequency = frequency.QuadPart / 1000 / 1000;
+         QueryPerformanceCounter(&mStartTime);
       }
       if (mRunning) {
          Event e;
@@ -146,24 +147,20 @@ public:
          }
          e.function = aFunction;
          e.id = std::this_thread::get_id();
-         //e.start = std::chrono::high_resolution_clock::now();
          mEvents.push_back(e);
          
          mEventStack[mStack] = (int)mEvents.size() - 1;
-         mEvents[mEvents.size() - 1].start = std::chrono::high_resolution_clock::now();
+         QueryPerformanceCounter(&mEvents[mEvents.size() - 1].start);
       }
    }
 
    void EndEvent() {
       if (mRunning) {
-         std::chrono::time_point<std::chrono::high_resolution_clock> end = std::chrono::high_resolution_clock::now();
+         LARGE_INTEGER endTime;
+         QueryPerformanceCounter(&endTime);
          Event& e = mEvents[mEventStack[mStack--]];
          assert(e.stack == mStack);
-
-         e.end = end;
-         //long long mStartTime = std::chrono::time_point_cast<std::chrono::microseconds>(e.mStartTime).time_since_epoch().count();
-         //long long end = std::chrono::time_point_cast<std::chrono::microseconds>(now).time_since_epoch().count();
-         //e.name += " (" + std::to_string(e.duration / 1000.0f) + "ms)";
+         e.end = endTime;
       }
    }
 
@@ -175,7 +172,7 @@ public:
       if (mRunning) {
          Event e;
          e.name = aName;
-         e.start  = std::chrono::high_resolution_clock::now();         
+         QueryPerformanceCounter(&e.start);
          e.function = aFunction;
          mMarkers.push_back(e);
       }
@@ -200,7 +197,8 @@ private:
    std::vector<Event> mMarkers;
    bool mStartProfile = false;
    std::map<std::thread::id, std::string> mThreads;
-   std::chrono::time_point<std::chrono::high_resolution_clock> mStartTime;
+   LONGLONG mFrequency;
+   LARGE_INTEGER mStartTime;
 };
 
 class ScopedEvent {

@@ -38,11 +38,11 @@ public:
       return &mPresentRenderPass;
    }
    const Framebuffer* GetPresentFramebuffer(uint32_t aIndex) const {
-      ASSERT(aIndex <= mNumSwapChainImages);
+      ASSERT_IF(aIndex <= mNumSwapChainImages);
       return &mPresentFramebuffer[aIndex];
    }
    const VkImage GetPresentImage(uint32_t aIndex) const {
-      ASSERT(aIndex <= mNumSwapChainImages);
+      ASSERT_IF(aIndex <= mNumSwapChainImages);
       return mSwapChainImages[aIndex];
    }
    const VmaAllocator& GetAllocator() const {

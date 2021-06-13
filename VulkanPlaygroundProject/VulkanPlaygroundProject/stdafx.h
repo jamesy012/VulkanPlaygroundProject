@@ -1,6 +1,10 @@
 #pragma once
 #pragma warning(disable: 26812)
 
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <Windows.h>
+
 #include <iostream>
 #include <assert.h>
 #include <vector>
@@ -17,10 +21,11 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 //~~~~~~~ ASSERTS/Validation
-#define ASSERT(x) assert(x);
-#define ASSERT_RET(x) if(!x) {ASSERT(false); return;};
-#define ASSERT_RET_VALUE(x, ret) if(!(x)) {ASSERT(false); return (ret);};
-#define ASSERT_RET_FALSE(x) ASSERT(false); return false;
+#define ASSERT(msg) DebugBreak();
+#define ASSERT_IF(x) if((x) == false){ASSERT(__FUNCTION__)};
+#define ASSERT_RET(x) if(!x) {ASSERT(__FUNCTION__); return;};
+#define ASSERT_RET_VALUE(x, ret) if(!(x)) {ASSERT(__FUNCTION__); return (ret);};
+#define ASSERT_RET_FALSE(x) ASSERT(__FUNCTION__); return false;
 
 static void CheckVulkanResult(VkResult aResult) {
    if (aResult == VK_SUCCESS) {
@@ -30,10 +35,10 @@ static void CheckVulkanResult(VkResult aResult) {
    assert(false);
 }
 
-#define ASSERT_VULKAN_VALUE(x) ASSERT(x != VK_NULL_HANDLE);
-#define ASSERT_VULKAN_SUCCESS(x) ASSERT(x == VK_SUCCESS);
+#define ASSERT_VULKAN_VALUE(x) ASSERT_IF(x != VK_NULL_HANDLE);
+#define ASSERT_VULKAN_SUCCESS(x) ASSERT_IF(x == VK_SUCCESS);
 #define ASSERT_VULKAN_SUCCESS_RET_FALSE(x) if(x != VK_SUCCESS){ASSERT_RET_FALSE("")};
-#define ASSERT_VALID(x) ASSERT(x != nullptr);
+#define ASSERT_VALID(x) ASSERT_IF(x != nullptr);
 
 
 //~~~~~~~ OBJECTS

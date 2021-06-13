@@ -25,8 +25,8 @@ public:
 protected:
    bool Create(VkDeviceSize aSize, VkBufferUsageFlags aUseage, VmaMemoryUsage aMemUsage);
 private:
-   VkBuffer mBuffer;
-   VmaAllocation mAllocation;
+   VkBuffer mBuffer = VK_NULL_HANDLE;
+   VmaAllocation mAllocation = nullptr;
    VkDeviceSize mSize = 0;
    VkDeviceSize mAllocatedSize = 0;
    //number of times this is mapped, to track when to unmap or map the data
