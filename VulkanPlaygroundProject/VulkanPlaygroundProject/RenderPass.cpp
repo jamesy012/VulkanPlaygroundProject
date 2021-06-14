@@ -79,3 +79,7 @@ void RenderPass::Destroy(VkDevice aDevice) {
    vkDestroyRenderPass(aDevice, mRenderPass, GetAllocationCallback());
    mRenderPass = VK_NULL_HANDLE;
 }
+
+void RenderPass::SetName(std::string aName) {
+   DebugSetObjName(VK_OBJECT_TYPE_RENDER_PASS, mRenderPass, aName + " RenderPass");
+}

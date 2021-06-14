@@ -23,3 +23,7 @@ void Framebuffer::Destroy(VkDevice aDevice) {
    vkDestroyFramebuffer(aDevice, mFramebuffer, GetAllocationCallback());
    mFramebuffer = VK_NULL_HANDLE;
 }
+
+void Framebuffer::SetName(std::string aName) {
+   DebugSetObjName(VK_OBJECT_TYPE_FRAMEBUFFER, mFramebuffer, aName + " FrameBuffer");
+}

@@ -8,6 +8,10 @@ public:
    void Map(void** aData);
    void UnMap();
 
+   void SetName(std::string aName) {
+      DebugSetObjName(VK_OBJECT_TYPE_BUFFER, mBuffer, aName);
+   }
+
    const VkBuffer GetBuffer() const {
       return mBuffer;
    }
@@ -89,6 +93,10 @@ public:
    void Destroy() {
       //vkFreeDescriptorSets(_VulkanManager->GetDevice(), mDescriptorPool, 1, &mDescriptorSet); //needs VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT and needs to know the pool too
       Buffer::Destroy();
+   }
+
+   void SetName(std::string aName) {
+      Buffer::SetName(aName);
    }
 
    const VkDescriptorSet GetDescriptorSet() const {

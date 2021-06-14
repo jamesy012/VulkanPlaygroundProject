@@ -142,8 +142,11 @@ void Application::Start() {
 
 
          mSceneBuffer.Create(3, sizeof(SceneUBO), mSceneSet, 0);
+         mSceneBuffer.SetName("Scene Buffer");
          mSceneShadowBuffer.Create(3, sizeof(SceneUBO), mSceneShadowSet, 0);
+         mSceneShadowBuffer.SetName("Scene Shadow Buffer");
          mObjectBuffer.Create(500, sizeof(ObjectUBO), mObjectSet, 0);
+         mObjectBuffer.SetName("Object Buffer");
       }
    }
   
@@ -295,6 +298,7 @@ void Application::Draw() {
       mShadow.EndRenderPass(buffer);
    }
    {
+      _VulkanManager->DebugMarkerStart(buffer, "Main Render", glm::vec4(0.0f,0.3f,0.0f,0.2f));
       std::vector<VkClearValue> clearColor = std::vector<VkClearValue>(2);
       clearColor[0].color.float32[0] = abs(sin((frameCounter * 0.5f) / 5000.0f));
       clearColor[0].color.float32[1] = abs(sin((frameCounter * 0.2f) / 5000.0f));
@@ -331,8 +335,10 @@ void Application::Draw() {
       }
 
       mRenderTarget.EndRenderPass(buffer);
+      _VulkanManager->DebugMarkerEnd(buffer);
    }
 
+   _VulkanManager->DebugMarkerStart(buffer, "Present Prepare");
    SetImageLayout(buffer, mVkManager->GetPresentImage(frameIndex), VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
    VkImageBlit blit{};
    blit.srcOffsets[1].x = mRenderTarget.GetSize().width;
@@ -347,6 +353,7 @@ void Application::Draw() {
    blit.dstSubresource.layerCount = 1;
    vkCmdBlitImage(buffer, mRenderTarget.GetColorImage(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, mVkManager->GetPresentImage(frameIndex), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VkFilter::VK_FILTER_LINEAR);
    SetImageLayout(buffer, mVkManager->GetPresentImage(frameIndex), VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
+   _VulkanManager->DebugMarkerEnd(buffer);
 
    vkEndCommandBuffer(buffer);
 

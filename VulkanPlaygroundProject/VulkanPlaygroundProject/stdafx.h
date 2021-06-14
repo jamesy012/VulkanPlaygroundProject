@@ -20,6 +20,7 @@
 #include <glm/ext.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+
 //~~~~~~~ ASSERTS/Validation
 #define ASSERT(msg) DebugBreak();
 #define ASSERT_IF(x) if((x) == false){ASSERT(__FUNCTION__)};
@@ -256,3 +257,8 @@ namespace Logger {
 extern class VulkanManager* _VulkanManager;
 
 #include "Profiler.h"
+
+template <class T>
+static void DebugSetObjName(VkObjectType aType, T aObject, std::string aName) {
+   _VulkanManager->DebugSetName(aType, (uint64_t)aObject, aName);
+}

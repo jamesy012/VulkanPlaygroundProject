@@ -19,6 +19,9 @@ public:
    const bool IsValid() const {
       return mRenderPass != VK_NULL_HANDLE;
    }
+
+   void SetName(std::string aName);
+
 private:
    VkRenderPass mRenderPass = VK_NULL_HANDLE;
    VkFormat mColorFormat;

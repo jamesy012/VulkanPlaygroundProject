@@ -15,6 +15,8 @@ public:
       return mDepthImage;
    }
 
+   void SetName(std::string aName);
+
    //Transform mTransform;
 private:
    VkExtent2D mSize;

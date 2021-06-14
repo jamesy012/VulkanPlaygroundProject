@@ -28,6 +28,8 @@ void Shadow::Create(VkExtent2D aSize, VkDescriptorSetLayout aShadowSetLayout) {
 
       UpdateImageDescriptorSet(mDepthImage, mShadowSet, _VulkanManager->GetDefaultSampler(), 1);
    }
+
+   SetName("Shadow");
 }
 
 void Shadow::Destroy() {
@@ -40,6 +42,7 @@ void Shadow::Destroy() {
 }
 
 void Shadow::StartRenderPass(VkCommandBuffer aBuffer) {
+   _VulkanManager->DebugMarkerStart(aBuffer, "Shadow Render", glm::vec4(0.1f, 0.1f, 0.1f, 0.2f));
    VkClearValue clearColor{};
    clearColor.depthStencil.depth = 1.0f;
    clearColor.depthStencil.stencil = 0;
@@ -60,4 +63,12 @@ void Shadow::StartRenderPass(VkCommandBuffer aBuffer) {
 
 void Shadow::EndRenderPass(VkCommandBuffer aBuffer) {
    vkCmdEndRenderPass(aBuffer);
+   _VulkanManager->DebugMarkerEnd(aBuffer);
+}
+
+void Shadow::SetName(std::string aName) {
+   DebugSetObjName(VK_OBJECT_TYPE_IMAGE, mDepthImage->GetImage(), aName + " Image");
+   DebugSetObjName(VK_OBJECT_TYPE_IMAGE_VIEW, mDepthImage->GetImageView(), aName + " Image View");
+   mRenderPass->SetName(aName);
+   mFramebuffer->SetName(aName);
 }

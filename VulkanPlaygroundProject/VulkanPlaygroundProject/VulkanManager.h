@@ -21,6 +21,10 @@ public:
    void OneTimeCommandBufferStart(VkCommandBuffer& aBuffer);
    void OneTimeCommandBufferEnd(VkCommandBuffer& aBuffer);
 
+   void DebugSetName(VkObjectType aType, uint64_t aObject, std::string aName);
+   void DebugMarkerStart(VkCommandBuffer aBuffer, std::string aName, glm::vec4 aColor = glm::zero<glm::vec4>());
+   void DebugMarkerEnd(VkCommandBuffer aBuffer);
+   void DebugMarkerInsert(VkCommandBuffer aBuffer, std::string aName, glm::vec4 aColor = glm::zero<glm::vec4>());
 
    const VkInstance GetInstance() const {
       return mInstance;
@@ -143,5 +147,12 @@ private:
    VkRenderPass mImGuiRenderPass = VK_NULL_HANDLE;
    std::vector<VkFramebuffer> mImGuiFramebuffer;
    std::vector<VkCommandBuffer> mImGuiCommandBuffers;
+
+   //debug
+   PFN_vkSetDebugUtilsObjectNameEXT mDebugMarkerSetObjectName;
+   PFN_vkCmdBeginDebugUtilsLabelEXT mDebugMarkerBegin;
+   PFN_vkCmdEndDebugUtilsLabelEXT mDebugMarkerEnd;
+   PFN_vkCmdInsertDebugUtilsLabelEXT mDebugMarkerInsert;
+
 };
 

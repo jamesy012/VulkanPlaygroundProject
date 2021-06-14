@@ -33,7 +33,7 @@ const bool enableValidationLayers = true;
 #endif
 
 const std::vector<const char*> deviceExtensions = {
-   VK_KHR_SWAPCHAIN_EXTENSION_NAME
+   VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 };
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
@@ -54,6 +54,7 @@ void VulkanManager::Create(Window* aWindow) {
    if (aWindow->CreateSurface(GetInstance())) {
       mSurface = aWindow->GetSurface();
    }
+
    CreateDevice();
 
    CreateSwapchain();
@@ -361,6 +362,44 @@ void VulkanManager::OneTimeCommandBufferEnd(VkCommandBuffer& aBuffer) {
    vkFreeCommandBuffers(mDevice, mGraphicsCommandPool, 1, &aBuffer);
 }
 
+void VulkanManager::DebugSetName(VkObjectType aType, uint64_t aObject, std::string aName) {
+   if (mDebugMarkerSetObjectName) {
+      VkDebugUtilsObjectNameInfoEXT info{};
+      info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
+      info.objectType = aType;
+      info.objectHandle = aObject;
+      info.pObjectName = aName.c_str();
+      VkResult result = mDebugMarkerSetObjectName(GetDevice(), &info);
+      ASSERT_VULKAN_SUCCESS(result);
+   }
+}
+
+void VulkanManager::DebugMarkerStart(VkCommandBuffer aBuffer, std::string aName, glm::vec4 aColor) {
+   if (mDebugMarkerBegin) {
+      VkDebugUtilsLabelEXT info{};
+      info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT;
+      memcpy(info.color, glm::value_ptr(aColor), sizeof(float) * 4);
+      info.pLabelName = aName.c_str();
+      mDebugMarkerBegin(aBuffer, &info);
+   }
+}
+
+void VulkanManager::DebugMarkerEnd(VkCommandBuffer aBuffer) {
+   if (mDebugMarkerEnd) {
+      mDebugMarkerEnd(aBuffer);
+   }
+}
+
+void VulkanManager::DebugMarkerInsert(VkCommandBuffer aBuffer, std::string aName, glm::vec4 aColor) {
+   if (mDebugMarkerInsert) {
+      VkDebugUtilsLabelEXT info{};
+      info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT;
+      memcpy(info.color, glm::value_ptr(aColor), sizeof(float) * 4);
+      info.pLabelName = aName.c_str();
+      mDebugMarkerInsert(aBuffer, &info);
+   }
+}
+
 bool CheckVkLayerSupport(const std::vector<const char*> aLayersToCheck) {
    uint32_t layerCount;
    vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
@@ -452,9 +491,14 @@ bool VulkanManager::CreateInstance() {
    if (enableValidationLayers) {
       auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(mInstance, "vkCreateDebugUtilsMessengerEXT");
       if (func != nullptr) {
-         return func(mInstance, &debugCreateInfo, GetAllocationCallback(), &mDebugMessenger);
+         func(mInstance, &debugCreateInfo, GetAllocationCallback(), &mDebugMessenger);
       }
    }
+
+   mDebugMarkerSetObjectName = (PFN_vkSetDebugUtilsObjectNameEXT)vkGetInstanceProcAddr(mInstance, "vkSetDebugUtilsObjectNameEXT");
+   mDebugMarkerBegin = (PFN_vkCmdBeginDebugUtilsLabelEXT)vkGetInstanceProcAddr(mInstance, "vkCmdBeginDebugUtilsLabelEXT");
+   mDebugMarkerEnd = (PFN_vkCmdEndDebugUtilsLabelEXT)vkGetInstanceProcAddr(mInstance, "vkCmdEndDebugUtilsLabelEXT");
+   mDebugMarkerInsert = (PFN_vkCmdInsertDebugUtilsLabelEXT)vkGetInstanceProcAddr(mInstance, "vkCmdInsertDebugUtilsLabelEXT");
 
    return true;
 }
@@ -762,7 +806,7 @@ bool VulkanManager::CreateCommandPoolBuffers() {
       if (vkCreateCommandPool(mDevice, &poolInfo, nullptr, &mGraphicsCommandPool) != VK_SUCCESS) {
          ASSERT_RET_FALSE("failed to create command pool!");
       }
-      //setObjName(VK_OBJECT_TYPE_COMMAND_POOL, (uint64_t)mGraphicsCommandPool, "Main Command Pool");
+      DebugSetObjName(VK_OBJECT_TYPE_COMMAND_POOL, mGraphicsCommandPool, "Main Command Pool");
    }
    //buffers
    {
@@ -779,9 +823,9 @@ bool VulkanManager::CreateCommandPoolBuffers() {
          ASSERT("failed to allocate command buffers!");
       }
 
-      //for (size_t i = 0; i < mCommandBuffers.size(); i++) {
-      //   setObjName(VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)commandBuffers[i], "Main CommandBuffer Frame:" + std::to_string(i));
-      //}
+      for (size_t i = 0; i < mCommandBuffers.size(); i++) {
+         DebugSetObjName(VK_OBJECT_TYPE_COMMAND_BUFFER, mCommandBuffers[i], "Main CommandBuffer Frame:" + std::to_string(i));
+      }
    }
 
    return true;
@@ -925,9 +969,9 @@ bool VulkanManager::CreateImGui() {
    if (vkAllocateCommandBuffers(mDevice, &allocInfo, mImGuiCommandBuffers.data()) != VK_SUCCESS) {
       ASSERT_RET_FALSE("failed to allocate command buffers!");
    }
-   //for (uint32_t i = 0; i < allocInfo.commandBufferCount; i++) {
-   //   setObjName(VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)imguiCommandBuffers[i], "ImGui Command Buffers Buffers Frame:" + std::to_string(i));
-   //}
+   for (size_t i = 0; i < mImGuiCommandBuffers.size(); i++) {
+      DebugSetObjName(VK_OBJECT_TYPE_COMMAND_BUFFER, mImGuiCommandBuffers[i], "ImGui Command Buffers Buffers Frame:" + std::to_string(i));
+   }
 
    return true;
 }
@@ -957,6 +1001,7 @@ bool VulkanManager::CreateImGuiSizeDependent() {
 }
 
 void VulkanManager::RenderImGui() {
+   PROFILE_START_SCOPED("ImGui Render");
    ImGui::Render();
    ImDrawData* draw_data = ImGui::GetDrawData();
    {
@@ -967,6 +1012,7 @@ void VulkanManager::RenderImGui() {
          bufferBeginInfo.flags |= VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
          result = vkBeginCommandBuffer(mImGuiCommandBuffers[mCurrentImageIndex], &bufferBeginInfo);
          ASSERT_VULKAN_SUCCESS(result);
+         _VulkanManager->DebugMarkerStart(mImGuiCommandBuffers[mCurrentImageIndex], "ImGui Render");
 
          VkRenderPassBeginInfo renderBeginInfo = {};
          renderBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -986,6 +1032,7 @@ void VulkanManager::RenderImGui() {
          // Submit command buffer
          vkCmdEndRenderPass(mImGuiCommandBuffers[mCurrentImageIndex]);
 
+         _VulkanManager->DebugMarkerEnd(mImGuiCommandBuffers[mCurrentImageIndex]);
          result = vkEndCommandBuffer(mImGuiCommandBuffers[mCurrentImageIndex]);
          ASSERT_VULKAN_SUCCESS(result);
       }

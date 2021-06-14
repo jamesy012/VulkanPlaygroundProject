@@ -52,6 +52,7 @@ bool Model::LoadModel(std::string aPath, VkDescriptorSetLayout aMaterialDescript
          setAllocate.descriptorSetCount = 1;
          setAllocate.pSetLayouts = &aMaterialDescriptorSet;
          vkAllocateDescriptorSets(_VulkanManager->GetDevice(), &setAllocate, &mMaterials[i].mDescriptorSet);
+         DebugSetObjName(VK_OBJECT_TYPE_DESCRIPTOR_SET, mMaterials[i].mDescriptorSet, mName + " Material set " + std::to_string(i));
 
          std::vector<VkWriteDescriptorSet> write = aWriteSets;
          VkDescriptorImageInfo info;
@@ -79,6 +80,9 @@ void Model::ProcessMeshs(const aiScene* aScene) {
 
    mVertexBuffer.Create(mVertices.size() * sizeof(Vertex));
    mIndexBuffer.Create(mIndices.size() * sizeof(uint32_t));
+   mVertexBuffer.SetName(mName + " Vertex Buffer");
+   mIndexBuffer.SetName(mName + " Index Buffer");
+
    BufferStaging staging;
    staging.Create(std::max(mVertexBuffer.GetAllocatedSize(), mIndexBuffer.GetAllocatedSize()));
    void* data;
@@ -243,6 +247,7 @@ void Model::Render(DescriptorUBO* aRenderDescriptor, RenderMode aRenderMode) {
       return;
    }
    PROFILE_START_SCOPED("Model Render: " + mName);
+   _VulkanManager->DebugMarkerStart(aRenderDescriptor->mCommandBuffer, mName);
    mVertexBuffer.Bind(aRenderDescriptor->mCommandBuffer);
    mIndexBuffer.Bind(aRenderDescriptor->mCommandBuffer);
 
@@ -273,6 +278,7 @@ void Model::Render(DescriptorUBO* aRenderDescriptor, RenderMode aRenderMode) {
          }
       }
    }
+   _VulkanManager->DebugMarkerEnd(aRenderDescriptor->mCommandBuffer);
 
 }
 

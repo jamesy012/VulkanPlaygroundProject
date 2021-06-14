@@ -10,6 +10,8 @@ public:
    const VkFramebuffer GetFramebuffer() const {
       return mFramebuffer;
    }
+
+   void SetName(std::string aName);
 private:
    VkFramebuffer mFramebuffer = VK_NULL_HANDLE;
 };
