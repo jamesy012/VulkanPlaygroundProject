@@ -13,7 +13,7 @@ static inline glm::quat quat_cast(const aiQuaternion& q) { return glm::quat(q.w,
 static inline glm::mat4 mat4_cast(const aiMatrix4x4& m) { return glm::transpose(glm::make_mat4(&m.a1)); }
 static inline glm::mat4 mat4_cast(const aiMatrix3x3& m) { return glm::transpose(glm::make_mat3(&m.a1)); }
 
-bool Model::LoadModel(std::string aPath, VkDescriptorSetLayout aMaterialDescriptorSet) {
+bool Model::LoadModel(std::string aPath, VkDescriptorSetLayout aMaterialDescriptorSet, std::vector<VkWriteDescriptorSet> aWriteSets) {
    LOG_SCOPED_NAME("Model Loading");
    LOG("%s\n", aPath.c_str());
    Assimp::Importer importer;
@@ -53,9 +53,17 @@ bool Model::LoadModel(std::string aPath, VkDescriptorSetLayout aMaterialDescript
          setAllocate.pSetLayouts = &aMaterialDescriptorSet;
          vkAllocateDescriptorSets(_VulkanManager->GetDevice(), &setAllocate, &mMaterials[i].mDescriptorSet);
 
+         std::vector<VkWriteDescriptorSet> write = aWriteSets;
+         VkDescriptorImageInfo info;
          if (!mMaterials[i].mDiffuse.empty()) {
-            UpdateImageDescriptorSet(mMaterials[i].mDiffuse[0], mMaterials[i].mDescriptorSet, _VulkanManager->GetDefaultSampler(), 0);
+            write.push_back(GetWriteDescriptorSet(info, mMaterials[i].mDiffuse[0], mMaterials[i].mDescriptorSet, _VulkanManager->GetDefaultSampler(), 0));
+         } else {
+            write.push_back(GetWriteDescriptorSet(info, &mImages[0], mMaterials[i].mDescriptorSet, _VulkanManager->GetDefaultSampler(), 0));
          }
+         for (size_t q = 0; q < write.size(); q++) {
+            write[q].dstSet = mMaterials[i].mDescriptorSet;
+         }
+         vkUpdateDescriptorSets(_VulkanManager->GetDevice(), static_cast<uint32_t>(write.size()), write.data(), 0, nullptr);
       }
 
    }
@@ -253,9 +261,11 @@ void Model::Render(DescriptorUBO* aRenderDescriptor, RenderMode aRenderMode) {
             if ((pos.x > min.x && pos.x < max.x) && (pos.y > min.y && pos.y < max.y) && (pos.z > min.z && pos.z < max.z))
 #endif
             {
-               Material& material = mMaterials[node->mMesh[i].mMaterialID];
-               if (!material.mDiffuse.empty()) {
-                  vkCmdBindDescriptorSets(aRenderDescriptor->mCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, aRenderDescriptor->mPipelineLayout, 2, 1, &material.mDescriptorSet, 0, nullptr);
+               if (aRenderMode == RenderMode::NORMAL) {
+                  Material& material = mMaterials[node->mMesh[i].mMaterialID];
+                  if (!material.mDiffuse.empty()) {
+                     vkCmdBindDescriptorSets(aRenderDescriptor->mCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, aRenderDescriptor->mPipelineLayout, 2, 1, &material.mDescriptorSet, 0, nullptr);
+                  }
                }
 
                vkCmdDrawIndexed(aRenderDescriptor->mCommandBuffer, static_cast<uint32_t>(node->mMesh[i].mCount), 1, node->mMesh[i].mStartIndex, 0, 0);

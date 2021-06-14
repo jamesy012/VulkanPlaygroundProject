@@ -7,26 +7,30 @@
 #include "Buffer.h"
 
 void Image::LoadImage(std::string aPath) {
+   int width;
+   int height;
    int texChannels;
-   stbi_uc* pixels = stbi_load(aPath.c_str(), &mWidth, &mHeight, &texChannels, STBI_rgb_alpha);
-   mSize = mWidth * mHeight * 4;
+   stbi_uc* pixels = stbi_load(aPath.c_str(), &width, &height, &texChannels, STBI_rgb_alpha);
+   mDataSize = width * height * 4;
+   mSize.width = width;
+   mSize.height = height;
 
    if (!pixels) {
       ASSERT(false);
    }
 
    BufferStaging staging;
-   staging.Create(mSize);
+   staging.Create(mDataSize);
    {
       void* data;
       staging.Map(&data);
-      memcpy(data, pixels, mSize);
+      memcpy(data, pixels, mDataSize);
       staging.UnMap();
    }
 
    stbi_image_free(pixels);
 
-   CreateImage();
+   CreateImage(VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 
    {
       VkBufferImageCopy region{};
@@ -41,8 +45,8 @@ void Image::LoadImage(std::string aPath) {
 
       region.imageOffset = { 0, 0, 0 };
       region.imageExtent = {
-         (uint32_t)mWidth,
-         (uint32_t)mHeight,
+         mSize.width,
+         mSize.height,
          1
       };
 
@@ -63,46 +67,59 @@ void Image::LoadImage(std::string aPath) {
 
    staging.Destroy();
 
-   {
-      VkImageViewCreateInfo imageViewInfo{};
-      imageViewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-      imageViewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-      imageViewInfo.format = VK_FORMAT_R8G8B8A8_SRGB;
-      imageViewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-      imageViewInfo.subresourceRange.baseArrayLayer = 0;
-      imageViewInfo.subresourceRange.layerCount = 1;
-      imageViewInfo.subresourceRange.baseMipLevel = 0;
-      imageViewInfo.subresourceRange.levelCount = 1;
-      imageViewInfo.image = mImage;
-      vkCreateImageView(_VulkanManager->GetDevice(), &imageViewInfo, GetAllocationCallback(), &mImageView);
-   }
+   CreateImageView(VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
+}
+
+void Image::CreateImage(VkExtent2D aSize, VkFormat aFormat, VkImageUsageFlags aUsage, VkImageAspectFlags aAspect) {
+   mSize = aSize;
+   CreateImage(aFormat, aUsage);
+   CreateImageView(aFormat, aAspect);
 }
 
 void Image::Destroy() {
    vkDestroyImageView(_VulkanManager->GetDevice(), mImageView, GetAllocationCallback());
    vmaDestroyImage(_VulkanManager->GetAllocator(), mImage, mAllocation);
+   mImage = VK_NULL_HANDLE;
+   mImageView = VK_NULL_HANDLE;
 }
 
-bool Image::CreateImage() {
+bool Image::CreateImage(VkFormat aFormat, VkImageUsageFlags aUsage) {
    VkImageCreateInfo imageInfo{};
    imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-   imageInfo.extent.width = mWidth;
-   imageInfo.extent.height = mHeight;
+   imageInfo.extent.width = mSize.width;
+   imageInfo.extent.height = mSize.height;
    imageInfo.extent.depth = 1;
-   imageInfo.format = VK_FORMAT_R8G8B8A8_SRGB;
+   imageInfo.format = aFormat;
    imageInfo.mipLevels = 1;
    imageInfo.arrayLayers = 1;
-   imageInfo.tiling = VK_IMAGE_TILING_LINEAR;
+   imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
    imageInfo.imageType = VK_IMAGE_TYPE_2D;
    imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
    imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-   imageInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;;
+   imageInfo.usage = aUsage;
 
    VmaAllocationCreateInfo allocInfo{};
    allocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 
    VmaAllocationInfo info;
    VkResult result = vmaCreateImage(_VulkanManager->GetAllocator(), &imageInfo, &allocInfo, &mImage, &mAllocation, &info);
+   ASSERT_VULKAN_SUCCESS_RET_FALSE(result);
+
+   return true;
+}
+
+bool Image::CreateImageView(VkFormat aFormat, VkImageAspectFlags aAspect) {
+   VkImageViewCreateInfo imageViewInfo{};
+   imageViewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+   imageViewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+   imageViewInfo.format = aFormat;
+   imageViewInfo.subresourceRange.aspectMask = aAspect;
+   imageViewInfo.subresourceRange.baseArrayLayer = 0;
+   imageViewInfo.subresourceRange.layerCount = 1;
+   imageViewInfo.subresourceRange.baseMipLevel = 0;
+   imageViewInfo.subresourceRange.levelCount = 1;
+   imageViewInfo.image = mImage;
+   VkResult result = vkCreateImageView(_VulkanManager->GetDevice(), &imageViewInfo, GetAllocationCallback(), &mImageView);
    ASSERT_VULKAN_SUCCESS_RET_FALSE(result);
 
    return true;

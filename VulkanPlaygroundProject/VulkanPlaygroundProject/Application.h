@@ -36,15 +36,18 @@ private:
    BufferVertex mBillboardQuad;
    Pipeline mPipelineTest;
    Pipeline mPipeline;
+   Pipeline mPipelineShadow;
    Model mModelTest;
 
    VkDescriptorSetLayout mSceneDescriptorSet;
    VkDescriptorSetLayout mObjectDescriptorSet;
    VkDescriptorSetLayout mMaterialDescriptorSet;
    VkDescriptorSet mSceneSet;
+   VkDescriptorSet mSceneShadowSet;
    VkDescriptorSet mObjectSet;
    VkDescriptorSet mMaterialSet;
    BufferRingUniform mSceneBuffer;
+   BufferRingUniform mSceneShadowBuffer;
    BufferRingUniform mObjectBuffer;
 
    RenderPass mRenderPass;
@@ -52,6 +55,7 @@ private:
    Image mTestImg;
 
    SceneUBO mSceneUbo{};
+   SceneUBO mSceneShadowUbo{};
 
    FlyCamera mFlyCamera;
 

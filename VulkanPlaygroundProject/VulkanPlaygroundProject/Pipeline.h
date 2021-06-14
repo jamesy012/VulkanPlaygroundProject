@@ -11,6 +11,13 @@ public:
    bool Create(const VkExtent2D aSize, const RenderPass* aRenderPass);
    void Destroy();
 
+   void SetCullMode(VkCullModeFlags aCullMode) {
+      mCullMode = aCullMode;
+   }
+   void SetBlendingEnabled(bool aBlending) {
+      mBlending = aBlending;
+   }
+
    const VkPipeline GetPipeline() const {
       return mPipeline;
    }
@@ -27,6 +34,8 @@ private:
    std::vector<VkDynamicState> mDynamicStates;
    std::vector<VkDescriptorSetLayout> mDescriptorSets;
    VertexType* mVertexType;
+   VkCullModeFlags mCullMode = VK_CULL_MODE_BACK_BIT;
+   bool mBlending = false;
 
    VkPipeline mPipeline = VK_NULL_HANDLE;
    VkPipelineLayout mPipelineLayout = VK_NULL_HANDLE;

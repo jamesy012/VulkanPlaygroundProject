@@ -63,6 +63,9 @@ public:
    const VkSampler GetDefaultSampler() const {
       return mDefaultSampler;
    }
+   const VkSampler GetDefaultClampedSampler() const {
+      return mDefaultClampedSampler;
+   }
    const uint32_t GetCurrentFrameCounter() const {
       return mCurrentFrameCounter;
    }
@@ -130,6 +133,7 @@ private:
    bool mResizedLastRender = true;
    VkDescriptorPool mDescriptorPool;
    VkSampler mDefaultSampler;
+   VkSampler mDefaultClampedSampler;
 
    //Buffers
    VmaAllocator mAllocator;

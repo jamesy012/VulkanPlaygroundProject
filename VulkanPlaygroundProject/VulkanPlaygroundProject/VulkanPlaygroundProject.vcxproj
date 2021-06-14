@@ -240,6 +240,7 @@
     <ClCompile Include="Pipeline.cpp" />
     <ClCompile Include="RenderPass.cpp" />
     <ClCompile Include="RenderTarget.cpp" />
+    <ClCompile Include="Shadow.cpp" />
     <ClCompile Include="stdafx.cpp" />
     <ClCompile Include="Transform.cpp" />
     <ClCompile Include="Vertex.cpp" />
@@ -266,6 +267,7 @@
     <ClInclude Include="Profiler.h" />
     <ClInclude Include="RenderPass.h" />
     <ClInclude Include="RenderTarget.h" />
+    <ClInclude Include="Shadow.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="Transform.h" />
     <ClInclude Include="Vertex.h" />

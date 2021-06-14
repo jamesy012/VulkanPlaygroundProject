@@ -47,6 +47,7 @@ struct SceneUBO {
    glm::mat4 mViewProj;
    glm::vec4 mViewPos;
    glm::vec4 mLightPos;
+   glm::mat4 mLightProj;
 };
 
 struct ObjectUBO {
@@ -106,7 +107,7 @@ static VkWriteDescriptorSet  CreateWriteDescriptorSet(VkDescriptorType aType, Vk
 }
 
 static void SetImageLayout(VkCommandBuffer aBuffer, VkImage aImage, VkImageAspectFlags aAspectMask, VkImageLayout aOldImageLayout,
-                    VkImageLayout aNewImageLayout, VkPipelineStageFlags aSrcStages, VkPipelineStageFlags aDestStages) {
+                           VkImageLayout aNewImageLayout, VkPipelineStageFlags aSrcStages, VkPipelineStageFlags aDestStages) {
 
    VkImageMemoryBarrier image_memory_barrier = {};
    image_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -169,6 +170,14 @@ static void SetImageLayout(VkCommandBuffer aBuffer, VkImage aImage, VkImageAspec
    vkCmdPipelineBarrier(aBuffer, aSrcStages, aDestStages, 0, 0, NULL, 0, NULL, 1, &image_memory_barrier);
 }
 
+constexpr VkViewport GetViewportFromExtent2D(const VkExtent2D aExtent) {
+   return { 0, 0, static_cast<float>(aExtent.width), static_cast<float>(aExtent.height), 0, 1 };
+}
+
+constexpr VkRect2D GetRect2DFromExtent2D(const VkExtent2D aExtent) {
+   return { { 0, 0 }, aExtent };
+}
+
 //~~~~~~~~~~ PROJECT HELPERS
 
 static std::string GetWorkDir() {
@@ -177,6 +186,7 @@ static std::string GetWorkDir() {
 
 enum RenderMode {
    NORMAL = 1,
+   SHADOW = 2,
    ALL = ~0
 };
 
@@ -194,34 +204,34 @@ static VkDeviceSize RoundUp(int number, VkDeviceSize multiple) {
 
 //~~~~~~ Logging
 namespace Logger {
-	extern int mPrintIndent;
-	extern std::string mLogCat;
+   extern int mPrintIndent;
+   extern std::string mLogCat;
 
-	void LogMessage(const char* aMessage, ...);
+   void LogMessage(const char* aMessage, ...);
 
-	class LogScopedIndent {
-	public:
-		LogScopedIndent() {
-			Logger::mPrintIndent++;
-		}
-		~LogScopedIndent() {
-			Logger::mPrintIndent--;
-		}
-	};
+   class LogScopedIndent {
+   public:
+      LogScopedIndent() {
+         Logger::mPrintIndent++;
+      }
+      ~LogScopedIndent() {
+         Logger::mPrintIndent--;
+      }
+   };
 
-	class LogScopedName {
-	public:
-		LogScopedName(std::string aName) {
-			mPreviousName = Logger::mLogCat;
-			Logger::mLogCat = aName;
-		}
-		~LogScopedName() {
-			Logger::mLogCat = mPreviousName;
+   class LogScopedName {
+   public:
+      LogScopedName(std::string aName) {
+         mPreviousName = Logger::mLogCat;
+         Logger::mLogCat = aName;
+      }
+      ~LogScopedName() {
+         Logger::mLogCat = mPreviousName;
 
-		}
-	private:
-		std::string mPreviousName;
-	};
+      }
+   private:
+      std::string mPreviousName;
+   };
 
 };
 

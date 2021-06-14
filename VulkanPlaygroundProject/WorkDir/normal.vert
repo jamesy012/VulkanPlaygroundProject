@@ -13,22 +13,30 @@ layout(location = 1) out vec2 fragTexCoord;
 layout(location = 2) out vec3 fragNormal;
 layout(location = 3) out vec3 fragPos;
 layout(location = 4) out vec3 fragTangent;
+layout(location = 5) out vec4 fragShadowCoord;
 
 layout(set = 0, binding = 0) uniform SceneBuffer{   
-	mat4 viewproj; 
+	mat4 viewProj; 
     vec4 viewPos;
     vec4 lightPos;
+    mat4 lightProj;
 } sceneData;
 
 layout(set = 1, binding = 0) uniform ObjectBuffer{   
 	mat4 modelMatrix; 
 } objectData;
 
+const mat4 biasMat = mat4( 
+	0.5, 0.0, 0.0, 0.0,
+	0.0, 0.5, 0.0, 0.0,
+	0.0, 0.0, 1.0, 0.0,
+	0.5, 0.5, 0.0, 1.0 );
+
 void main() {
     mat4 modelScene = objectData.modelMatrix;
     mat3 modelSceneMat3 = mat3(modelScene);
     vec4 pos = modelScene * vec4(inPosition, 1.0);
-    gl_Position = sceneData.viewproj * pos;
+    gl_Position = sceneData.viewProj * pos;
 
     fragPos = pos.xyz;
     fragNormal = normalize(modelSceneMat3 * inNorm);
@@ -36,4 +44,6 @@ void main() {
     fragTexCoord = inTexCoord;
     
     fragTangent = vec3(modelScene * vec4(inTangent,0));
+
+    fragShadowCoord = ( biasMat * sceneData.lightProj * modelScene) * vec4(inPosition, 1.0);	
 }

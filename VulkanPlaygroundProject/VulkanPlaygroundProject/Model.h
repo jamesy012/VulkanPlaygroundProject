@@ -101,8 +101,8 @@ class Model {
    std::vector<Material> mMaterials;
 
 public:
-   bool LoadModel(std::string aPath, VkDescriptorSetLayout aMaterialDescriptorSet);
-   void Render(DescriptorUBO* aRenderDescriptor, RenderMode aRenderMode, glm::vec3 pos);
+   bool LoadModel(std::string aPath, VkDescriptorSetLayout aMaterialDescriptorSet, std::vector<VkWriteDescriptorSet> aWriteSets);
+   void Render(DescriptorUBO* aRenderDescriptor, RenderMode aRenderMode);
 
    void SetPosition(glm::vec3 aPos) {
       ASSERT_RET(mBase);
