@@ -423,6 +423,12 @@ bool CheckVkLayerSupport(const std::vector<const char*> aLayersToCheck) {
 }
 
 bool VulkanManager::CreateInstance() {
+   {
+      LOG("Loading Vulkan sdk: ");
+      uint32_t version = VK_HEADER_VERSION_COMPLETE;
+      LOG("Version: %i.%i.%i\n", VK_VERSION_MAJOR(version), VK_VERSION_MINOR(version), VK_VERSION_PATCH(version));
+   }
+   
    if (enableValidationLayers && !CheckVkLayerSupport(validationLayers)) {
       ASSERT_RET_FALSE("validation layers requested, but not available!");
    }

@@ -3,7 +3,7 @@
 
 #include "RenderPass.h"
 
-bool Framebuffer::Create(VkDevice aDevice, VkExtent2D aSize, RenderPass* aRenderPass, std::vector<VkImageView>& aViews) {
+bool Framebuffer::Create(VkDevice aDevice, VkExtent2D aSize, const RenderPass* aRenderPass, std::vector<VkImageView>& aViews) {
    
    VkFramebufferCreateInfo createInfo{};
    createInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;

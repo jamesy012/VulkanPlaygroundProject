@@ -38,18 +38,6 @@ private:
    void* mMapPtr = nullptr;
 };
 
-class BufferVertex : public Buffer {
-public:
-   bool Create(VkDeviceSize aSize) override {
-      return Buffer::Create(aSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
-   }
-   void Bind(VkCommandBuffer aBuffer) {
-      VkBuffer vertexBuffers[] = { GetBuffer() };
-      VkDeviceSize offsets[] = { 0 };
-      vkCmdBindVertexBuffers(aBuffer, 0, 1, vertexBuffers, offsets);
-   }
-};
-
 class BufferIndex : public Buffer {
 public:
    bool Create(VkDeviceSize aSize) override {

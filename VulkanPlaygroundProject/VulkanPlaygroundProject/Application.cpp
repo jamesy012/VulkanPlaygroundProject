@@ -12,6 +12,7 @@
 #include "Shadow.h"
 
 ShadowDirectional mShadow;
+ShadowDirectionalCascade mShadowCascade;
 
 void Application::Start() {
    mWindow = new Window();
@@ -21,55 +22,17 @@ void Application::Start() {
    _CInput = new InputHandler();
    _CInput->Startup(mWindow->GetWindow());
 
-   {
-      {
-         VertexSimple verts[6];
-         verts[0].pos = glm::vec2(-1.0f, -1.0f);
-         verts[1].pos = glm::vec2(1.0f, -1.0f);
-         verts[2].pos = glm::vec2(-1.0f, 1.0f);
-         verts[3].pos = glm::vec2(1.0f, -1.0f);
-         verts[4].pos = glm::vec2(1.0f, 1.0f);
-         verts[5].pos = glm::vec2(-1.0f, 1.0f);
-         mScreenQuad.Create(sizeof(VertexSimple) * 6);
-         BufferStaging staging;
-         staging.Create(mScreenQuad.GetSize());
-         {
-            void* data;
-            staging.Map(&data);
-            memcpy(data, verts, sizeof(VertexSimple) * 6);
-            staging.UnMap();
-         }
-         mScreenQuad.CopyFrom(&staging);
-         staging.Destroy();
-      }
-      {
-         Vertex verts[6]{};
-         verts[0].pos = glm::vec3(-1.0f, -1.0f, 0);
-         verts[1].pos = glm::vec3(1.0f, -1.0f, 0);
-         verts[2].pos = glm::vec3(-1.0f, 1.0f, 0);
-         verts[3].pos = glm::vec3(1.0f, -1.0f, 0);
-         verts[4].pos = glm::vec3(1.0f, 1.0f, 0);
-         verts[5].pos = glm::vec3(-1.0f, 1.0f, 0);
-         mBillboardQuad.Create(sizeof(Vertex) * 6);
-         BufferStaging staging;
-         staging.Create(mBillboardQuad.GetSize());
-         {
-            void* data;
-            staging.Map(&data);
-            memcpy(data, verts, sizeof(Vertex) * 6);
-            staging.UnMap();
-         }
-         mBillboardQuad.CopyFrom(&staging);
-         staging.Destroy();
-      }
-   }
+   ShadowManager::Create();
 
+   mScreenQuad.CreatePrimitive(VertexPrimitives::QUAD);
+   mBillboardQuad.CreatePrimitive(VertexPrimitives::QUAD);
 
    CreateSizeDependent();
    mVkManager->mSizeDependentCreateCallback = std::bind(&Application::CreateSizeDependent, this);
    mVkManager->mSizeDependentDestroyCallback = std::bind(&Application::DestroySizeDependent, this);
 
    mShadow.Create({ 2048, 2048 }, VK_NULL_HANDLE);
+   mShadowCascade.Create({ 2048, 2048 }, VK_NULL_HANDLE);
 
    {
       {
@@ -100,7 +63,7 @@ void Application::Start() {
          layoutInfo.pBindings = bindings.data();
          vkCreateDescriptorSetLayout(mVkManager->GetDevice(), &layoutInfo, GetAllocationCallback(), &mMaterialDescriptorSet);
       }
-      
+
       {
          mPipeline.AddShader(GetWorkDir() + "normal.vert");
          mPipeline.AddShader(GetWorkDir() + "normal.frag");
@@ -122,7 +85,7 @@ void Application::Start() {
          mPipelineShadow.AddDescriptorSetLayout(mSceneDescriptorSet);
          mPipelineShadow.AddDescriptorSetLayout(mObjectDescriptorSet);
          //mPipelineShadow.SetCullMode(VK_CULL_MODE_FRONT_BIT);
-         mPipelineShadow.Create(mVkManager->GetSwapchainExtent(), mShadow.GetRenderPass());
+         mPipelineShadow.Create(mVkManager->GetSwapchainExtent(), ShadowManager::GetRenderPass());
       }
 
       {
@@ -149,7 +112,7 @@ void Application::Start() {
          mObjectBuffer.SetName("Object Buffer");
       }
    }
-  
+
    mTestImg.LoadImage(GetWorkDir() + "Sponza/textures/background.tga");
    UpdateImageDescriptorSet(&mTestImg, mMaterialSet, mVkManager->GetDefaultSampler(), 0);
    std::vector<VkDescriptorImageInfo> imgInfo = std::vector<VkDescriptorImageInfo>(1);
@@ -222,11 +185,11 @@ void Application::Update() {
 
    mFlyCamera.UpdateInput();
    mSceneUbo.mViewProj = mFlyCamera.GetPV();
-   mSceneUbo.mViewPos = glm::vec4(mFlyCamera.GetPostion(),0);
-   mSceneUbo.mLightPos = glm::vec4(mLightPos,0);
+   mSceneUbo.mViewPos = glm::vec4(mFlyCamera.GetPostion(), 0);
+   mSceneUbo.mLightPos = glm::vec4(mLightPos, 0);
 
-   glm::mat4 shadowProj = glm::ortho(-50.0f, 50.0f, -50.0f, 50.0f, 0.1f,200.0f);
-   glm::mat4 shadowView = glm::lookAt(mLightPos, glm::vec3(0), glm::vec3(0,1,0));
+   glm::mat4 shadowProj = glm::ortho(-50.0f, 50.0f, -50.0f, 50.0f, 0.1f, 200.0f);
+   glm::mat4 shadowView = glm::lookAt(mLightPos, glm::vec3(0), glm::vec3(0, 1, 0));
    mSceneUbo.mLightProj = shadowProj * shadowView;
 
    {
@@ -284,11 +247,12 @@ void Application::Draw() {
       }
    }
 
+   //shadow
    {
       mShadow.StartRenderPass(buffer);
 
       vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipelineShadow.GetPipeline());
-      uint32_t descriptorSetOffsets[] = { mSceneBuffer.GetCurrentOffset() };
+      uint32_t descriptorSetOffsets[] = { mSceneShadowBuffer.GetCurrentOffset() };
       vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipelineShadow.GetPipelineLayout(), 0, 1, &mSceneShadowSet, 1, descriptorSetOffsets);
       {
          DescriptorUBO des = DescriptorUBO(buffer, mPipelineShadow.GetPipelineLayout(), &mObjectBuffer);
@@ -297,8 +261,25 @@ void Application::Draw() {
 
       mShadow.EndRenderPass(buffer);
    }
+   //cascade shadow
    {
-      _VulkanManager->DebugMarkerStart(buffer, "Main Render", glm::vec4(0.0f,0.3f,0.0f,0.2f));
+      for (uint32_t i = 0; i < mShadowCascade.NumCascades(); i++) {
+         mShadowCascade.StartRenderPass(buffer, i);
+
+         vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipelineShadow.GetPipeline());
+         uint32_t descriptorSetOffsets[] = { mSceneShadowBuffer.GetCurrentOffset() };
+         vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipelineShadow.GetPipelineLayout(), 0, 1, &mSceneShadowSet, 1, descriptorSetOffsets);
+         {
+            DescriptorUBO des = DescriptorUBO(buffer, mPipelineShadow.GetPipelineLayout(), &mObjectBuffer);
+            mModelTest.Render(&des, RenderMode::SHADOW);
+         }
+
+         mShadowCascade.EndRenderPass(buffer, i);
+      }
+   }
+   //main render
+   {
+      _VulkanManager->DebugMarkerStart(buffer, "Main Render", glm::vec4(0.0f, 0.3f, 0.0f, 0.2f));
       std::vector<VkClearValue> clearColor = std::vector<VkClearValue>(2);
       clearColor[0].color.float32[0] = abs(sin((frameCounter * 0.5f) / 5000.0f));
       clearColor[0].color.float32[1] = abs(sin((frameCounter * 0.2f) / 5000.0f));
@@ -367,6 +348,7 @@ void Application::Destroy() {
    mVkManager->WaitDevice();
 
    mTestImg.Destroy();
+   mShadowCascade.Destroy();
    mShadow.Destroy();
 
    {
@@ -388,6 +370,9 @@ void Application::Destroy() {
    mPipeline.Destroy();
    mPipelineTest.Destroy();
    mModelTest.Destroy();
+
+   ShadowManager::Destroy();
+
    mVkManager->Destroy();
    mWindow->Destroy();
    delete mWindow;

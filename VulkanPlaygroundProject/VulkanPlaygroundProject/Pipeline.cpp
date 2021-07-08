@@ -73,7 +73,7 @@ bool Pipeline::AddShader(std::string aPath, bool aForceReload) {
       }
       fileExt = aPath.substr(index);
       for (auto& c : fileExt) {
-         c = std::tolower(c);
+         c = tolower(c);
       }
    }
    if (fileExt == "vert") {
