@@ -18,10 +18,24 @@ shaderc_shader_kind GetShaderCShaderKind(VkShaderStageFlagBits aType) {
          return shaderc_shader_kind::shaderc_glsl_vertex_shader;
       case VK_SHADER_STAGE_FRAGMENT_BIT:
          return shaderc_shader_kind::shaderc_glsl_fragment_shader;
+      case VK_SHADER_STAGE_COMPUTE_BIT:
+         return shaderc_shader_kind::shaderc_glsl_compute_shader;
       default:
          ASSERT(false);
    }
    return shaderc_vertex_shader;
+}
+
+VkShaderStageFlagBits GetShaderStageFromFileExt(std::string aFileExt) {
+   if (aFileExt == "vert") {
+      return VK_SHADER_STAGE_VERTEX_BIT;
+   } else if (aFileExt == "frag") {
+      return VK_SHADER_STAGE_FRAGMENT_BIT;
+   } else if (aFileExt == "comp") {
+      return VK_SHADER_STAGE_COMPUTE_BIT;
+   }
+   ASSERT(false);
+   return (VkShaderStageFlagBits)0;
 }
 
 bool ReadFile(std::string aPath, std::stringstream& aOutput) {
@@ -79,11 +93,8 @@ bool Pipeline::AddShader(std::string aPath, bool aForceReload) {
          c = tolower(c);
       }
    }
-   if (fileExt == "vert") {
-      shader.mInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
-   } else if (fileExt == "frag") {
-      shader.mInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-   }
+
+   shader.mInfo.stage = GetShaderStageFromFileExt(fileExt);
    shaderc_shader_kind shadercType = GetShaderCShaderKind(shader.mInfo.stage);
 
    bool reloadFromFile = false;
@@ -304,25 +315,47 @@ bool Pipeline::Create(const VkExtent2D aSize, const RenderPass* aRenderPass) {
    dynamicState.dynamicStateCount = static_cast<uint32_t>(mDynamicStates.size());
    dynamicState.pDynamicStates = mDynamicStates.data();
 
-   VkGraphicsPipelineCreateInfo pipeline{};
-   pipeline.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-   pipeline.layout = mPipelineLayout;
-   pipeline.stageCount = static_cast<uint32_t>(shaderStages.size());
-   pipeline.pStages = shaderStages.data();
-   pipeline.pVertexInputState = &vertexInputInfo;
-   pipeline.pInputAssemblyState = &inputAssembly;
-   pipeline.pViewportState = &viewportState;
-   pipeline.pRasterizationState = &rasterizer;
-   pipeline.pMultisampleState = &multisampling;
-   pipeline.pDepthStencilState = &depthStencil;
-   pipeline.pColorBlendState = &colorBlending;
-   pipeline.pDynamicState = &dynamicState;
-   pipeline.renderPass = aRenderPass->GetRenderPass();
-   pipeline.subpass = 0;
-   pipeline.basePipelineHandle = VK_NULL_HANDLE; // Optional
-   pipeline.basePipelineIndex = -1; // Optional
-   vkCreateGraphicsPipelines(_VulkanManager->GetDevice(), VK_NULL_HANDLE, 1, &pipeline, nullptr, &mPipeline);
-   //helper->setObjName(VK_OBJECT_TYPE_PIPELINE, (uint64_t)mPipeline, aName);
+   bool canRender = true;
+   //todo make rasteraization check better
+   for (size_t i = 0; i < mShaders.size(); i++) {
+      if (mShaders[i].mInfo.stage == VK_SHADER_STAGE_COMPUTE_BIT) {
+         canRender = false;
+      }
+   }
+
+   if (canRender) {
+      VkGraphicsPipelineCreateInfo graphicsPipeline{};
+      graphicsPipeline.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+      graphicsPipeline.layout = mPipelineLayout;
+      graphicsPipeline.stageCount = static_cast<uint32_t>(shaderStages.size());
+      graphicsPipeline.pStages = shaderStages.data();
+      graphicsPipeline.pViewportState = &viewportState;
+      graphicsPipeline.pVertexInputState = &vertexInputInfo;
+      graphicsPipeline.pInputAssemblyState = &inputAssembly;
+      graphicsPipeline.pRasterizationState = &rasterizer;
+      graphicsPipeline.pMultisampleState = &multisampling;
+      graphicsPipeline.pDepthStencilState = &depthStencil;
+      graphicsPipeline.pColorBlendState = &colorBlending;
+      graphicsPipeline.pDynamicState = &dynamicState;
+      graphicsPipeline.renderPass = aRenderPass->GetRenderPass();
+      graphicsPipeline.subpass = 0;
+      graphicsPipeline.basePipelineHandle = VK_NULL_HANDLE; // Optional
+      graphicsPipeline.basePipelineIndex = -1; // Optional
+      vkCreateGraphicsPipelines(_VulkanManager->GetDevice(), VK_NULL_HANDLE, 1, &graphicsPipeline, nullptr, &mPipeline);
+      //helper->setObjName(VK_OBJECT_TYPE_PIPELINE, (uint64_t)mPipeline, aName);
+   } else {
+      if (shaderStages.size() == 1) {
+         VkComputePipelineCreateInfo computePipeline{};
+         computePipeline.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+         computePipeline.layout = mPipelineLayout;
+         computePipeline.stage = shaderStages[0];
+
+         vkCreateComputePipelines(_VulkanManager->GetDevice(), VK_NULL_HANDLE, 1, &computePipeline, nullptr, &mPipeline);
+      } else {
+         ASSERT("Number of Shader Stages incorrect");
+      }
+   }
+
 
    for (size_t i = 0; i < mShaders.size(); i++) {
       vkDestroyShaderModule(_VulkanManager->GetDevice(), mShaders[i].mInfo.module, GetAllocationCallback());

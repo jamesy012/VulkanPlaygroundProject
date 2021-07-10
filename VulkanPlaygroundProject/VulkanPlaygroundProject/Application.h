@@ -37,18 +37,23 @@ private:
    Pipeline mPipelineTest;
    Pipeline mPipeline;
    Pipeline mPipelineShadow;
+   Pipeline mComputeTest;
    Model mModelTest;
 
    VkDescriptorSetLayout mSceneDescriptorSet;
    VkDescriptorSetLayout mObjectDescriptorSet;
    VkDescriptorSetLayout mMaterialDescriptorSet;
+   VkDescriptorSetLayout mComputeTestDescriptorSet;
    VkDescriptorSet mSceneSet;
    VkDescriptorSet mSceneShadowSet;
    VkDescriptorSet mObjectSet;
    VkDescriptorSet mMaterialSet;
+   VkDescriptorSet mComputeTestSet;
    BufferRingUniform mSceneBuffer;
    BufferRingUniform mSceneShadowBuffer;
    BufferRingUniform mObjectBuffer;
+   BufferStorageUniform mComputeTestInputBuffer;
+   BufferStorageUniform mComputeTestOutputBuffer;
 
    RenderPass mRenderPass;
    RenderTarget mRenderTarget;

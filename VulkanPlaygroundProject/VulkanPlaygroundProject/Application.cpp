@@ -18,6 +18,10 @@ float shadowOffsetsSplitDepth[NUM_SHADOW_CASCADES];
 glm::mat4 shadowOffsetsVpMatrix[NUM_SHADOW_CASCADES];
 float cascadeSplitLambda = 0.8f;
 
+struct ComputeTestStruct {
+   glm::mat4 matrices[64];
+};
+
 void Application::Start() {
    mWindow = new Window();
    mWindow->Create(800, 600, "vulkan");
@@ -68,6 +72,17 @@ void Application::Start() {
       }
 
       {
+         VkDescriptorSetLayoutBinding inputLayout = CreateDescriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT, 0);
+         VkDescriptorSetLayoutBinding outputLayout = CreateDescriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT, 1);
+         VkDescriptorSetLayoutBinding bindings[] = { inputLayout, outputLayout };
+         VkDescriptorSetLayoutCreateInfo layoutInfo{};
+         layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+         layoutInfo.bindingCount = sizeof(bindings) / sizeof(VkDescriptorSetLayoutBinding);
+         layoutInfo.pBindings = bindings;
+         vkCreateDescriptorSetLayout(mVkManager->GetDevice(), &layoutInfo, GetAllocationCallback(), &mComputeTestDescriptorSet);
+      }
+
+      {
          mPipeline.AddShader(GetWorkDir() + "normal.vert");
          mPipeline.AddShader(GetWorkDir() + "normal.frag");
          mPipeline.SetVertexType(VertexTypeDefault);
@@ -91,6 +106,10 @@ void Application::Start() {
          mPipelineShadow.AddDescriptorSetLayout(mObjectDescriptorSet);
          //mPipelineShadow.SetCullMode(VK_CULL_MODE_FRONT_BIT);
          mPipelineShadow.Create(mVkManager->GetSwapchainExtent(), ShadowManager::GetRenderPass());
+
+         mComputeTest.AddShader(GetWorkDir() + "computeTest.comp");
+         mComputeTest.AddDescriptorSetLayout(mComputeTestDescriptorSet);
+         mComputeTest.Create(mVkManager->GetSwapchainExtent(), nullptr);
       }
 
       {
@@ -108,6 +127,9 @@ void Application::Start() {
          setAllocate.pSetLayouts = &mMaterialDescriptorSet;
          vkAllocateDescriptorSets(mVkManager->GetDevice(), &setAllocate, &mMaterialSet);
 
+         setAllocate.pSetLayouts = &mComputeTestDescriptorSet;
+         vkAllocateDescriptorSets(mVkManager->GetDevice(), &setAllocate, &mComputeTestSet);
+
 
          mSceneBuffer.Create(3, sizeof(SceneUBO), mSceneSet, 0);
          mSceneBuffer.SetName("Scene Buffer");
@@ -115,6 +137,10 @@ void Application::Start() {
          mSceneShadowBuffer.SetName("Scene Shadow Buffer");
          mObjectBuffer.Create(500, sizeof(ObjectUBO), mObjectSet, 0);
          mObjectBuffer.SetName("Object Buffer");
+
+         mComputeTestInputBuffer.Create(1, sizeof(ComputeTestStruct), mComputeTestSet, 0, false);
+         mComputeTestOutputBuffer.Create(1, sizeof(ComputeTestStruct), mComputeTestSet, 1, false);
+
       }
    }
 
@@ -127,6 +153,18 @@ void Application::Start() {
 
    mModelTest.LoadModel(GetWorkDir() + "Sponza/Sponza.obj", mMaterialDescriptorSet, writeSets);
    mModelTest.SetScale(0.05f);
+
+
+   {
+      ComputeTestStruct* data;
+      mComputeTestInputBuffer.Map(reinterpret_cast<void**>(&data));
+      for (int i = 0; i < 64; i++) {
+         for (int q = 0; q < 16; q++) {
+            glm::value_ptr(data[0].matrices[i])[q] = (float)i + q;
+         }
+      }
+      mComputeTestInputBuffer.UnMap();
+   }
 
    //mFlyCamera.SetPosition(glm::vec3(130, 50, 150));
    mFlyCamera.SetFarClip(150.0f);
@@ -377,6 +415,7 @@ void Application::Draw() {
       vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline.GetPipeline());
       vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline.GetPipelineLayout(), 2, 1, &mMaterialSet, 0, nullptr);
 
+      //render Light facing camera
       {
          DescriptorUBO des = DescriptorUBO(buffer, mPipeline.GetPipelineLayout(), &mObjectBuffer);
          mModelTest.Render(&des, RenderMode::NORMAL);
@@ -394,6 +433,19 @@ void Application::Draw() {
 
       mRenderTarget.EndRenderPass(buffer);
       _VulkanManager->DebugMarkerEnd(buffer);
+   }
+
+   //compute Test
+   {
+      _VulkanManager->DebugMarkerStart(buffer, "Compute Test", glm::vec4(0.0f, 0.0f, 0.3f, 0.2f));
+      vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_COMPUTE, mComputeTest.GetPipeline());
+
+      vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_COMPUTE, mComputeTest.GetPipelineLayout(), 0, 1, &mComputeTestSet, 0, nullptr);
+
+      vkCmdDispatch(buffer, 1, 1, 1);
+
+      _VulkanManager->DebugMarkerEnd(buffer);
+
    }
 
    _VulkanManager->DebugMarkerStart(buffer, "Present Prepare");
@@ -433,9 +485,12 @@ void Application::Destroy() {
       mSceneShadowBuffer.Destroy();
       mSceneBuffer.Destroy();
       mObjectBuffer.Destroy();
+      mComputeTestInputBuffer.Destroy();
+      mComputeTestOutputBuffer.Destroy();
       vkDestroyDescriptorSetLayout(mVkManager->GetDevice(), mSceneDescriptorSet, GetAllocationCallback());
       vkDestroyDescriptorSetLayout(mVkManager->GetDevice(), mObjectDescriptorSet, GetAllocationCallback());
       vkDestroyDescriptorSetLayout(mVkManager->GetDevice(), mMaterialDescriptorSet, GetAllocationCallback());
+      vkDestroyDescriptorSetLayout(mVkManager->GetDevice(), mComputeTestDescriptorSet, GetAllocationCallback());
    }
 
    mRenderTarget.Destroy();
@@ -445,6 +500,7 @@ void Application::Destroy() {
    mPipelineShadow.Destroy();
    mPipeline.Destroy();
    mPipelineTest.Destroy();
+   mComputeTest.Destroy();
    mModelTest.Destroy();
 
    ShadowManager::Destroy();

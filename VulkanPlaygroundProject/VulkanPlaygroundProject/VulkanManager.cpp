@@ -20,7 +20,11 @@ VulkanManager* _VulkanManager;
 #define VULKAN_API_VERSION VK_HEADER_VERSION_COMPLETE
 
 #define MAX_DESCRIPTOR_SETS 50
-constexpr VkDescriptorPoolSize poolSizes[2] = { { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, MAX_DESCRIPTOR_SETS }, { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, MAX_DESCRIPTOR_SETS } };
+constexpr VkDescriptorPoolSize poolSizes[3] = { 
+   { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, MAX_DESCRIPTOR_SETS },
+   { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, MAX_DESCRIPTOR_SETS },
+   { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, MAX_DESCRIPTOR_SETS }
+};
 
 const std::vector<const char*> validationLayers = {
    "VK_LAYER_KHRONOS_validation"
@@ -68,7 +72,7 @@ void VulkanManager::Create(Window* aWindow) {
    CreateSyncObjects();
 
    CreateImGui();
-   
+
    //vma
    {
       VmaAllocatorCreateInfo createInfo{};
@@ -185,7 +189,7 @@ void VulkanManager::Destroy() {
 
    mWindow->DestroySurface(GetInstance());
 
-   if(enableValidationLayers && mDebugMessenger != VK_NULL_HANDLE) {
+   if (enableValidationLayers && mDebugMessenger != VK_NULL_HANDLE) {
       auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(mInstance, "vkDestroyDebugUtilsMessengerEXT");
       if (func != nullptr) {
          func(mInstance, mDebugMessenger, GetAllocationCallback());
@@ -432,7 +436,7 @@ bool VulkanManager::CreateInstance() {
       uint32_t version = VK_HEADER_VERSION_COMPLETE;
       LOG("Version: %i.%i.%i\n", VK_VERSION_MAJOR(version), VK_VERSION_MINOR(version), VK_VERSION_PATCH(version));
    }
-   
+
    if (enableValidationLayers && !CheckVkLayerSupport(validationLayers)) {
       ASSERT_RET_FALSE("validation layers requested, but not available!");
    }
@@ -771,7 +775,7 @@ bool VulkanManager::CreateSwapchain() {
 
    createInfo.oldSwapchain = VK_NULL_HANDLE;
 
-    if (vkCreateSwapchainKHR(mDevice, &createInfo, nullptr, &mSwapChain) != VK_SUCCESS) {
+   if (vkCreateSwapchainKHR(mDevice, &createInfo, nullptr, &mSwapChain) != VK_SUCCESS) {
       ASSERT("failed to create swap chain");
    }
 

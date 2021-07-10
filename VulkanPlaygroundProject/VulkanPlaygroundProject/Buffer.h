@@ -57,11 +57,11 @@ public:
 
 class BufferUniform : protected Buffer {
 public:
-   bool Create(uint32_t aCount, VkDeviceSize aStructSize, VkDescriptorSet aDescriptorSet, uint32_t aBinding) {
+   bool Create(uint32_t aCount, VkDeviceSize aStructSize, VkDescriptorSet aDescriptorSet, uint32_t aBinding, bool aDynamic = true) {
       mStructSize = aStructSize;
       mAllignedStructSize = RoundUp((int)aStructSize, _VulkanManager->GetUniformBufferAllignment());
       mCount = aCount;
-      bool res = Create(aCount * (uint32_t)mAllignedStructSize);
+      bool res = Create(aCount * (VkDeviceSize)mAllignedStructSize);
       if (!res) {
          return false;
       }
@@ -73,7 +73,7 @@ public:
       VkDescriptorBufferInfo bufferInfo{};
       bufferInfo.buffer = GetBuffer();
       bufferInfo.range = mStructSize;
-      VkWriteDescriptorSet sceneSet = CreateWriteDescriptorSet(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, aDescriptorSet, &bufferInfo, aBinding);
+      VkWriteDescriptorSet sceneSet = CreateWriteDescriptorSet(GetDescriptorType(aDynamic), aDescriptorSet, &bufferInfo, aBinding);
       vkUpdateDescriptorSets(_VulkanManager->GetDevice(), 1, &sceneSet, 0, nullptr);
       return true;
    }
@@ -95,9 +95,23 @@ public:
       return mStructSize;
    }
 
+   void Map(void** aData) {
+      Buffer::Map(aData);
+   };
+
+   void UnMap() {
+      Buffer::UnMap();
+   }
+
 protected:
    bool Create(VkDeviceSize aSize) override {
       return Buffer::Create(aSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
+   }
+   virtual VkDescriptorType GetDescriptorType(bool aDynamic) {
+      if (aDynamic) {
+         return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+      }
+      return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
    }
    uint32_t mCount = 0;
    VkDeviceSize mStructSize;
@@ -151,4 +165,21 @@ private:
 #if defined(_DEBUG)
    uint32_t mLastOverflowFrame = -1;
 #endif
+};
+
+class BufferStorageUniform : public BufferUniform {
+public:
+   bool Create(uint32_t aCount, VkDeviceSize aStructSize, VkDescriptorSet aDescriptorSet, uint32_t aBinding, bool aDynamic = true) {
+      return BufferUniform::Create(aCount, aStructSize, aDescriptorSet, aBinding, aDynamic);
+   }
+private:
+   bool Create(VkDeviceSize aSize) override {
+      return Buffer::Create(aSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
+   }
+   VkDescriptorType GetDescriptorType(bool aDynamic) override {
+      if (aDynamic) {
+         return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
+      }
+      return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+   }
 };

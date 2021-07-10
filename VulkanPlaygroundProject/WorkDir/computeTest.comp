@@ -1,0 +1,16 @@
+#version 450
+
+layout (local_size_x = 64) in;
+
+layout(set = 0, binding = 0) readonly buffer InputBuffer{
+    mat4 matrices[];
+} sourceData;
+
+layout(set = 0, binding = 1) buffer OutputBuffer{
+    mat4 matrices[];
+} outputData;
+
+
+void main() {
+    outputData.matrices[gl_GlobalInvocationID.x] = sourceData.matrices[gl_GlobalInvocationID.x] + 1;
+}
