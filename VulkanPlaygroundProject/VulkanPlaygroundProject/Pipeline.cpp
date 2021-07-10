@@ -9,6 +9,9 @@
 #include "RenderPass.h"
 #include "Vertex.h"
 
+#define STB_DS_IMPLEMENTATION
+#include <stb_ds.h>
+
 shaderc_shader_kind GetShaderCShaderKind(VkShaderStageFlagBits aType) {
    switch (aType) {
       case VK_SHADER_STAGE_VERTEX_BIT:
@@ -66,12 +69,12 @@ bool Pipeline::AddShader(std::string aPath, bool aForceReload) {
    Shader shader;
 
    std::string fileExt;
+   size_t fileExtIndex = aPath.find_last_of('.') + 1;
    {
-      size_t index = aPath.find_last_of('.') + 1;
-      if (index == 0) {
+      if (fileExtIndex == 0) {
          ASSERT_RET_FALSE("Invalid file name?");
       }
-      fileExt = aPath.substr(index);
+      fileExt = aPath.substr(fileExtIndex);
       for (auto& c : fileExt) {
          c = tolower(c);
       }
@@ -86,7 +89,14 @@ bool Pipeline::AddShader(std::string aPath, bool aForceReload) {
    bool reloadFromFile = false;
    static const bool FORCE_RELOAD = false;
 
-   const std::string cachePath = aPath + ".cache";
+
+   std::size_t hashValue = stbds_hash_bytes(mShaderMacroArguments.mMacros.data(), sizeof(ShaderMacroArguments::Args) * mShaderMacroArguments.mMacros.size(), 0);
+   LOG("hash: %zu\n", hashValue);
+
+   std::string cachePath = aPath;
+   cachePath.insert(fileExtIndex - 1, "-" + std::to_string(hashValue));
+   cachePath += ".cache";
+
    struct _stat stat {};
    struct _stat statCache {};
 
@@ -112,6 +122,11 @@ bool Pipeline::AddShader(std::string aPath, bool aForceReload) {
       options.SetOptimizationLevel(shaderc_optimization_level::shaderc_optimization_level_performance);
       options.SetGenerateDebugInfo();
       options.SetWarningsAsErrors();
+
+      for (size_t i = 0; i < mShaderMacroArguments.mMacros.size(); i++) {
+         options.AddMacroDefinition(ShaderMacroArguments::ArgsToString(mShaderMacroArguments.mMacros[i]));
+      }
+      
       //shaderc::PreprocessedSourceCompilationResult result = compiler.PreprocessGlsl(dataStream.str(), shadercType, aPath.c_str(), options);
       //
       //if (result.GetCompilationStatus() != shaderc_compilation_status_success) {

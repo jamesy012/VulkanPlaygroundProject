@@ -27,7 +27,6 @@ const mat4 biasMat = mat4(
 	0.5, 0.5, 0.0, 1.0 
 );
 
-
 float textureProj(vec4 shadowCoord, vec2 off, uint cascadeIndex)
 {
 	float shadow = 1.0;

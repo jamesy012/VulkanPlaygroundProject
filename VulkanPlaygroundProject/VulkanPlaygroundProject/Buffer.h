@@ -99,7 +99,7 @@ protected:
    bool Create(VkDeviceSize aSize) override {
       return Buffer::Create(aSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
    }
-   uint32_t mCount;
+   uint32_t mCount = 0;
    VkDeviceSize mStructSize;
    VkDeviceSize mAllignedStructSize;
 
@@ -149,6 +149,6 @@ private:
    uint32_t mCurrentOffset;
    uint16_t mOffsetCount = 0;
 #if defined(_DEBUG)
-   uint32_t mLastOverflowFrame = 0;
+   uint32_t mLastOverflowFrame = -1;
 #endif
 };

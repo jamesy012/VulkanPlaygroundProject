@@ -11,13 +11,12 @@
 
 #include "Shadow.h"
 
-#define SHADOW_CASCADES 4
 ShadowDirectional mShadowCascade;
 
-uint32_t shadowOffsets[SHADOW_CASCADES];
-float shadowOffsetsSplitDepth[SHADOW_CASCADES];
-glm::mat4 shadowOffsetsVpMatrix[SHADOW_CASCADES];
-float cascadeSplitLambda = 0.95f;
+uint32_t shadowOffsets[NUM_SHADOW_CASCADES];
+float shadowOffsetsSplitDepth[NUM_SHADOW_CASCADES];
+glm::mat4 shadowOffsetsVpMatrix[NUM_SHADOW_CASCADES];
+float cascadeSplitLambda = 0.8f;
 
 void Application::Start() {
    mWindow = new Window();
@@ -36,7 +35,7 @@ void Application::Start() {
    mVkManager->mSizeDependentCreateCallback = std::bind(&Application::CreateSizeDependent, this);
    mVkManager->mSizeDependentDestroyCallback = std::bind(&Application::DestroySizeDependent, this);
 
-   mShadowCascade.Create({ 2048, 2048 }, VK_NULL_HANDLE, SHADOW_CASCADES);
+   mShadowCascade.Create({ 2048, 2048 }, VK_NULL_HANDLE, NUM_SHADOW_CASCADES);
 
    {
       {
@@ -83,8 +82,10 @@ void Application::Start() {
          mPipelineTest.SetVertexType(VertexTypeSimple);
          mPipelineTest.Create(mVkManager->GetSwapchainExtent(), &mRenderPass);
 
+         ShaderMacroArguments shadowArguments;
+         shadowArguments.mMacros = {ShaderMacroArguments::Args::POSITION_ONLY, ShaderMacroArguments::Args::SIMPLE_SCENE};
+         mPipelineShadow.SetShaderMacroArguments(shadowArguments);
          mPipelineShadow.AddShader(GetWorkDir() + "normal.vert");
-         //mPipelineShadow.AddShader(GetWorkDir() + "test.frag");
          mPipelineShadow.SetVertexType(VertexTypeDefault);
          mPipelineShadow.AddDescriptorSetLayout(mSceneDescriptorSet);
          mPipelineShadow.AddDescriptorSetLayout(mObjectDescriptorSet);
@@ -110,7 +111,7 @@ void Application::Start() {
 
          mSceneBuffer.Create(3, sizeof(SceneUBO), mSceneSet, 0);
          mSceneBuffer.SetName("Scene Buffer");
-         mSceneShadowBuffer.Create(mShadowCascade.NumCascades(), sizeof(SceneUBO), mSceneShadowSet, 0);
+         mSceneShadowBuffer.Create(mShadowCascade.NumCascades(), sizeof(SceneSimpleUBO), mSceneShadowSet, 0);
          mSceneShadowBuffer.SetName("Scene Shadow Buffer");
          mObjectBuffer.Create(500, sizeof(ObjectUBO), mObjectSet, 0);
          mObjectBuffer.SetName("Object Buffer");
@@ -189,41 +190,10 @@ void Application::Update() {
    PROFILE_START_SCOPED("Update");
 
    mFlyCamera.UpdateInput();
-   mSceneUbo.mViewProj = mFlyCamera.GetPV();
-   mSceneUbo.mViewPos = glm::vec4(mFlyCamera.GetPostion(), 0);
-   mSceneUbo.mLightPos = glm::vec4(mLightPos, 0);
 
-   for (int i = 0; i < SHADOW_CASCADES; i++) {
-      mSceneUbo.mShadowCascadeProj[i] = shadowOffsetsVpMatrix[i];
-      glm::value_ptr(mSceneUbo.mShadowSplits)[i] = shadowOffsetsSplitDepth[i];
-   }
-
-   glm::mat4 shadowProj = glm::ortho(-50.0f, 50.0f, -50.0f, 50.0f, 0.1f, 200.0f);
-   glm::mat4 shadowView = glm::lookAt(mLightPos, glm::vec3(0), glm::vec3(0, 1, 0));
-   //mSceneUbo.mLightProj = shadowProj * shadowView;
-
+   //Cascade shadows
    {
-      void* data;
-      mSceneBuffer.Get(&data);
-      memcpy(data, &mSceneUbo, sizeof(SceneUBO));
-      mSceneBuffer.Return();
-   }
-
-   memcpy(&mSceneShadowUbo.mViewProj, mSceneUbo.mShadowCascadeProj, sizeof(glm::mat4) * 4);
-   memcpy(&mSceneShadowUbo.mShadowCascadeProj, mSceneUbo.mShadowCascadeProj, sizeof(glm::mat4) * 4);
-   mSceneShadowUbo.mViewPos = glm::vec4(mLightPos, 0);
-   mSceneShadowUbo.mLightPos = glm::vec4(mLightPos, 0);
-
-   {
-      void* data;
-      mSceneShadowBuffer.Get(&data);
-      memcpy(data, &mSceneShadowUbo, sizeof(SceneUBO));
-      mSceneShadowBuffer.Return();
-      shadowOffsets[0] = mSceneShadowBuffer.GetCurrentOffset();
-   }
-
-   {
-      float cascadeSplits[SHADOW_CASCADES];
+      float cascadeSplits[NUM_SHADOW_CASCADES];
 
       float nearClip = mFlyCamera.GetNear();
       float farClip = mFlyCamera.GetFar();
@@ -236,7 +206,7 @@ void Application::Update() {
       float ratio = maxZ / minZ;
 
       for (uint32_t i = 0; i < mShadowCascade.NumCascades(); i++) {
-         float p = (i + 1) / static_cast<float>(SHADOW_CASCADES);
+         float p = (i + 1) / static_cast<float>(NUM_SHADOW_CASCADES);
          float log = minZ * std::pow(ratio, p);
          float uniform = minZ + range * p;
          float d = cascadeSplitLambda * (log - uniform) + uniform;
@@ -245,7 +215,7 @@ void Application::Update() {
 
       // Calculate orthographic projection matrix for each cascade
       float lastSplitDist = 0.0;
-      for (uint32_t i = 0; i < SHADOW_CASCADES; i++) {
+      for (uint32_t i = 0; i < NUM_SHADOW_CASCADES; i++) {
          float splitDist = cascadeSplits[i];
 
          glm::vec3 frustumCorners[8] = {
@@ -299,15 +269,37 @@ void Application::Update() {
 
          lastSplitDist = cascadeSplits[i];
       }
+   }
 
-      for (uint32_t i = 0; i < mShadowCascade.NumCascades(); i++) {
-         mSceneShadowUbo.mViewProj = shadowOffsetsVpMatrix[i];
-         //mSceneShadowUbo.mLightProj = mSceneShadowUbo.mViewProj;
-         void* data;
-         mSceneShadowBuffer.Get(&data);
-         memcpy(data, &mSceneShadowUbo, sizeof(SceneUBO));
-         mSceneShadowBuffer.Return();
-         shadowOffsets[i] = mSceneShadowBuffer.GetCurrentOffset();
+   //ubo
+   {
+      //scene
+      {
+         mSceneUbo.mViewProj = mFlyCamera.GetPV();
+         mSceneUbo.mViewPos = glm::vec4(mFlyCamera.GetPostion(), 0);
+         mSceneUbo.mLightPos = glm::vec4(mLightPos, 0);
+
+         for (int i = 0; i < NUM_SHADOW_CASCADES; i++) {
+            mSceneUbo.mShadowCascadeProj[i] = shadowOffsetsVpMatrix[i];
+            glm::value_ptr(mSceneUbo.mShadowSplits)[i] = shadowOffsetsSplitDepth[i];
+         }
+
+         {
+            void* data;
+            mSceneBuffer.Get(&data);
+            memcpy(data, &mSceneUbo, sizeof(SceneUBO));
+            mSceneBuffer.Return();
+         }
+      }
+      //shadow
+      {
+         for (uint32_t i = 0; i < mShadowCascade.NumCascades(); i++) {
+            mSceneShadowUbo.mViewProj = shadowOffsetsVpMatrix[i];
+            void* data;
+            mSceneShadowBuffer.Get(&data, shadowOffsets[i]);
+            memcpy(data, &mSceneShadowUbo, sizeof(SceneUBO));
+            mSceneShadowBuffer.Return();
+         }
       }
    }
 

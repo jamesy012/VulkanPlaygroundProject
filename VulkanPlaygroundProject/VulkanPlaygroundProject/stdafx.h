@@ -43,14 +43,23 @@ static void CheckVulkanResult(VkResult aResult) {
 #define ASSERT_VALID(x) ASSERT_IF(x != nullptr);
 
 
+//~~~~~~~ CONSTANTS
+
+#define NUM_SHADOW_CASCADES 4
+static_assert(NUM_SHADOW_CASCADES <= 4);//shader splits in vec4
+
 //~~~~~~~ OBJECTS
 
+struct SceneSimpleUBO {
+   glm::mat4 mViewProj;//camera viewProj
+};
+
 struct SceneUBO {
-   glm::mat4 mViewProj;
-   glm::vec4 mViewPos;
-   glm::vec4 mLightPos;
-   glm::vec4 mShadowSplits;
-   glm::mat4 mShadowCascadeProj[4];
+   glm::mat4 mViewProj;//camera viewProj
+   glm::vec4 mViewPos; //xyz, w unused
+   glm::vec4 mLightPos; //xyz, w unused
+   glm::vec4 mShadowSplits;//x = cascade 0, y = cascade 1 ...
+   glm::mat4 mShadowCascadeProj[NUM_SHADOW_CASCADES];//shadow projView per cascade
 };
 
 struct ObjectUBO {

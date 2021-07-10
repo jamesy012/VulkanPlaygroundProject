@@ -55,7 +55,7 @@ private:
    Image mTestImg;
 
    SceneUBO mSceneUbo{};
-   SceneUBO mSceneShadowUbo{};
+   SceneSimpleUBO mSceneShadowUbo{};
 
    FlyCamera mFlyCamera;
 

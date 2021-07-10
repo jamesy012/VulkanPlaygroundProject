@@ -45,7 +45,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
    std::cerr << "VULKAN: " << pCallbackData->pMessageIdName << ":\n\t" << pCallbackData->pMessage << std::endl;
 
    if (pCallbackData->messageIdNumber != 0) {
-      ASSERT();
+      ASSERT("Vulkan Error");
    }
 
    return VK_FALSE;
