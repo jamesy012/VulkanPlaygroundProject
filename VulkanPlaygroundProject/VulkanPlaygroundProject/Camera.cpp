@@ -53,7 +53,3 @@ void Camera::SetFarClip(float aFarClip) {
 	mFarClip = aFarClip;
 	SetDirty();
 }
-
-float Camera::GetFov() const {
-	return glm::degrees(mFov);
-}

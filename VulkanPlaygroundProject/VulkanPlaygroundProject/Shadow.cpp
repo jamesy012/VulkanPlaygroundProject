@@ -26,15 +26,20 @@ void ShadowManager::Destroy() {
    mInstance = nullptr;
 }
 
-void Shadow::Create(VkExtent2D aSize, VkDescriptorSetLayout aShadowSetLayout) {
+void Shadow::Create(VkExtent2D aSize, VkDescriptorSetLayout aShadowSetLayout, uint32_t aNumCascades) {
+   ASSERT_RET(aNumCascades != 0);
+
    mSize = aSize;
+   mNumCascades = aNumCascades;
 
    mDepthImage = new Image();
-   mDepthImage->CreateImage(aSize, DEPTHFORMAT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_ASPECT_DEPTH_BIT);
-
-   mFramebuffer = new Framebuffer();
-   std::vector<VkImageView> depthView = { mDepthImage->GetImageView() };
-   mFramebuffer->Create(_VulkanManager->GetDevice(), aSize, ShadowManager::GetRenderPass(), depthView);
+   mDepthImage->CreateImage(aSize, DEPTHFORMAT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_ASPECT_DEPTH_BIT, aNumCascades);
+   mFramebuffers.resize(aNumCascades);
+   for (uint32_t i = 0; i < mNumCascades; i++) {
+      mFramebuffers[i] = new Framebuffer();
+      std::vector<VkImageView> depthView = { mDepthImage->GetArrayImageView(i) };
+      mFramebuffers[i]->Create(_VulkanManager->GetDevice(), aSize, ShadowManager::GetRenderPass(), depthView);
+   }
 
    if (aShadowSetLayout != VK_NULL_HANDLE) {
       VkDescriptorSetAllocateInfo setAllocate{};
@@ -51,14 +56,17 @@ void Shadow::Create(VkExtent2D aSize, VkDescriptorSetLayout aShadowSetLayout) {
 }
 
 void Shadow::Destroy() {
-   mFramebuffer->Destroy(_VulkanManager->GetDevice());
+   for (uint32_t i = 0; i < mNumCascades; i++) {
+      mFramebuffers[i]->Destroy(_VulkanManager->GetDevice());
+   }
    mDepthImage->Destroy();
-   mFramebuffer = nullptr;
    mDepthImage = nullptr;
+   mFramebuffers.clear();
 }
 
-void Shadow::StartRenderPass(VkCommandBuffer aBuffer) {
-   _VulkanManager->DebugMarkerStart(aBuffer, "Shadow Render", glm::vec4(0.1f, 0.1f, 0.1f, 0.2f));
+void Shadow::StartRenderPass(VkCommandBuffer aBuffer, uint32_t aCascadeIndex) {
+   ASSERT_RET(IndexValid(aCascadeIndex));
+   _VulkanManager->DebugMarkerStart(aBuffer, "Shadow Render cascade:" + std::to_string(aCascadeIndex), glm::vec4(0.1f, 0.1f, 0.1f, 0.2f));
    VkClearValue clearColor{};
    clearColor.depthStencil.depth = 1.0f;
    clearColor.depthStencil.stencil = 0;
@@ -69,7 +77,7 @@ void Shadow::StartRenderPass(VkCommandBuffer aBuffer) {
    renderBegin.renderPass = ShadowManager::GetRenderPass()->GetRenderPass();//mVkManager->GetPresentRenderPass()->GetRenderPass();
    renderBegin.clearValueCount = 1;
    renderBegin.pClearValues = &clearColor;
-   renderBegin.framebuffer = mFramebuffer->GetFramebuffer();//mVkManager->GetPresentFramebuffer(frameIndex)->GetFramebuffer();
+   renderBegin.framebuffer = mFramebuffers[aCascadeIndex]->GetFramebuffer();//mVkManager->GetPresentFramebuffer(frameIndex)->GetFramebuffer();
    vkCmdBeginRenderPass(aBuffer, &renderBegin, VK_SUBPASS_CONTENTS_INLINE);
    VkViewport viewport = GetViewportFromExtent2D(mSize);
    VkRect2D scissor = GetRect2DFromExtent2D(mSize);
@@ -77,7 +85,8 @@ void Shadow::StartRenderPass(VkCommandBuffer aBuffer) {
    vkCmdSetScissor(aBuffer, 0, 1, &scissor);
 }
 
-void Shadow::EndRenderPass(VkCommandBuffer aBuffer) {
+void Shadow::EndRenderPass(VkCommandBuffer aBuffer, uint32_t aCascadeIndex) {
+   ASSERT_RET(IndexValid(aCascadeIndex));
    vkCmdEndRenderPass(aBuffer);
    _VulkanManager->DebugMarkerEnd(aBuffer);
 }
@@ -85,35 +94,11 @@ void Shadow::EndRenderPass(VkCommandBuffer aBuffer) {
 void Shadow::SetName(std::string aName) {
    DebugSetObjName(VK_OBJECT_TYPE_IMAGE, mDepthImage->GetImage(), aName + " Image");
    DebugSetObjName(VK_OBJECT_TYPE_IMAGE_VIEW, mDepthImage->GetImageView(), aName + " Image View");
-   mFramebuffer->SetName(aName);
-}
-
-void ShadowDirectionalCascade::Create(VkExtent2D aSize, VkDescriptorSetLayout aShadowSetLayout, uint32_t aNumCascades) {
-   mShadows.resize(aNumCascades);
-   for (uint32_t i = 0; i < aNumCascades; i++) {
-      mShadows[i].Create(aSize, aShadowSetLayout);
-   }
-   mNumCascades = aNumCascades;
-}
-
-void ShadowDirectionalCascade::Destroy() {
    for (uint32_t i = 0; i < mNumCascades; i++) {
-      mShadows[i].Destroy();
+      mFramebuffers[i]->SetName(aName + " cascade:" + std::to_string(i));
    }
-   mShadows.clear();
-   mNumCascades = 0;
 }
 
-void ShadowDirectionalCascade::StartRenderPass(VkCommandBuffer aBuffer, uint32_t aCascadeIndex) {
-   ASSERT_RET(IndexValid(aCascadeIndex));
-   mShadows[aCascadeIndex].StartRenderPass(aBuffer);
-}
-
-void ShadowDirectionalCascade::EndRenderPass(VkCommandBuffer aBuffer, uint32_t aCascadeIndex) {
-   ASSERT_RET(IndexValid(aCascadeIndex));
-   mShadows[aCascadeIndex].EndRenderPass(aBuffer);
-}
-
-bool ShadowDirectionalCascade::IndexValid(uint32_t aCascadeIndex) const {
+bool Shadow::IndexValid(uint32_t aCascadeIndex) const {
    return aCascadeIndex < mNumCascades;
 }

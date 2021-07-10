@@ -15,7 +15,15 @@ public:
 	void SetNearClip(float aNearClip);
 	void SetFarClip(float aFarClip);
 
-	float GetFov() const;
+	float GetFov() const {
+		return glm::degrees(mFov);
+	};
+	float GetNear() const {
+		return mNearClip;
+	};
+	float GetFar() const {
+		return mFarClip;
+	};
 
 private:
 	void UpdateModelMatrix() override;

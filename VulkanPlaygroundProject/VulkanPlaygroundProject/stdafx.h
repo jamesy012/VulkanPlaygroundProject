@@ -49,7 +49,8 @@ struct SceneUBO {
    glm::mat4 mViewProj;
    glm::vec4 mViewPos;
    glm::vec4 mLightPos;
-   glm::mat4 mLightProj;
+   glm::vec4 mShadowSplits;
+   glm::mat4 mShadowCascadeProj[4];
 };
 
 struct ObjectUBO {

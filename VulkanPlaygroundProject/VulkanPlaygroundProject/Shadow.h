@@ -1,6 +1,9 @@
 #pragma once
 
 class RenderPass;
+class Image;
+class Framebuffer;
+
 class ShadowManager {
 protected:
    static ShadowManager* mInstance;
@@ -18,13 +21,11 @@ private:
 
 class Shadow {
 public:
-   void Create(VkExtent2D aSize, VkDescriptorSetLayout aShadowSetLayout);
+   void Create(VkExtent2D aSize, VkDescriptorSetLayout aShadowSetLayout, uint32_t aNumCascades = 1);
    void Destroy();
 
-   void StartRenderPass(VkCommandBuffer aBuffer);
-   void EndRenderPass(VkCommandBuffer aBuffer);
-
-
+   void StartRenderPass(VkCommandBuffer aBuffer, uint32_t aCascadeIndex = 0);
+   void EndRenderPass(VkCommandBuffer aBuffer, uint32_t aCascadeIndex = 0);
 
    const class Image* GetImage() const {
       return mDepthImage;
@@ -32,32 +33,22 @@ public:
 
    void SetName(std::string aName);
 
-   //Transform mTransform;
-private:
-   VkExtent2D mSize;
-   VkDescriptorSet mShadowSet = VK_NULL_HANDLE;
-
-   class Image* mDepthImage;
-   class Framebuffer* mFramebuffer;
-};
-
-class ShadowDirectional : public Shadow {
-};
-
-class ShadowDirectionalCascade {
-public:
-   void Create(VkExtent2D aSize, VkDescriptorSetLayout aShadowSetLayout, uint32_t aNumCascades = 3);
-   void Destroy();
-
-   void StartRenderPass(VkCommandBuffer aBuffer, uint32_t aCascadeIndex);
-   void EndRenderPass(VkCommandBuffer aBuffer, uint32_t aCascadeIndex);
-
    const uint32_t NumCascades() const {
       return mNumCascades;
    };
-private:
+
+protected:
    bool IndexValid(uint32_t aCascadeIndex) const;
+
+   VkExtent2D mSize;
+   VkDescriptorSet mShadowSet = VK_NULL_HANDLE;
+
+   Image* mDepthImage;
+   std::vector<Framebuffer*> mFramebuffers;
    uint32_t mNumCascades;
-   std::vector<Shadow> mShadows;
+
+};
+
+class ShadowDirectional : public Shadow {
 };
 

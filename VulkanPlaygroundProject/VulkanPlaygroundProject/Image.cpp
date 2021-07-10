@@ -15,6 +15,9 @@ void Image::LoadImage(std::string aPath) {
    mSize.width = width;
    mSize.height = height;
 
+   mNumArrays = 1;
+   mNumMips = 1;
+
    if (!pixels) {
       ASSERT(false);
    }
@@ -67,20 +70,37 @@ void Image::LoadImage(std::string aPath) {
 
    staging.Destroy();
 
-   CreateImageView(VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
+   CreateImageViews(VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);   
+
+   SetName(aPath);
 }
 
-void Image::CreateImage(VkExtent2D aSize, VkFormat aFormat, VkImageUsageFlags aUsage, VkImageAspectFlags aAspect) {
+void Image::CreateImage(VkExtent2D aSize, VkFormat aFormat, VkImageUsageFlags aUsage, VkImageAspectFlags aAspect, uint32_t aNumArrays, uint32_t aNumMips) {
    mSize = aSize;
+   mNumArrays = aNumArrays;
+   mNumMips = aNumMips;
    CreateImage(aFormat, aUsage);
-   CreateImageView(aFormat, aAspect);
+   CreateImageViews(aFormat, aAspect);
+
+   SetName("Image");
+}
+
+void Image::SetName(std::string aName) {
+   DebugSetObjName(VK_OBJECT_TYPE_IMAGE, GetImage(), aName + " Image");
+   for (uint32_t i = 0; i < mNumArrays; i++) {
+      DebugSetObjName(VK_OBJECT_TYPE_IMAGE_VIEW, GetArrayImageView(i), aName + " Image View " + std::to_string(i));
+   }
 }
 
 void Image::Destroy() {
+   for (uint32_t i = 0; i < mNumArrays && mNumArrays != 1; i++) {
+      vkDestroyImageView(_VulkanManager->GetDevice(), mArrayImageViews[i], GetAllocationCallback());
+   }
+   mArrayImageViews.clear();
    vkDestroyImageView(_VulkanManager->GetDevice(), mImageView, GetAllocationCallback());
+
    vmaDestroyImage(_VulkanManager->GetAllocator(), mImage, mAllocation);
    mImage = VK_NULL_HANDLE;
-   mImageView = VK_NULL_HANDLE;
 }
 
 bool Image::CreateImage(VkFormat aFormat, VkImageUsageFlags aUsage) {
@@ -90,8 +110,8 @@ bool Image::CreateImage(VkFormat aFormat, VkImageUsageFlags aUsage) {
    imageInfo.extent.height = mSize.height;
    imageInfo.extent.depth = 1;
    imageInfo.format = aFormat;
-   imageInfo.mipLevels = 1;
-   imageInfo.arrayLayers = 1;
+   imageInfo.mipLevels = mNumMips;
+   imageInfo.arrayLayers = mNumArrays;
    imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
    imageInfo.imageType = VK_IMAGE_TYPE_2D;
    imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -108,19 +128,35 @@ bool Image::CreateImage(VkFormat aFormat, VkImageUsageFlags aUsage) {
    return true;
 }
 
-bool Image::CreateImageView(VkFormat aFormat, VkImageAspectFlags aAspect) {
+bool Image::CreateImageViews(VkFormat aFormat, VkImageAspectFlags aAspect) {
    VkImageViewCreateInfo imageViewInfo{};
    imageViewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-   imageViewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+   if (mNumArrays != 1) {
+      imageViewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+   } else {
+      imageViewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+   }
    imageViewInfo.format = aFormat;
    imageViewInfo.subresourceRange.aspectMask = aAspect;
    imageViewInfo.subresourceRange.baseArrayLayer = 0;
-   imageViewInfo.subresourceRange.layerCount = 1;
+   imageViewInfo.subresourceRange.layerCount = mNumArrays;
    imageViewInfo.subresourceRange.baseMipLevel = 0;
-   imageViewInfo.subresourceRange.levelCount = 1;
+   imageViewInfo.subresourceRange.levelCount = mNumMips;
    imageViewInfo.image = mImage;
+
    VkResult result = vkCreateImageView(_VulkanManager->GetDevice(), &imageViewInfo, GetAllocationCallback(), &mImageView);
-   ASSERT_VULKAN_SUCCESS_RET_FALSE(result);
+
+   mArrayImageViews.resize(mNumArrays);
+   if (mNumArrays != 1) {
+      imageViewInfo.subresourceRange.layerCount = 1;
+      for (uint32_t i = 0; i < mNumArrays; i++) {
+         imageViewInfo.subresourceRange.baseArrayLayer = i;
+         VkResult result = vkCreateImageView(_VulkanManager->GetDevice(), &imageViewInfo, GetAllocationCallback(), &mArrayImageViews[i]);
+         ASSERT_VULKAN_SUCCESS_RET_FALSE(result);
+      }
+   } else {
+      mArrayImageViews[0] = mImageView;
+   }
 
    return true;
 }
