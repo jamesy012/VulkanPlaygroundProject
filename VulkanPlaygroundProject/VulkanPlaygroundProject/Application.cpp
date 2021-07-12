@@ -11,12 +11,21 @@
 
 #include "Shadow.h"
 
+#include "Terrain.h"
+
 ShadowDirectional mShadowCascade;
 
 uint32_t shadowOffsets[NUM_SHADOW_CASCADES];
 float shadowOffsetsSplitDepth[NUM_SHADOW_CASCADES];
 glm::mat4 shadowOffsetsVpMatrix[NUM_SHADOW_CASCADES];
 float cascadeSplitLambda = 0.8f;
+
+Pipeline mTerrainTestPipeline;
+Terrain mTerrainTest;
+VkDescriptorSetLayout mTerrainTestHeightMapSetLayout;
+VkDescriptorSet mTerrainTestHeightMapSet;
+Image mTerrainHeightMapImage;
+
 
 struct ComputeTestStruct {
    glm::mat4 matrices[64];
@@ -70,6 +79,16 @@ void Application::Start() {
          layoutInfo.pBindings = bindings.data();
          vkCreateDescriptorSetLayout(mVkManager->GetDevice(), &layoutInfo, GetAllocationCallback(), &mMaterialDescriptorSet);
       }
+      {
+         VkDescriptorSetLayoutBinding diffuseLayout = CreateDescriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_VERTEX_BIT, 0);
+         //VkDescriptorSetLayoutBinding shadowLayout = CreateDescriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1);
+         std::vector<VkDescriptorSetLayoutBinding> bindings = { diffuseLayout/*, shadowLayout */};
+         VkDescriptorSetLayoutCreateInfo layoutInfo{};
+         layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+         layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
+         layoutInfo.pBindings = bindings.data();
+         vkCreateDescriptorSetLayout(mVkManager->GetDevice(), &layoutInfo, GetAllocationCallback(), &mTerrainTestHeightMapSetLayout);
+      }
 
       {
          VkDescriptorSetLayoutBinding sceneLayout = CreateDescriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_COMPUTE_BIT, 0);
@@ -92,6 +111,18 @@ void Application::Start() {
          mPipeline.AddDescriptorSetLayout(mMaterialDescriptorSet);
          mPipeline.SetBlendingEnabled(true);
          mPipeline.Create(mVkManager->GetSwapchainExtent(), &mRenderPass);
+
+         mTerrainTestPipeline.AddShader(GetWorkDir() + "terrain.vert");
+         mTerrainTestPipeline.AddShader(GetWorkDir() + "terrain.frag");
+         ShaderMacroArguments terrainTestArguments;
+         terrainTestArguments.mMacros = { ShaderMacroArguments::Args::SIMPLE_SCENE };
+         //mTerrainTestPipeline.SetShaderMacroArguments(terrainTestArguments);
+         mTerrainTestPipeline.SetVertexType(VertexTypeDefault);
+         mTerrainTestPipeline.AddDescriptorSetLayout(mSceneDescriptorSet);
+         mTerrainTestPipeline.AddDescriptorSetLayout(mObjectDescriptorSet);
+         mTerrainTestPipeline.AddDescriptorSetLayout(mTerrainTestHeightMapSetLayout);
+         //mTerrainTestPipeline.SetBlendingEnabled(true);
+         mTerrainTestPipeline.Create(mVkManager->GetSwapchainExtent(), &mRenderPass);
 
          mPipelineTest.AddShader(GetWorkDir() + "test.vert");
          mPipelineTest.AddShader(GetWorkDir() + "test.frag");
@@ -127,6 +158,8 @@ void Application::Start() {
 
          setAllocate.pSetLayouts = &mMaterialDescriptorSet;
          vkAllocateDescriptorSets(mVkManager->GetDevice(), &setAllocate, &mMaterialSet);
+         setAllocate.pSetLayouts = &mTerrainTestHeightMapSetLayout;
+         vkAllocateDescriptorSets(mVkManager->GetDevice(), &setAllocate, &mTerrainTestHeightMapSet);
 
          setAllocate.pSetLayouts = &mComputeTestDescriptorSet;
          vkAllocateDescriptorSets(mVkManager->GetDevice(), &setAllocate, &mComputeTestSet);
@@ -181,6 +214,10 @@ void Application::Start() {
    //mFlyCamera.SetPosition(glm::vec3(130, 50, 150));
    mFlyCamera.SetFarClip(150.0f);
    mLightPos = glm::vec3(-20, 74, 10);
+
+   mTerrainHeightMapImage.LoadImage(GetWorkDir() + "Sponza/textures/background.tga");
+   UpdateImageDescriptorSet(&mTerrainHeightMapImage, mTerrainTestHeightMapSet, mVkManager->GetDefaultSampler(), 0);
+   mTerrainTest.Create("");
 }
 
 static bool sStartProfile = false;
@@ -407,22 +444,36 @@ void Application::Draw() {
    //main render
    {
       _VulkanManager->DebugMarkerStart(buffer, "Main Render", glm::vec4(0.0f, 0.3f, 0.0f, 0.2f));
-      std::vector<VkClearValue> clearColor = std::vector<VkClearValue>(2);
-      clearColor[0].color.float32[0] = abs(sin((frameCounter * 0.5f) / 5000.0f));
-      clearColor[0].color.float32[1] = abs(sin((frameCounter * 0.2f) / 5000.0f));
-      clearColor[0].color.float32[2] = abs(sin((frameCounter * 0.1f) / 5000.0f));
-      clearColor[0].color.float32[3] = 1.0f;
-      clearColor[1].depthStencil.depth = 1.0f;
-      clearColor[1].depthStencil.stencil = 0;
-      mRenderTarget.StartRenderPass(buffer, clearColor);
+      //full screen quad test
+      {
+         std::vector<VkClearValue> clearColor = std::vector<VkClearValue>(2);
+         clearColor[0].color.float32[0] = abs(sin((frameCounter * 0.5f) / 5000.0f));
+         clearColor[0].color.float32[1] = abs(sin((frameCounter * 0.2f) / 5000.0f));
+         clearColor[0].color.float32[2] = abs(sin((frameCounter * 0.1f) / 5000.0f));
+         clearColor[0].color.float32[3] = 1.0f;
+         clearColor[1].depthStencil.depth = 1.0f;
+         clearColor[1].depthStencil.stencil = 0;
+         mRenderTarget.StartRenderPass(buffer, clearColor);
 
-      vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipelineTest.GetPipeline());
+         vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipelineTest.GetPipeline());
 
-      uint32_t descriptorSetOffsets[] = { mSceneBuffer.GetCurrentOffset() };
-      vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline.GetPipelineLayout(), 0, 1, &mSceneSet, 1, descriptorSetOffsets);
+         uint32_t descriptorSetOffsets[] = { mSceneBuffer.GetCurrentOffset() };
+         vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline.GetPipelineLayout(), 0, 1, &mSceneSet, 1, descriptorSetOffsets);
 
-      mScreenQuad.Bind(buffer);
-      vkCmdDraw(buffer, 6, 1, 0, 0);
+         mScreenQuad.Bind(buffer);
+         vkCmdDraw(buffer, 6, 1, 0, 0);
+      }
+
+      //terrain test
+      {
+         vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mTerrainTestPipeline.GetPipeline());
+         vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mTerrainTestPipeline.GetPipelineLayout(), 2, 1, &mTerrainTestHeightMapSet, 0, nullptr);
+         DescriptorUBO des = DescriptorUBO(buffer, mTerrainTestPipeline.GetPipelineLayout(), &mObjectBuffer, mObjectSet);
+         ObjectUBO ubo;
+         ubo.mModel = glm::translate(glm::identity<glm::mat4>(), glm::vec3(-32,-5,-32)*4.0f);
+         des.UpdateObjectAndBind(&ubo);
+         mTerrainTest.Render(buffer);
+      }
 
       vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline.GetPipeline());
       vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline.GetPipelineLayout(), 2, 1, &mMaterialSet, 0, nullptr);
@@ -430,7 +481,8 @@ void Application::Draw() {
       //render Light facing camera
       {
          DescriptorUBO des = DescriptorUBO(buffer, mPipeline.GetPipelineLayout(), &mObjectBuffer, mObjectSet);
-         mModelTest.Render(&des, RenderMode::NORMAL);
+         //mModelTest.Render(&des, RenderMode::NORMAL);
+
          {
             ObjectUBO ubo;
             ubo.mModel = glm::translate(glm::identity<glm::mat4>(), mLightPos);
@@ -440,6 +492,7 @@ void Application::Draw() {
 
             mBillboardQuad.Bind(buffer);
             vkCmdDraw(buffer, 6, 1, 0, 0);
+
          }
       }
 
@@ -491,6 +544,11 @@ void Application::Destroy() {
 
    mTestImg.Destroy();
    mShadowCascade.Destroy();
+
+   mTerrainTestPipeline.Destroy();
+   mTerrainTest.Destroy();
+   mTerrainHeightMapImage.Destroy();
+   vkDestroyDescriptorSetLayout(mVkManager->GetDevice(), mTerrainTestHeightMapSetLayout, GetAllocationCallback());
 
    {
       VkDescriptorSet sets[] = { mSceneSet, mObjectSet, mMaterialSet };

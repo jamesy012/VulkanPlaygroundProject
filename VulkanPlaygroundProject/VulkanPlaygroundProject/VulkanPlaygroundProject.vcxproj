@@ -242,6 +242,7 @@
     <ClCompile Include="RenderTarget.cpp" />
     <ClCompile Include="Shadow.cpp" />
     <ClCompile Include="stdafx.cpp" />
+    <ClCompile Include="Terrain.cpp" />
     <ClCompile Include="Transform.cpp" />
     <ClCompile Include="Vertex.cpp" />
     <ClCompile Include="VulkanManager.cpp" />
@@ -269,6 +270,7 @@
     <ClInclude Include="RenderTarget.h" />
     <ClInclude Include="Shadow.h" />
     <ClInclude Include="stdafx.h" />
+    <ClInclude Include="Terrain.h" />
     <ClInclude Include="Transform.h" />
     <ClInclude Include="Vertex.h" />
     <ClInclude Include="VulkanManager.h" />
