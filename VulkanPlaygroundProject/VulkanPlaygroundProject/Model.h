@@ -11,12 +11,12 @@ struct aiNode;
 
 struct DescriptorUBO {
 public:
-   DescriptorUBO(VkCommandBuffer aCommandBuffer, VkPipelineLayout aPipelineLayout, BufferRingUniform* aObjectBuffer) {
+   DescriptorUBO(VkCommandBuffer aCommandBuffer, VkPipelineLayout aPipelineLayout, BufferRingUniform* aObjectBuffer, VkDescriptorSet aDescriptorSet) {
       mCommandBuffer = aCommandBuffer;
       mPipelineLayout = aPipelineLayout;
       mObjectBuffer = aObjectBuffer;
 
-      mDescriptorSet = aObjectBuffer->GetDescriptorSet();
+      mDescriptorSet = aDescriptorSet;
 
       mObjectBuffer->Get();
    }
@@ -47,6 +47,7 @@ private:
 
 
 class Model {
+public:
    //~~~~~~~~~~ NODE/MESH
    struct Mesh {
       Mesh() {};
@@ -152,6 +153,13 @@ public:
    }
    void AddRenderMode(unsigned int aMode) {
       mRenderModes |= aMode;
+   }
+
+   Node* GetNode(size_t aIndex) {
+      return mNodes[aIndex];
+   }
+   size_t GetNumNodes() {
+      return mNodes.size();
    }
 
    void Destroy();

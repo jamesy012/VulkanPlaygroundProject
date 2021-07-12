@@ -57,7 +57,7 @@ public:
 
 class BufferUniform : protected Buffer {
 public:
-   bool Create(uint32_t aCount, VkDeviceSize aStructSize, VkDescriptorSet aDescriptorSet, uint32_t aBinding, bool aDynamic = true) {
+   bool Create(uint32_t aCount, VkDeviceSize aStructSize) {
       mStructSize = aStructSize;
       mAllignedStructSize = RoundUp((int)aStructSize, _VulkanManager->GetUniformBufferAllignment());
       mCount = aCount;
@@ -65,16 +65,14 @@ public:
       if (!res) {
          return false;
       }
+      return true;
+   }
+   bool Create(uint32_t aCount, VkDeviceSize aStructSize, VkDescriptorSet aDescriptorSet, uint32_t aBinding, bool aDynamic = true) {
+      if (!Create(aCount, aStructSize)) {
+         return false;
+      }
 
-
-      mDescriptorSet = aDescriptorSet;
-      mBinding = aBinding;
-
-      VkDescriptorBufferInfo bufferInfo{};
-      bufferInfo.buffer = GetBuffer();
-      bufferInfo.range = mStructSize;
-      VkWriteDescriptorSet sceneSet = CreateWriteDescriptorSet(GetDescriptorType(aDynamic), aDescriptorSet, &bufferInfo, aBinding);
-      vkUpdateDescriptorSets(_VulkanManager->GetDevice(), 1, &sceneSet, 0, nullptr);
+      AddToDescriptorSet(aDescriptorSet, aBinding, aDynamic);
       return true;
    }
 
@@ -83,12 +81,16 @@ public:
       Buffer::Destroy();
    }
 
-   void SetName(std::string aName) {
-      Buffer::SetName(aName);
+   void AddToDescriptorSet(VkDescriptorSet aDescriptorSet, uint32_t aBinding, bool aDynamic = true) {
+      VkDescriptorBufferInfo bufferInfo{};
+      bufferInfo.buffer = GetBuffer();
+      bufferInfo.range = mStructSize;
+      VkWriteDescriptorSet sceneSet = CreateWriteDescriptorSet(GetDescriptorType(aDynamic), aDescriptorSet, &bufferInfo, aBinding);
+      vkUpdateDescriptorSets(_VulkanManager->GetDevice(), 1, &sceneSet, 0, nullptr);
    }
 
-   const VkDescriptorSet GetDescriptorSet() const {
-      return mDescriptorSet;
+   void SetName(std::string aName) {
+      Buffer::SetName(aName);
    }
 
    const VkDeviceSize GetStructSize() const {
@@ -116,9 +118,6 @@ protected:
    uint32_t mCount = 0;
    VkDeviceSize mStructSize;
    VkDeviceSize mAllignedStructSize;
-
-   VkDescriptorSet mDescriptorSet;
-   uint32_t mBinding;
 };
 
 class BufferRingUniform : public BufferUniform {

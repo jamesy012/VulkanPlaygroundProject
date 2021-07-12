@@ -72,9 +72,10 @@ void Application::Start() {
       }
 
       {
-         VkDescriptorSetLayoutBinding inputLayout = CreateDescriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT, 0);
-         VkDescriptorSetLayoutBinding outputLayout = CreateDescriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT, 1);
-         VkDescriptorSetLayoutBinding bindings[] = { inputLayout, outputLayout };
+         VkDescriptorSetLayoutBinding sceneLayout = CreateDescriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_COMPUTE_BIT, 0);
+         VkDescriptorSetLayoutBinding inputLayout = CreateDescriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT, 1);
+         VkDescriptorSetLayoutBinding outputLayout = CreateDescriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT, 2);
+         VkDescriptorSetLayoutBinding bindings[] = { sceneLayout, inputLayout, outputLayout };
          VkDescriptorSetLayoutCreateInfo layoutInfo{};
          layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
          layoutInfo.bindingCount = sizeof(bindings) / sizeof(VkDescriptorSetLayoutBinding);
@@ -138,8 +139,9 @@ void Application::Start() {
          mObjectBuffer.Create(500, sizeof(ObjectUBO), mObjectSet, 0);
          mObjectBuffer.SetName("Object Buffer");
 
-         mComputeTestInputBuffer.Create(1, sizeof(ComputeTestStruct), mComputeTestSet, 0, false);
-         mComputeTestOutputBuffer.Create(1, sizeof(ComputeTestStruct), mComputeTestSet, 1, false);
+         mSceneBuffer.AddToDescriptorSet(mComputeTestSet, 0, true);
+         mComputeTestInputBuffer.Create(1, sizeof(ComputeTestStruct), mComputeTestSet, 1, false);
+         mComputeTestOutputBuffer.Create(1, sizeof(ComputeTestStruct), mComputeTestSet, 2, false);
 
       }
    }
@@ -158,11 +160,21 @@ void Application::Start() {
    {
       ComputeTestStruct* data;
       mComputeTestInputBuffer.Map(reinterpret_cast<void**>(&data));
+
       for (int i = 0; i < 64; i++) {
          for (int q = 0; q < 16; q++) {
             glm::value_ptr(data[0].matrices[i])[q] = (float)i + q;
          }
       }
+
+      size_t index = 0;
+      for (size_t i = 0; i < mModelTest.GetNumNodes(); i++) {
+         Model::Node* node = mModelTest.GetNode(i);
+         if (!node->mMesh.empty()) {
+            data[0].matrices[index++] = node->GetMatrixWithParents();
+         }
+      }
+         
       mComputeTestInputBuffer.UnMap();
    }
 
@@ -385,7 +397,7 @@ void Application::Draw() {
          vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipelineShadow.GetPipeline());
          vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipelineShadow.GetPipelineLayout(), 0, 1, &mSceneShadowSet, 1, &shadowOffsets[i]);
          {
-            DescriptorUBO des = DescriptorUBO(buffer, mPipelineShadow.GetPipelineLayout(), &mObjectBuffer);
+            DescriptorUBO des = DescriptorUBO(buffer, mPipelineShadow.GetPipelineLayout(), &mObjectBuffer, mObjectSet);
             mModelTest.Render(&des, RenderMode::SHADOW);
          }
 
@@ -417,7 +429,7 @@ void Application::Draw() {
 
       //render Light facing camera
       {
-         DescriptorUBO des = DescriptorUBO(buffer, mPipeline.GetPipelineLayout(), &mObjectBuffer);
+         DescriptorUBO des = DescriptorUBO(buffer, mPipeline.GetPipelineLayout(), &mObjectBuffer, mObjectSet);
          mModelTest.Render(&des, RenderMode::NORMAL);
          {
             ObjectUBO ubo;
@@ -440,7 +452,8 @@ void Application::Draw() {
       _VulkanManager->DebugMarkerStart(buffer, "Compute Test", glm::vec4(0.0f, 0.0f, 0.3f, 0.2f));
       vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_COMPUTE, mComputeTest.GetPipeline());
 
-      vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_COMPUTE, mComputeTest.GetPipelineLayout(), 0, 1, &mComputeTestSet, 0, nullptr);
+      uint32_t descriptorSetOffsets[] = { mSceneBuffer.GetCurrentOffset() };
+      vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_COMPUTE, mComputeTest.GetPipelineLayout(), 0, 1, &mComputeTestSet, 1, descriptorSetOffsets);
 
       vkCmdDispatch(buffer, 1, 1, 1);
 
