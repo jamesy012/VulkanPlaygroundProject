@@ -21,10 +21,12 @@ glm::mat4 shadowOffsetsVpMatrix[NUM_SHADOW_CASCADES];
 float cascadeSplitLambda = 0.8f;
 
 Pipeline mTerrainTestPipeline;
+Pipeline mTerrainTestShadowPipeline;
 Terrain mTerrainTest;
 VkDescriptorSetLayout mTerrainTestHeightMapSetLayout;
 VkDescriptorSet mTerrainTestHeightMapSet;
 Image mTerrainHeightMapImage;
+Image mTerrainAlbedoImages;
 
 
 struct ComputeTestStruct {
@@ -80,9 +82,10 @@ void Application::Start() {
          vkCreateDescriptorSetLayout(mVkManager->GetDevice(), &layoutInfo, GetAllocationCallback(), &mMaterialDescriptorSet);
       }
       {
-         VkDescriptorSetLayoutBinding diffuseLayout = CreateDescriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_VERTEX_BIT, 0);
-         //VkDescriptorSetLayoutBinding shadowLayout = CreateDescriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1);
-         std::vector<VkDescriptorSetLayoutBinding> bindings = { diffuseLayout/*, shadowLayout */};
+         VkDescriptorSetLayoutBinding heightmapLayout = CreateDescriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_VERTEX_BIT, 0);
+         VkDescriptorSetLayoutBinding shadowLayout = CreateDescriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1);
+         VkDescriptorSetLayoutBinding diffuseLayout = CreateDescriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 2);
+         std::vector<VkDescriptorSetLayoutBinding> bindings = { heightmapLayout, shadowLayout, diffuseLayout};
          VkDescriptorSetLayoutCreateInfo layoutInfo{};
          layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
          layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
@@ -123,6 +126,14 @@ void Application::Start() {
          mTerrainTestPipeline.AddDescriptorSetLayout(mTerrainTestHeightMapSetLayout);
          //mTerrainTestPipeline.SetBlendingEnabled(true);
          mTerrainTestPipeline.Create(mVkManager->GetSwapchainExtent(), &mRenderPass);
+
+         mTerrainTestShadowPipeline.AddShader(GetWorkDir() + "terrain.vert");
+         mTerrainTestShadowPipeline.SetVertexType(VertexTypeDefault);
+         mTerrainTestShadowPipeline.AddDescriptorSetLayout(mSceneDescriptorSet);
+         mTerrainTestShadowPipeline.AddDescriptorSetLayout(mObjectDescriptorSet);
+         mTerrainTestShadowPipeline.AddDescriptorSetLayout(mTerrainTestHeightMapSetLayout);
+         mTerrainTestShadowPipeline.SetCullMode(VK_CULL_MODE_FRONT_BIT);
+         mTerrainTestShadowPipeline.Create(mVkManager->GetSwapchainExtent(), ShadowManager::GetRenderPass());
 
          mPipelineTest.AddShader(GetWorkDir() + "test.vert");
          mPipelineTest.AddShader(GetWorkDir() + "test.frag");
@@ -215,8 +226,14 @@ void Application::Start() {
    mFlyCamera.SetFarClip(150.0f);
    mLightPos = glm::vec3(-20, 74, 10);
 
-   mTerrainHeightMapImage.LoadImage(GetWorkDir() + "Sponza/textures/background.tga");
-   UpdateImageDescriptorSet(&mTerrainHeightMapImage, mTerrainTestHeightMapSet, mVkManager->GetDefaultSampler(), 0);
+   mTerrainAlbedoImages.CreateImage({ 1024, 1024 }, 3, 1);
+   mTerrainAlbedoImages.LoadImageForArray(GetWorkDir() + "Textures/seamlessTextures/100_1382_seamless.JPG", 0);
+   mTerrainAlbedoImages.LoadImageForArray(GetWorkDir() + "Textures/seamlessTextures/100_1395_seamless.JPG", 1);
+   mTerrainAlbedoImages.LoadImageForArray(GetWorkDir() + "Textures/seamlessTextures/100_1377_seamless.JPG", 2);
+   mTerrainHeightMapImage.LoadImage(GetWorkDir() + "Textures/heightmapTest.png");
+   UpdateImageDescriptorSet(&mTerrainHeightMapImage, mTerrainTestHeightMapSet, mVkManager->GetDefaultMirrorSampler(), 0);
+   UpdateImageDescriptorSet(mShadowCascade.GetImage(), mTerrainTestHeightMapSet, mVkManager->GetDefaultClampedSampler(), 1);
+   UpdateImageDescriptorSet(&mTerrainAlbedoImages, mTerrainTestHeightMapSet, mVkManager->GetDefaultSampler(), 2);
    mTerrainTest.Create("");
 }
 
@@ -431,11 +448,23 @@ void Application::Draw() {
       for (uint32_t i = 0; i < mShadowCascade.NumCascades(); i++) {
          mShadowCascade.StartRenderPass(buffer, i);
 
-         vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipelineShadow.GetPipeline());
-         vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipelineShadow.GetPipelineLayout(), 0, 1, &mSceneShadowSet, 1, &shadowOffsets[i]);
+         //vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipelineShadow.GetPipeline());
+         //vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipelineShadow.GetPipelineLayout(), 0, 1, &mSceneShadowSet, 1, &shadowOffsets[i]);
+         //{
+         //   DescriptorUBO des = DescriptorUBO(buffer, mPipelineShadow.GetPipelineLayout(), &mObjectBuffer, mObjectSet);
+         //   mModelTest.Render(&des, RenderMode::SHADOW);
+         //}
+
+         //terrain test
          {
-            DescriptorUBO des = DescriptorUBO(buffer, mPipelineShadow.GetPipelineLayout(), &mObjectBuffer, mObjectSet);
-            mModelTest.Render(&des, RenderMode::SHADOW);
+            vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mTerrainTestShadowPipeline.GetPipeline());
+            vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mTerrainTestShadowPipeline.GetPipelineLayout(), 0, 1, &mSceneShadowSet, 1, &shadowOffsets[i]);
+            vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mTerrainTestShadowPipeline.GetPipelineLayout(), 2, 1, &mTerrainTestHeightMapSet, 0, nullptr);
+            DescriptorUBO des = DescriptorUBO(buffer, mTerrainTestShadowPipeline.GetPipelineLayout(), &mObjectBuffer, mObjectSet);
+            ObjectUBO ubo;
+            ubo.mModel = glm::translate(glm::identity<glm::mat4>(), glm::vec3(-32, -4, -32) * 4.0f);
+            des.UpdateObjectAndBind(&ubo);
+            mTerrainTest.Render(buffer);
          }
 
          mShadowCascade.EndRenderPass(buffer, i);
@@ -470,7 +499,7 @@ void Application::Draw() {
          vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mTerrainTestPipeline.GetPipelineLayout(), 2, 1, &mTerrainTestHeightMapSet, 0, nullptr);
          DescriptorUBO des = DescriptorUBO(buffer, mTerrainTestPipeline.GetPipelineLayout(), &mObjectBuffer, mObjectSet);
          ObjectUBO ubo;
-         ubo.mModel = glm::translate(glm::identity<glm::mat4>(), glm::vec3(-32,-5,-32)*4.0f);
+         ubo.mModel = glm::translate(glm::identity<glm::mat4>(), glm::vec3(-32, -4, -32)*4.0f);
          des.UpdateObjectAndBind(&ubo);
          mTerrainTest.Render(buffer);
       }
@@ -546,7 +575,9 @@ void Application::Destroy() {
    mShadowCascade.Destroy();
 
    mTerrainTestPipeline.Destroy();
-   mTerrainTest.Destroy();
+   mTerrainTestShadowPipeline.Destroy();
+   mTerrainTest.Destroy(); 
+   mTerrainAlbedoImages.Destroy();
    mTerrainHeightMapImage.Destroy();
    vkDestroyDescriptorSetLayout(mVkManager->GetDevice(), mTerrainTestHeightMapSetLayout, GetAllocationCallback());
 

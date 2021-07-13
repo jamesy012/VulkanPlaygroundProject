@@ -123,6 +123,10 @@ void VulkanManager::Create(Window* aWindow) {
 
       if (vkCreateSampler(GetDevice(), &samplerInfo, nullptr, &mDefaultSampler) != VK_SUCCESS) {
          throw std::runtime_error("failed to create texture gltfSampler!");
+      }  
+      samplerInfo.addressModeU = samplerInfo.addressModeV = samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
+      if (vkCreateSampler(GetDevice(), &samplerInfo, nullptr, &mDefaultMirrorSampler) != VK_SUCCESS) {
+         throw std::runtime_error("failed to create texture gltfSampler!");
       }
       samplerInfo.addressModeU = samplerInfo.addressModeV = samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
       if (vkCreateSampler(GetDevice(), &samplerInfo, nullptr, &mDefaultClampedSampler) != VK_SUCCESS) {
@@ -145,6 +149,7 @@ void VulkanManager::Destroy() {
    WaitDevice();
 
    vkDestroySampler(GetDevice(), mDefaultSampler, GetAllocationCallback());
+   vkDestroySampler(GetDevice(), mDefaultMirrorSampler, GetAllocationCallback());
    vkDestroySampler(GetDevice(), mDefaultClampedSampler, GetAllocationCallback());
    vkDestroyDescriptorPool(GetDevice(), mDescriptorPool, GetAllocationCallback());
 

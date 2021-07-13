@@ -119,7 +119,7 @@ static VkWriteDescriptorSet  CreateWriteDescriptorSet(VkDescriptorType aType, Vk
 }
 
 static void SetImageLayout(VkCommandBuffer aBuffer, VkImage aImage, VkImageAspectFlags aAspectMask, VkImageLayout aOldImageLayout,
-                           VkImageLayout aNewImageLayout, VkPipelineStageFlags aSrcStages, VkPipelineStageFlags aDestStages) {
+                           VkImageLayout aNewImageLayout, VkPipelineStageFlags aSrcStages, VkPipelineStageFlags aDestStages, uint32_t aArrayIndex = 0) {
 
    VkImageMemoryBarrier image_memory_barrier = {};
    image_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -134,7 +134,7 @@ static void SetImageLayout(VkCommandBuffer aBuffer, VkImage aImage, VkImageAspec
    image_memory_barrier.subresourceRange.aspectMask = aAspectMask;
    image_memory_barrier.subresourceRange.baseMipLevel = 0;
    image_memory_barrier.subresourceRange.levelCount = 1;
-   image_memory_barrier.subresourceRange.baseArrayLayer = 0;
+   image_memory_barrier.subresourceRange.baseArrayLayer = aArrayIndex;
    image_memory_barrier.subresourceRange.layerCount = 1;
 
    switch (aOldImageLayout) {

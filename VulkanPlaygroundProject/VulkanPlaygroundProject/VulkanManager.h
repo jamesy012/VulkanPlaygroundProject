@@ -67,6 +67,9 @@ public:
    const VkSampler GetDefaultSampler() const {
       return mDefaultSampler;
    }
+   const VkSampler GetDefaultMirrorSampler() const {
+      return mDefaultMirrorSampler;
+   }
    const VkSampler GetDefaultClampedSampler() const {
       return mDefaultClampedSampler;
    }
@@ -137,6 +140,7 @@ private:
    bool mResizedLastRender = true;
    VkDescriptorPool mDescriptorPool;
    VkSampler mDefaultSampler;
+   VkSampler mDefaultMirrorSampler;
    VkSampler mDefaultClampedSampler;
 
    //Buffers

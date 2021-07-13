@@ -6,12 +6,13 @@
 
 #include "Buffer.h"
 
-void Image::LoadImage(std::string aPath) {
+#define BITS_PER_PIXEL 4
+
+bool Image::LoadImage(std::string aPath) {
    int width;
    int height;
    int texChannels;
    stbi_uc* pixels = stbi_load(aPath.c_str(), &width, &height, &texChannels, STBI_rgb_alpha);
-   mDataSize = width * height * 4;
    mSize.width = width;
    mSize.height = height;
 
@@ -20,7 +21,11 @@ void Image::LoadImage(std::string aPath) {
 
    if (!pixels) {
       ASSERT(false);
+      return false;
    }
+
+   bool result = CreateImage(VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+   ASSERT_RET_VALUE(result, false);
 
    BufferStaging staging;
    staging.Create(mDataSize);
@@ -32,8 +37,6 @@ void Image::LoadImage(std::string aPath) {
    }
 
    stbi_image_free(pixels);
-
-   CreateImage(VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 
    {
       VkBufferImageCopy region{};
@@ -70,19 +73,103 @@ void Image::LoadImage(std::string aPath) {
 
    staging.Destroy();
 
-   CreateImageViews(VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);   
+   result = CreateImageViews(VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
+   ASSERT_RET_VALUE(result, false);
+
+   mHasData = true;
 
    SetName(aPath);
+   return true;
 }
 
-void Image::CreateImage(VkExtent2D aSize, VkFormat aFormat, VkImageUsageFlags aUsage, VkImageAspectFlags aAspect, uint32_t aNumArrays, uint32_t aNumMips) {
+bool Image::LoadImageForArray(std::string aPath, uint32_t aArrayIndex) {
+   ASSERT_IF(aArrayIndex < mNumArrays);
+   int width;
+   int height;
+   int texChannels;
+   stbi_uc* pixels = stbi_load(aPath.c_str(), &width, &height, &texChannels, STBI_rgb_alpha);
+
+   //todo support loading images of different sizes
+   if (width != mSize.width) {
+      ASSERT(false);
+      return false;
+   }
+   if (height != mSize.height) {
+      ASSERT(false);
+      return false;
+   }
+
+   if (!pixels) {
+      ASSERT(false);
+      return false;
+   }
+
+   BufferStaging staging;
+   staging.Create(mDataSize);
+   {
+      void* data;
+      staging.Map(&data);
+      memcpy(data, pixels, mDataSize);
+      staging.UnMap();
+   }
+
+   stbi_image_free(pixels);
+
+   {
+      VkBufferImageCopy region{};
+      region.bufferOffset = 0;
+      region.bufferRowLength = 0;
+      region.bufferImageHeight = 0;
+
+      region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+      region.imageSubresource.mipLevel = 0;
+      region.imageSubresource.baseArrayLayer = aArrayIndex;
+      region.imageSubresource.layerCount = 1;
+
+      region.imageOffset = { 0, 0, 0 };
+      region.imageExtent = {
+         mSize.width,
+         mSize.height,
+         1
+      };
+
+      VkCommandBuffer commandBuffer;
+      _VulkanManager->OneTimeCommandBufferStart(commandBuffer);
+      SetImageLayout(commandBuffer, mImage, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, aArrayIndex);
+      vkCmdCopyBufferToImage(
+         commandBuffer,
+         staging.GetBuffer(),
+         mImage,
+         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+         1,
+         &region
+      );
+      SetImageLayout(commandBuffer, mImage, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, aArrayIndex);
+      _VulkanManager->OneTimeCommandBufferEnd(commandBuffer);
+      _VulkanManager->WaitDevice();
+   }
+
+   staging.Destroy();
+
+   mHasData = true;
+
+   return true;
+}
+
+bool Image::CreateImage(VkExtent2D aSize, VkFormat aFormat, VkImageUsageFlags aUsage, VkImageAspectFlags aAspect, uint32_t aNumArrays, uint32_t aNumMips) {
    mSize = aSize;
    mNumArrays = aNumArrays;
    mNumMips = aNumMips;
-   CreateImage(aFormat, aUsage);
-   CreateImageViews(aFormat, aAspect);
-
+   bool result = CreateImage(aFormat, aUsage);
+   ASSERT_RET_VALUE(result, false);
+   result = CreateImageViews(aFormat, aAspect);
+   ASSERT_RET_VALUE(result, false);
    SetName("Image");
+   return true;
+}
+
+bool Image::CreateImage(VkExtent2D aSize, uint32_t aNumArrays, uint32_t aNumMips) {
+   return CreateImage(aSize, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_ASPECT_COLOR_BIT, aNumArrays, aNumMips);
 }
 
 void Image::SetName(std::string aName) {
@@ -124,6 +211,8 @@ bool Image::CreateImage(VkFormat aFormat, VkImageUsageFlags aUsage) {
    VmaAllocationInfo info;
    VkResult result = vmaCreateImage(_VulkanManager->GetAllocator(), &imageInfo, &allocInfo, &mImage, &mAllocation, &info);
    ASSERT_VULKAN_SUCCESS_RET_FALSE(result);
+
+   mDataSize = mSize.width * mSize.height * BITS_PER_PIXEL;
 
    return true;
 }

@@ -1,8 +1,10 @@
 #pragma once
 class Image {
 public:
-   void LoadImage(std::string aPath);
-   void CreateImage(VkExtent2D aSize, VkFormat aFormat, VkImageUsageFlags aUsage, VkImageAspectFlags aAspect, uint32_t aNumArrays = 1u, uint32_t aNumMips = 1u);
+   bool LoadImage(std::string aPath);
+   bool LoadImageForArray(std::string aPath, uint32_t aArrayIndex);
+   bool CreateImage(VkExtent2D aSize, VkFormat aFormat, VkImageUsageFlags aUsage, VkImageAspectFlags aAspect, uint32_t aNumArrays = 1u, uint32_t aNumMips = 1u);
+   bool CreateImage(VkExtent2D aSize, uint32_t aNumArrays = 1u, uint32_t aNumMips = 1u);
 
    const VkImage GetImage() const {
       return mImage;
@@ -36,6 +38,7 @@ private:
    uint32_t mNumArrays = 1u;
    uint32_t mNumMips = 1u;
    uint32_t mDataSize = 0u;
+   bool mHasData = false;
 };
 
 static VkWriteDescriptorSet GetWriteDescriptorSet(VkDescriptorImageInfo& aImageInfo, const Image* aImage, VkDescriptorSet aDescriptorSet, VkSampler aSampler, uint32_t aBinding) {
