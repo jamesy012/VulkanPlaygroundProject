@@ -23,14 +23,15 @@ private:
 
 class Pipeline {
 public:
+   //Pipeline Creation objects
+
    void SetShaderMacroArguments(ShaderMacroArguments& aArguments) {
       mShaderMacroArguments = aArguments;
    }
    bool AddShader(std::string aPath, bool aForceReload = false);
    void SetVertexType(VertexType& aType);
    void AddDescriptorSetLayout(VkDescriptorSetLayout aSetLayout);
-   bool Create(const VkExtent2D aSize, const RenderPass* aRenderPass);
-   void Destroy();
+   void AddPushConstant(VkShaderStageFlags aStage, uint32_t aOffset, uint32_t aSize);
 
    void SetCullMode(VkCullModeFlags aCullMode) {
       mCullMode = aCullMode;
@@ -39,6 +40,8 @@ public:
       mBlending = aBlending;
    }
 
+   //getters
+
    const VkPipeline GetPipeline() const {
       return mPipeline;
    }
@@ -46,6 +49,12 @@ public:
    const VkPipelineLayout GetPipelineLayout() const {
       return mPipelineLayout;
    }
+
+
+   //functions
+
+   bool Create(const VkExtent2D aSize, const RenderPass* aRenderPass);
+   void Destroy();
 private:
    struct Shader {
    public:
@@ -55,6 +64,7 @@ private:
    ShaderMacroArguments mShaderMacroArguments;
    std::vector<VkDynamicState> mDynamicStates;
    std::vector<VkDescriptorSetLayout> mDescriptorSets;
+   std::vector<VkPushConstantRange> mPushConstants;
    VertexType* mVertexType;
    VkCullModeFlags mCullMode = VK_CULL_MODE_BACK_BIT;
    bool mBlending = false;

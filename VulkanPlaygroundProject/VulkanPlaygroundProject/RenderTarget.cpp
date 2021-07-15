@@ -6,7 +6,7 @@ bool RenderTarget::Create(VkDevice aDevice, RenderPass* aRenderPass, VkExtent2D 
 
    VkImageCreateInfo info{};
    info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-   info.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+   info.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
    info.format = aRenderPass->GetColorFormat();
    info.arrayLayers = 1;
    info.mipLevels = 1;
@@ -39,7 +39,7 @@ bool RenderTarget::Create(VkDevice aDevice, RenderPass* aRenderPass, VkExtent2D 
 
    if (aIncludeDepth) {
       info.format = aRenderPass->GetDepthFormat();
-      info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+      info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
       VmaAllocationInfo allocationInfo;
       result = vmaCreateImage(_VulkanManager->GetAllocator(), &info, &allocInfo, &mDepth, &mDepthAllocation, &allocationInfo);
       ASSERT_VULKAN_SUCCESS_RET_FALSE(result);
@@ -58,7 +58,9 @@ bool RenderTarget::Create(VkDevice aDevice, RenderPass* aRenderPass, VkExtent2D 
 
    std::vector<VkImageView> imageViews;
    imageViews.push_back(mColorView);
-   imageViews.push_back(mDepthView);
+   if (aIncludeDepth) {
+      imageViews.push_back(mDepthView);
+   }
 
    mFramebuffer.Create(aDevice, aSize, aRenderPass, imageViews);
 

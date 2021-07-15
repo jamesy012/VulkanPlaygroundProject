@@ -26,6 +26,8 @@ private:
    void Update();
 
    void CreateSizeDependent();
+   //size dependent Resources that need other systems (first frame?) to be created first
+   void CreateDelayedSizeDependent();
    void DestroySizeDependent();
 
    Window* mWindow;
@@ -56,6 +58,7 @@ private:
    BufferStorageUniform mComputeTestOutputBuffer;
 
    RenderPass mRenderPass;
+   RenderPass mRenderPassNoDepth;
    RenderTarget mRenderTarget;
    Image mTestImg;
 

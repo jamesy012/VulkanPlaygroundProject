@@ -9,43 +9,6 @@
 struct aiScene;
 struct aiNode;
 
-struct DescriptorUBO {
-public:
-   DescriptorUBO(VkCommandBuffer aCommandBuffer, VkPipelineLayout aPipelineLayout, BufferRingUniform* aObjectBuffer, VkDescriptorSet aDescriptorSet) {
-      mCommandBuffer = aCommandBuffer;
-      mPipelineLayout = aPipelineLayout;
-      mObjectBuffer = aObjectBuffer;
-
-      mDescriptorSet = aDescriptorSet;
-
-      mObjectBuffer->Get();
-   }
-
-   ~DescriptorUBO() {
-      mObjectBuffer->Return();
-   }
-
-   void UpdateObjectAndBind(void* aData) {
-      void* objectUbo;
-      mObjectBuffer->Get((void**)&objectUbo);
-      memcpy(objectUbo, aData, mObjectBuffer->GetStructSize());
-      mObjectBuffer->Return();
-      BindDescriptorSet();
-   }
-
-   void BindDescriptorSet() {
-      uint32_t descriptorSetOffsets[] = { mObjectBuffer->GetCurrentOffset() };
-      vkCmdBindDescriptorSets(mCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipelineLayout, 1, 1, &mDescriptorSet, 1, descriptorSetOffsets);
-   }
-
-   BufferRingUniform* mObjectBuffer;
-   VkCommandBuffer mCommandBuffer;
-   VkPipelineLayout mPipelineLayout;
-private:
-   VkDescriptorSet mDescriptorSet;
-};
-
-
 class Model {
 public:
    //~~~~~~~~~~ NODE/MESH

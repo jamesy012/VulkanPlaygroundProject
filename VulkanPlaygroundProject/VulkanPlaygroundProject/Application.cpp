@@ -28,6 +28,16 @@ VkDescriptorSet mTerrainTestHeightMapSet;
 Image mTerrainHeightMapImage;
 Image mTerrainAlbedoImages;
 
+RenderTarget mScreenSpaceRT;
+VkDescriptorSetLayout mScreenSpaceSetLayout;
+VkDescriptorSet mScreenSpaceSet;
+Pipeline mTerrainSSGPipeline;
+
+struct SSG {
+   int enabled = true;
+   float timer = 0.0f;
+} mSSGPushConstants;
+
 
 struct ComputeTestStruct {
    glm::mat4 matrices[64];
@@ -43,7 +53,26 @@ void Application::Start() {
 
    ShadowManager::Create();
 
-   mScreenQuad.CreatePrimitive(VertexPrimitives::QUAD);
+   {
+      bool result = mScreenQuad.Create(sizeof(VertexSimple) * 6);
+      VertexSimple verts[6]{};
+      verts[0].pos = glm::vec2(-1.0f, 1.0f);
+      verts[1].pos = glm::vec2(1.0f, 1.0f);
+      verts[2].pos = glm::vec2(1.0f, -1.0f);
+      verts[3].pos = glm::vec2(1.0f, -1.0f);
+      verts[4].pos = glm::vec2(-1.0f, -1.0f);
+      verts[5].pos = glm::vec2(-1.0f, 1.0f);
+      BufferStaging staging;
+      staging.Create(sizeof(VertexSimple) * 6);
+      {
+         void* data;
+         staging.Map(&data);
+         memcpy(data, verts, sizeof(VertexSimple) * 6);
+         staging.UnMap();
+      }
+      mScreenQuad.CopyFrom(&staging);
+      staging.Destroy();
+   }
    mBillboardQuad.CreatePrimitive(VertexPrimitives::QUAD);
 
    CreateSizeDependent();
@@ -80,6 +109,16 @@ void Application::Start() {
          layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
          layoutInfo.pBindings = bindings.data();
          vkCreateDescriptorSetLayout(mVkManager->GetDevice(), &layoutInfo, GetAllocationCallback(), &mMaterialDescriptorSet);
+      }
+      {
+         VkDescriptorSetLayoutBinding diffuseLayout = CreateDescriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0);
+         VkDescriptorSetLayoutBinding depthLayout = CreateDescriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1);
+         std::vector<VkDescriptorSetLayoutBinding> bindings = { diffuseLayout, depthLayout };
+         VkDescriptorSetLayoutCreateInfo layoutInfo{};
+         layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+         layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
+         layoutInfo.pBindings = bindings.data();
+         vkCreateDescriptorSetLayout(mVkManager->GetDevice(), &layoutInfo, GetAllocationCallback(), &mScreenSpaceSetLayout);
       }
       {
          VkDescriptorSetLayoutBinding heightmapLayout = CreateDescriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_VERTEX_BIT, 0);
@@ -153,6 +192,13 @@ void Application::Start() {
          mComputeTest.AddShader(GetWorkDir() + "computeTest.comp");
          mComputeTest.AddDescriptorSetLayout(mComputeTestDescriptorSet);
          mComputeTest.Create(mVkManager->GetSwapchainExtent(), nullptr);
+
+         mTerrainSSGPipeline.AddShader(GetWorkDir() + "test.vert");
+         mTerrainSSGPipeline.AddShader(GetWorkDir() + "SSG.frag");
+         mTerrainSSGPipeline.SetVertexType(VertexTypeSimple);
+         mTerrainSSGPipeline.AddDescriptorSetLayout(mScreenSpaceSetLayout);
+         mTerrainSSGPipeline.AddPushConstant(VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(SSG));
+         mTerrainSSGPipeline.Create(mVkManager->GetSwapchainExtent(), &mRenderPassNoDepth);
       }
 
       {
@@ -170,7 +216,10 @@ void Application::Start() {
          setAllocate.pSetLayouts = &mMaterialDescriptorSet;
          vkAllocateDescriptorSets(mVkManager->GetDevice(), &setAllocate, &mMaterialSet);
          setAllocate.pSetLayouts = &mTerrainTestHeightMapSetLayout;
-         vkAllocateDescriptorSets(mVkManager->GetDevice(), &setAllocate, &mTerrainTestHeightMapSet);
+         vkAllocateDescriptorSets(mVkManager->GetDevice(), &setAllocate, &mTerrainTestHeightMapSet); 
+
+         setAllocate.pSetLayouts = &mScreenSpaceSetLayout;
+         vkAllocateDescriptorSets(mVkManager->GetDevice(), &setAllocate, &mScreenSpaceSet);
 
          setAllocate.pSetLayouts = &mComputeTestDescriptorSet;
          vkAllocateDescriptorSets(mVkManager->GetDevice(), &setAllocate, &mComputeTestSet);
@@ -235,6 +284,8 @@ void Application::Start() {
    UpdateImageDescriptorSet(mShadowCascade.GetImage(), mTerrainTestHeightMapSet, mVkManager->GetDefaultClampedSampler(), 1);
    UpdateImageDescriptorSet(&mTerrainAlbedoImages, mTerrainTestHeightMapSet, mVkManager->GetDefaultSampler(), 2);
    mTerrainTest.Create("");
+
+   CreateDelayedSizeDependent();
 }
 
 static bool sStartProfile = false;
@@ -287,6 +338,7 @@ void Application::ImGui() {
    ImGui::Begin("scene");
    ImGui::DragFloat3("LightPos", glm::value_ptr(mLightPos), 0.05f);
    ImGui::DragFloat("split", &cascadeSplitLambda, 0.01f);
+   ImGui::Checkbox("SSG", (bool*)&mSSGPushConstants.enabled);
    ImGui::End();
 }
 
@@ -407,6 +459,9 @@ void Application::Update() {
       }
    }
 
+   {
+      mSSGPushConstants.timer += ImGui::GetIO().DeltaTime;
+   }
    //mModelTest.SetRotation(glm::vec3(0, frameCounter * 0.07f, 0));
 }
 
@@ -414,11 +469,25 @@ void Application::CreateSizeDependent() {
    if (!mRenderPass.IsValid()) {
       mRenderPass.Create(mVkManager->GetDevice(), mVkManager->GetColorFormat(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_FORMAT_D32_SFLOAT_S8_UINT);
    }
+   if (!mRenderPassNoDepth.IsValid()) {
+      mRenderPassNoDepth.Create(mVkManager->GetDevice(), mVkManager->GetColorFormat(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+   }
    mRenderTarget.Create(mVkManager->GetDevice(), &mRenderPass, mVkManager->GetSwapchainExtent(), true);
+   mScreenSpaceRT.Create(mVkManager->GetDevice(), &mRenderPassNoDepth, mVkManager->GetSwapchainExtent(), false);
+
+   if (frameCounter != 0) {
+      CreateDelayedSizeDependent();
+   }
+}
+
+void Application::CreateDelayedSizeDependent() {
+   UpdateImageDescriptorSet(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, mRenderTarget.GetColorImageView(), mScreenSpaceSet, mVkManager->GetDefaultMirrorSampler(), 0);
+   UpdateImageDescriptorSet(VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL, mRenderTarget.GetDepthImageView(), mScreenSpaceSet, mVkManager->GetDefaultMirrorSampler(), 1);
 }
 
 void Application::DestroySizeDependent() {
    mRenderTarget.Destroy();
+   mScreenSpaceRT.Destroy();
 }
 
 
@@ -460,11 +529,7 @@ void Application::Draw() {
             vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mTerrainTestShadowPipeline.GetPipeline());
             vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mTerrainTestShadowPipeline.GetPipelineLayout(), 0, 1, &mSceneShadowSet, 1, &shadowOffsets[i]);
             vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mTerrainTestShadowPipeline.GetPipelineLayout(), 2, 1, &mTerrainTestHeightMapSet, 0, nullptr);
-            DescriptorUBO des = DescriptorUBO(buffer, mTerrainTestShadowPipeline.GetPipelineLayout(), &mObjectBuffer, mObjectSet);
-            ObjectUBO ubo;
-            ubo.mModel = glm::translate(glm::identity<glm::mat4>(), glm::vec3(-32, -4, -32) * 4.0f);
-            des.UpdateObjectAndBind(&ubo);
-            mTerrainTest.Render(buffer);
+            mTerrainTest.Render(buffer, mTerrainTestShadowPipeline.GetPipelineLayout(), &mObjectBuffer, mObjectSet);
          }
 
          mShadowCascade.EndRenderPass(buffer, i);
@@ -490,18 +555,15 @@ void Application::Draw() {
          vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline.GetPipelineLayout(), 0, 1, &mSceneSet, 1, descriptorSetOffsets);
 
          mScreenQuad.Bind(buffer);
-         vkCmdDraw(buffer, 6, 1, 0, 0);
+         //vkCmdDraw(buffer, 6, 1, 0, 0);
       }
 
       //terrain test
       {
          vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mTerrainTestPipeline.GetPipeline());
          vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mTerrainTestPipeline.GetPipelineLayout(), 2, 1, &mTerrainTestHeightMapSet, 0, nullptr);
-         DescriptorUBO des = DescriptorUBO(buffer, mTerrainTestPipeline.GetPipelineLayout(), &mObjectBuffer, mObjectSet);
-         ObjectUBO ubo;
-         ubo.mModel = glm::translate(glm::identity<glm::mat4>(), glm::vec3(-32, -4, -32)*4.0f);
-         des.UpdateObjectAndBind(&ubo);
-         mTerrainTest.Render(buffer);
+
+         mTerrainTest.Render(buffer, mTerrainTestPipeline.GetPipelineLayout(), &mObjectBuffer, mObjectSet);
       }
 
       vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline.GetPipeline());
@@ -543,11 +605,40 @@ void Application::Draw() {
 
    }
 
+   //screenspace effects
+   {
+      _VulkanManager->DebugMarkerStart(buffer, "screen space", glm::vec4(0.0f, 0.5f, 0.3f, 0.2f));
+      SetImageLayout(buffer, mRenderTarget.GetColorImage(), VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT);
+      SetImageLayout(buffer, mRenderTarget.GetDepthImage(), VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT);
+      //grass
+      {
+         _VulkanManager->DebugMarkerStart(buffer, "grass", glm::vec4(0.5f, 0.0f, 0.3f, 0.3f));
+         VkClearValue clearColor;
+         clearColor.color.float32[0] = abs(sin((frameCounter * 0.5f) / 5000.0f));
+         clearColor.color.float32[1] = abs(sin((frameCounter * 0.2f) / 5000.0f));
+         clearColor.color.float32[2] = abs(sin((frameCounter * 0.1f) / 5000.0f));
+         clearColor.color.float32[3] = 1.0f;
+         mScreenSpaceRT.StartRenderPass(buffer, { clearColor });
+
+         vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mTerrainSSGPipeline.GetPipeline());
+         vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mTerrainSSGPipeline.GetPipelineLayout(), 0, 1, &mScreenSpaceSet, 0, nullptr);
+         vkCmdPushConstants(buffer, mTerrainSSGPipeline.GetPipelineLayout(), VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(SSG), &mSSGPushConstants);
+         mScreenQuad.Bind(buffer);
+         vkCmdDraw(buffer, 6, 1, 0, 0);
+
+         mScreenSpaceRT.EndRenderPass(buffer);
+         _VulkanManager->DebugMarkerEnd(buffer);
+      }
+      SetImageLayout(buffer, mRenderTarget.GetColorImage(), VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT);
+      SetImageLayout(buffer, mRenderTarget.GetDepthImage(), VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT);
+      _VulkanManager->DebugMarkerEnd(buffer);
+   }
+
    _VulkanManager->DebugMarkerStart(buffer, "Present Prepare");
    SetImageLayout(buffer, mVkManager->GetPresentImage(frameIndex), VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
    VkImageBlit blit{};
-   blit.srcOffsets[1].x = mRenderTarget.GetSize().width;
-   blit.srcOffsets[1].y = mRenderTarget.GetSize().height;
+   blit.srcOffsets[1].x = mScreenSpaceRT.GetSize().width;
+   blit.srcOffsets[1].y = mScreenSpaceRT.GetSize().height;
    blit.srcOffsets[1].z = 1;
    blit.dstOffsets[1].x = mVkManager->GetSwapchainExtent().width;
    blit.dstOffsets[1].y = mVkManager->GetSwapchainExtent().height;
@@ -556,7 +647,7 @@ void Application::Draw() {
    blit.srcSubresource.layerCount = 1;
    blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
    blit.dstSubresource.layerCount = 1;
-   vkCmdBlitImage(buffer, mRenderTarget.GetColorImage(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, mVkManager->GetPresentImage(frameIndex), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VkFilter::VK_FILTER_LINEAR);
+   vkCmdBlitImage(buffer, mScreenSpaceRT.GetColorImage(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, mVkManager->GetPresentImage(frameIndex), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VkFilter::VK_FILTER_LINEAR);
    SetImageLayout(buffer, mVkManager->GetPresentImage(frameIndex), VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
    _VulkanManager->DebugMarkerEnd(buffer);
 
@@ -574,12 +665,18 @@ void Application::Destroy() {
    mTestImg.Destroy();
    mShadowCascade.Destroy();
 
+   mScreenSpaceRT.Destroy();
+
    mTerrainTestPipeline.Destroy();
    mTerrainTestShadowPipeline.Destroy();
    mTerrainTest.Destroy(); 
    mTerrainAlbedoImages.Destroy();
    mTerrainHeightMapImage.Destroy();
    vkDestroyDescriptorSetLayout(mVkManager->GetDevice(), mTerrainTestHeightMapSetLayout, GetAllocationCallback());
+
+   mTerrainSSGPipeline.Destroy();
+   mScreenSpaceRT.Destroy();
+
 
    {
       VkDescriptorSet sets[] = { mSceneSet, mObjectSet, mMaterialSet };
@@ -593,10 +690,12 @@ void Application::Destroy() {
       vkDestroyDescriptorSetLayout(mVkManager->GetDevice(), mObjectDescriptorSet, GetAllocationCallback());
       vkDestroyDescriptorSetLayout(mVkManager->GetDevice(), mMaterialDescriptorSet, GetAllocationCallback());
       vkDestroyDescriptorSetLayout(mVkManager->GetDevice(), mComputeTestDescriptorSet, GetAllocationCallback());
+      vkDestroyDescriptorSetLayout(mVkManager->GetDevice(), mScreenSpaceSetLayout, GetAllocationCallback());
    }
 
    mRenderTarget.Destroy();
    mRenderPass.Destroy(mVkManager->GetDevice());
+   mRenderPassNoDepth.Destroy(mVkManager->GetDevice());
    mBillboardQuad.Destroy();
    mScreenQuad.Destroy();
    mPipelineShadow.Destroy();

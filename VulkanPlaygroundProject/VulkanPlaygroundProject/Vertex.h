@@ -53,7 +53,7 @@ public:
       {
          void* data;
          staging.Map(&data);
-         memcpy(data, verts, sizeof(verts));
+         memcpy(data, verts, sizeof(Vertex) * 6);
          staging.UnMap();
       }
       CopyFrom(&staging);

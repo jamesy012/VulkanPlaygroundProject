@@ -130,7 +130,8 @@ bool Pipeline::AddShader(std::string aPath, bool aForceReload) {
 
       shaderc::Compiler compiler;
       shaderc::CompileOptions options;
-      options.SetOptimizationLevel(shaderc_optimization_level::shaderc_optimization_level_performance);
+      //options.SetOptimizationLevel(shaderc_optimization_level::shaderc_optimization_level_performance);
+      options.SetOptimizationLevel(shaderc_optimization_level::shaderc_optimization_level_zero);
       options.SetGenerateDebugInfo();
       options.SetWarningsAsErrors();
 
@@ -192,6 +193,14 @@ void Pipeline::AddDescriptorSetLayout(VkDescriptorSetLayout aSetLayout) {
    mDescriptorSets.push_back(aSetLayout);
 }
 
+void Pipeline::AddPushConstant(VkShaderStageFlags aStage, uint32_t aOffset, uint32_t aSize) {
+   VkPushConstantRange range;
+   range.stageFlags = aStage;
+   range.offset = aOffset;
+   range.size = aSize;
+   mPushConstants.push_back(range);
+}
+
 bool Pipeline::Create(const VkExtent2D aSize, const RenderPass* aRenderPass) {
 
    {
@@ -199,8 +208,8 @@ bool Pipeline::Create(const VkExtent2D aSize, const RenderPass* aRenderPass) {
       pipelineLayout.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
       pipelineLayout.setLayoutCount = static_cast<uint32_t>(mDescriptorSets.size());
       pipelineLayout.pSetLayouts = mDescriptorSets.data();
-      //pipelineLayout.pushConstantRangeCount = mPushConstants.size(); // Optional
-      //pipelineLayout.pPushConstantRanges = mPushConstants.data(); // Optional
+      pipelineLayout.pushConstantRangeCount = static_cast<uint32_t>(mPushConstants.size());
+      pipelineLayout.pPushConstantRanges = mPushConstants.data();
       vkCreatePipelineLayout(_VulkanManager->GetDevice(), &pipelineLayout, nullptr, &mPipelineLayout);
       //helper->setObjName(VK_OBJECT_TYPE_PIPELINE_LAYOUT, (uint64_t)mPipelineLayout, aName + " Layout");
    }

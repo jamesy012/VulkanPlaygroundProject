@@ -12,11 +12,16 @@ void Terrain::Destroy() {
    mIndexBuffer.Destroy();
 }
 
-void Terrain::Render(VkCommandBuffer aBuffer) {
-   mVertexBuffer.Bind(aBuffer);
-   mIndexBuffer.Bind(aBuffer);
-   //vkCmdDraw(aBuffer, static_cast<uint32_t>(mVertexBuffer.GetSize()), 1, 0, 0);
-   vkCmdDrawIndexed(aBuffer, static_cast<uint32_t>(mIndices.size()), 1, 0, 0, 0);
+void Terrain::Render(VkCommandBuffer aCommandBuffer, VkPipelineLayout aLayout, BufferRingUniform* aBuffer, VkDescriptorSet aDescriptorSet) {
+   mVertexBuffer.Bind(aCommandBuffer);
+   mIndexBuffer.Bind(aCommandBuffer);
+
+   DescriptorUBO des = DescriptorUBO(aCommandBuffer, aLayout, aBuffer, aDescriptorSet);
+   ObjectUBO ubo;
+   ubo.mModel = glm::translate(glm::identity<glm::mat4>(), glm::vec3(-32, -4, -32) * 4.0f);
+   des.UpdateObjectAndBind(&ubo);
+
+   vkCmdDrawIndexed(aCommandBuffer, static_cast<uint32_t>(mIndices.size()), 1, 0, 0, 0);
 }
 
 void Terrain::CreateMesh() {

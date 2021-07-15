@@ -14,6 +14,18 @@ public:
    const VkImage GetColorImage() const {
       return mColor;
    };
+   
+   const VkImage GetDepthImage() const {
+      return mDepth;
+   }; 
+
+   const VkImageView GetColorImageView() const {
+      return mColorView;
+   };
+
+   const VkImageView GetDepthImageView() const {
+      return mDepthView;
+   };
 
    const VkExtent2D GetSize() const {
       return mExtent;

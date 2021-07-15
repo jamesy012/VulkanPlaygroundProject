@@ -6,7 +6,7 @@ class Terrain {
 public:
    void Create(std::string aTexturePath);
    void Destroy();
-   void Render(VkCommandBuffer aBuffer);
+   void Render(VkCommandBuffer aCommandBuffer, VkPipelineLayout aLayout, BufferRingUniform* aBuffer, VkDescriptorSet aDescriptorSet);
 private:
    void CreateMesh();
 

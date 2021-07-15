@@ -13,6 +13,7 @@ layout(location = 1) out vec2 fragTexCoord;
 layout(location = 2) out vec3 fragPos;
 layout(location = 3) out vec3 fragViewPos;
 layout(location = 4) out float fragHeight;
+layout(location = 5) out vec3 fragNormal;
 
 layout(set = 0, binding = 0) uniform SceneBuffer{   
 	mat4 viewProj; 
@@ -27,6 +28,15 @@ layout(set = 2, binding = 0) uniform sampler2D tex1;
 void main() {
     float offset = 1.0f / 256.0f; 
     float height = texture(tex1, inTexCoord).r;
+
+    {
+        float left = texture(tex1, inTexCoord - vec2(offset, 0)).r;
+        float right = texture(tex1, inTexCoord + vec2(offset, 0)).r;
+        float up = texture(tex1, inTexCoord - vec2(0, offset)).r;
+        float down = texture(tex1, inTexCoord + vec2(0, offset)).r;
+        fragNormal = normalize(vec3(left - right, 1.0f, down - up));
+    }
+
     height += texture(tex1, inTexCoord + vec2(offset,0)).r;
     height += texture(tex1, inTexCoord + vec2(0,offset)).r;
     height += texture(tex1, inTexCoord + vec2(offset,offset)).r;

@@ -5,6 +5,7 @@ layout(location = 1) in vec2 fragTexCoord;
 layout(location = 2) in vec3 fragPos;
 layout(location = 3) in vec3 fragViewPos;
 layout(location = 4) in float fragHeight;
+layout(location = 5) in vec3 fragNormal;
 
 layout(location = 0) out vec4 outColor;
 
@@ -80,48 +81,62 @@ vec2 rotateUV(vec2 uv, float rotation, vec2 mid)
 
 void main() {
     //outColor = fragColor;
-outColor = vec4(0,0,0,1);
-	vec3 heights[3] = {{0,0.2, 0.2},{0,0.1, 0.3},{0.6,0.2,0.3}};
-	float uvScales[3] = {16, 6,8};
-	float uvRotates[3] = {0, 0.5, 2};
-	for(uint i = 0;i<3;i++) {
-	float center = heights[i].x;
-    float width = heights[i].y;
-    float fade = heights[i].z;
-		float widthFade = width + fade;
-		//float maskCenter;
-    	//maskCenter = step(fragHeight, center + width); 
-    	//maskCenter *= step(center - width, fragHeight);
+	outColor = vec4(0,0,0,1);
+	vec3 diffuseColor = vec3(0,0,0);
 
-    	//float val = (1.0-abs(fragHeight+center+width))/fade;
-    	//float val2 = (1.0-abs((1.0-fragHeight)+center+width))/fade;
-		//
-    	//val = clamp(val, 0.0, 1.0);
-    	//val2 = clamp(val2, 0.0, 1.0);
-		//float value = 1.0-(val + val2) + maskCenter;
+	{
+		vec3 heights[3] = {{0, 0.2, 0.2},{0, 0.1, 0.3},{0.6, 0.2, 0.3}};
+		float uvScales[3] = {16, 6,8};
+		float uvRotates[3] = {0, 0.5, 2};
+		for(uint i = 0;i<3;i++) {
+			float center = heights[i].x;
+    		float width = heights[i].y;
+    		float fade = heights[i].z;
+			float widthFade = width + fade;
 
-    float val = map(fragHeight, center-widthFade,center, 0.0, 1.0); 
-    float val2 = map(fragHeight, center,center+widthFade, 1.0, 0.0); 
-float value = val * val2;
-	value = clamp(value, 0, 1);
-		//float value = clamp(fragHeight - heights[i].x,0,heights[i].y) * 1/heights[i].y;
-		//float value = clamp(fragHeight, 0, heights[i].y);
-		outColor += value * texture(texTerrainTextures, vec3(rotateUV(fragTexCoord,uvRotates[i], vec2(0.5))*uvScales[i], i));
-		//outColor = value.rrrr;
+    		float val = map(fragHeight, center - widthFade, center, 0.0, 1.0); 
+    		float val2 = map(fragHeight, center, center + widthFade, 1.0, 0.0); 
+			float value = clamp(val * val2, 0, 1);
+
+			vec2 uv = rotateUV(fragTexCoord, uvRotates[i], vec2(0.5)) * uvScales[i];
+			diffuseColor += value * texture(texTerrainTextures, vec3(uv, i)).xyz;
+		}
 	}
 
-    outColor *= 1-clamp(distance(sceneData.viewPos.xyz, fragPos) / 150.0f, 0, 1);
+	// Get cascade index for the current fragment's view position
+	uint cascadeIndex = 0;
+	for(uint i = 0; i < 4 - 1; ++i) {
+		if(-fragViewPos.z < sceneData.shadowCascadeSplits[i]) {	
+			cascadeIndex = i + 1;
+		}
+	}
 
-	//// Get cascade index for the current fragment's view position
-	//uint cascadeIndex = 0;
-	//for(uint i = 0; i < 4 - 1; ++i) {
-	//	if(-fragViewPos.z < sceneData.shadowCascadeSplits[i]) {	
-	//		cascadeIndex = i + 1;
-	//	}
-	//}
+	//vec4 shadowCoord = (biasMat * ubo.cascadeViewProjMat[cascadeIndex]) * vec4(inPos, 1.0);	
+	vec4 shadowCoord = (biasMat * sceneData.shadowCascadeProj[cascadeIndex]) * vec4(fragPos, 1.0);	
+    float shadowRes = filterPCF(shadowCoord / shadowCoord.w, cascadeIndex);
+	outColor *= clamp(shadowRes,0.5f,1.0f);
 
-	////vec4 shadowCoord = (biasMat * ubo.cascadeViewProjMat[cascadeIndex]) * vec4(inPos, 1.0);	
-	//vec4 shadowCoord = (biasMat * sceneData.shadowCascadeProj[cascadeIndex]) * vec4(fragPos, 1.0);	
-    //float shadowRes = filterPCF(shadowCoord / shadowCoord.w, cascadeIndex);
-	//outColor *= clamp(shadowRes,0.5f,1.0f);
+	vec3 normal = fragNormal;
+    //outColor = vec4(fragTexCoord,0,1);
+
+    float ambientStrength = 0.1;
+    vec3 lightColor = vec3(1,1,1);
+    vec3 ambient = ambientStrength * lightColor * diffuseColor;
+
+    vec3 lightPos = sceneData.lightPos.xyz;
+    vec3 lightDir = normalize(lightPos - fragPos);
+    float diff = max(dot(normal, lightDir), 0.0f);
+    vec3 diffuse = diff * lightColor * diffuseColor;
+
+    //float specularStrength = 0.0;
+    //vec3 viewDir = normalize(sceneData.viewPos.xyz - fragPos);
+    //vec3 reflectDir = reflect(-lightDir, normal);  
+    //float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32);
+    //vec3 specular = specularStrength * spec * lightColor/* * roughness*/; 
+
+    //outColor *= 1-clamp(distance(sceneData.viewPos.xyz, fragPos) / 150.0f, 0, 1);
+
+	outColor = vec4(ambient + (diffuse /*+ specular*/)  * shadowRes, 1.0);
+
+	//outColor = vec4(fragNormal, 1.0);
 }
