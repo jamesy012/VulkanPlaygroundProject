@@ -246,7 +246,7 @@ void Application::Start() {
    vkUpdateDescriptorSets(_VulkanManager->GetDevice(), static_cast<uint32_t>(writeSets.size()), writeSets.data(), 0, nullptr);
    UpdateImageDescriptorSet(mShadowCascade.GetImage(), mMaterialSet, mVkManager->GetDefaultClampedSampler(), 1);
 
-   mModelTest.LoadModel(GetWorkDir() + "Sponza/Sponza.obj", mMaterialDescriptorSet, writeSets);
+   //mModelTest.LoadModel(GetWorkDir() + "Sponza/Sponza.obj", mMaterialDescriptorSet, writeSets);
    mModelTest.SetScale(0.05f);
 
 
@@ -276,7 +276,7 @@ void Application::Start() {
    mLightPos = glm::vec3(-20, 74, 10);
 
    mTerrainAlbedoImages.CreateImage({ 1024, 1024 }, 3, 1);
-   mTerrainAlbedoImages.LoadImageForArray(GetWorkDir() + "Textures/seamlessTextures/100_1382_seamless.JPG", 0);
+   mTerrainAlbedoImages.LoadImageForArray(GetWorkDir() + "Textures/seamlessTextures/100_1395_seamless.JPG", 0);
    mTerrainAlbedoImages.LoadImageForArray(GetWorkDir() + "Textures/seamlessTextures/100_1395_seamless.JPG", 1);
    mTerrainAlbedoImages.LoadImageForArray(GetWorkDir() + "Textures/seamlessTextures/100_1377_seamless.JPG", 2);
    mTerrainHeightMapImage.LoadImage(GetWorkDir() + "Textures/heightmapTest.png");

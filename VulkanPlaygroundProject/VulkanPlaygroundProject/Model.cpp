@@ -75,8 +75,7 @@ bool Model::LoadModel(std::string aPath, VkDescriptorSetLayout aMaterialDescript
 
 void Model::ProcessMeshs(const aiScene* aScene) {
    mMeshs.resize(aScene->mNumMeshes);
-   mBase = new Node();
-   ProcessMesh(aScene, aScene->mRootNode, mBase);
+   ProcessMesh(aScene, aScene->mRootNode, &mBase);
 
    mVertexBuffer.Create(mVertices.size() * sizeof(Vertex));
    mIndexBuffer.Create(mIndices.size() * sizeof(uint32_t));

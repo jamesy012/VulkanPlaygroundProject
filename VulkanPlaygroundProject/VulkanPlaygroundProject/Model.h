@@ -69,32 +69,25 @@ public:
    void Render(DescriptorUBO* aRenderDescriptor, RenderMode aRenderMode);
 
    void SetPosition(glm::vec3 aPos) {
-      ASSERT_RET(mBase);
-      mBase->mTransform.SetPosition(aPos);
+      mBase.mTransform.SetPosition(aPos);
    }
    void SetRotation(glm::vec3 aRot) {
-      ASSERT_RET(mBase);
-      mBase->mTransform.SetRotation(aRot);
+      mBase.mTransform.SetRotation(aRot);
    }
    void SetScale(float aScale) {
-      ASSERT_RET(mBase);
-      mBase->mTransform.SetScale(aScale);
+      mBase.mTransform.SetScale(aScale);
    }
    void SetScale(glm::vec3 aScale) {
-      ASSERT_RET(mBase);
-      mBase->mTransform.SetScale(aScale);
+      mBase.mTransform.SetScale(aScale);
    }
    glm::vec3 GetPosition() {
-      ASSERT_RET_VALUE(mBase, glm::vec3(0));
-      return mBase->mTransform.GetPostion();
+      return mBase.mTransform.GetPostion();
    }
    glm::vec3 GetRotation() {
-      ASSERT_RET_VALUE(mBase, glm::vec3(0));
-      return mBase->mTransform.GetRotation();
+      return mBase.mTransform.GetRotation();
    }
    glm::vec3 GetScale() {
-      ASSERT_RET_VALUE(mBase, glm::vec3(1));
-      return mBase->mTransform.GetScale();
+      return mBase.mTransform.GetScale();
    }
 
    void SetRenderMode(unsigned int aMode) {
@@ -140,7 +133,7 @@ private:
    void LoadImages();
 
    std::vector<Mesh*> mMeshs;
-   Node* mBase;
+   Node mBase;
    std::vector<Node*> mNodes;
 
    unsigned int mRenderModes = RenderMode::ALL;
