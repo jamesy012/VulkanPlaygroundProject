@@ -21,7 +21,6 @@
 #include <glm/ext.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-
 //~~~~~~~ ASSERTS/Validation
 #define ASSERT(msg) DebugBreak();
 #define ASSERT_IF(x) if((x) == false){ASSERT(__FUNCTION__)};
@@ -261,6 +260,9 @@ namespace Logger {
 #define LOG(...) Logger::LogMessage(__VA_ARGS__);
 //#define LOG_LIT(Message, ...) Logger::LogMessage("%s\n", #Message, __VA_ARGS__);
 #define LOG_WITH_LINE(Message) Logger::LogMessage("(%s #%i) %s", __FUNCTION__, __LINE__, Message);
+
+//~~~~~~~ COMMON OBJECTS
+#include "FileIO.h"
 
 //~~~~~~~ VULKAN OBJECTS
 #include "VulkanManager.h"

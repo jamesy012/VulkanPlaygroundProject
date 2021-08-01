@@ -1,9 +1,6 @@
 #include "stdafx.h"
 #include "Pipeline.h"
 
-#include <fstream>
-#include <sstream>
-
 #include <shaderc/shaderc.hpp>
 
 #include "RenderPass.h"
@@ -38,95 +35,33 @@ VkShaderStageFlagBits GetShaderStageFromFileExt(std::string aFileExt) {
    return (VkShaderStageFlagBits)0;
 }
 
-bool ReadFile(std::string aPath, std::stringstream& aOutput) {
-   std::ifstream fileStream(aPath);
-   if (fileStream.fail()) {
-      return false;
-   }
-   aOutput = std::stringstream();
-   aOutput << fileStream.rdbuf();
-   return true;
-}
-
-bool ReadFileBinary(std::string aPath, char* aOutput, uint32_t aSize) {
-   std::ifstream fileStream(aPath, std::ios::binary);
-   if (fileStream.fail()) {
-      return false;
-   }
-   fileStream.read(aOutput, aSize);
-   return true;
-}
-
-bool WriteFile(std::string aPath, std::string aInput) {
-   std::ofstream fileStream(aPath);
-   if (fileStream.fail()) {
-      return false;
-   }
-   fileStream << aInput;
-   fileStream.close();
-   return true;
-}
-
-bool WriteFileBinary(std::string aPath, const char* aInput, uint32_t aSize) {
-   std::ofstream fileStream(aPath, std::ios::binary);
-   if (fileStream.fail()) {
-      return false;
-   }
-   fileStream.write(aInput, aSize);
-   fileStream.close();
-   return true;
-}
-
 bool Pipeline::AddShader(std::string aPath, bool aForceReload) {
    LOG_SCOPED_NAME("Pipeline Shader Compile");
    LOG("%s\n", aPath.c_str());
    Shader shader;
 
-   std::string fileExt;
-   size_t fileExtIndex = aPath.find_last_of('.') + 1;
-   {
-      if (fileExtIndex == 0) {
-         ASSERT_RET_FALSE("Invalid file name?");
-      }
-      fileExt = aPath.substr(fileExtIndex);
-      for (auto& c : fileExt) {
-         c = tolower(c);
-      }
-   }
-
-   shader.mInfo.stage = GetShaderStageFromFileExt(fileExt);
-   shaderc_shader_kind shadercType = GetShaderCShaderKind(shader.mInfo.stage);
 
    bool reloadFromFile = false;
    static const bool FORCE_RELOAD = false;
 
-
    std::size_t hashValue = stbds_hash_bytes(mShaderMacroArguments.mMacros.data(), sizeof(ShaderMacroArguments::Args) * mShaderMacroArguments.mMacros.size(), 0);
    LOG("hash: %zu\n", hashValue);
 
-   std::string cachePath = aPath;
-   cachePath.insert(fileExtIndex - 1, "-" + std::to_string(hashValue));
-   cachePath += ".cache";
+   FileIO file(aPath, hashValue);
 
-   struct _stat stat {};
-   struct _stat statCache {};
+   shader.mInfo.stage = GetShaderStageFromFileExt(file.GetFileExtension());
+   shaderc_shader_kind shadercType = GetShaderCShaderKind(shader.mInfo.stage);
 
    if (FORCE_RELOAD || aForceReload) {
       reloadFromFile = true;
    } else {
-      _stat(aPath.c_str(), &stat);
-      _stat(cachePath.c_str(), &statCache);
-
-      reloadFromFile = (stat.st_mtime > statCache.st_mtime);
+      reloadFromFile = file.IsOrginalFileNewer();
    }
 
    std::vector<uint32_t> spvResult;
    if(reloadFromFile)
    {
       LOG("Recompiling...\n");
-      std::ifstream fileStream(aPath);
-      std::stringstream dataStream;
-      dataStream << fileStream.rdbuf();
 
       shaderc::Compiler compiler;
       shaderc::CompileOptions options;
@@ -153,7 +88,8 @@ bool Pipeline::AddShader(std::string aPath, bool aForceReload) {
       //}
       //std::string compileResult = { result.cbegin(), result.cend() };
 
-      std::string fileData = dataStream.str();
+      std::string fileData;
+      file.ReadNormal(fileData);
       shaderc::SpvCompilationResult result2 = compiler.CompileGlslToSpv(fileData, shadercType, aPath.c_str(), options);
       if (result2.GetCompilationStatus() != shaderc_compilation_status_success) {
          std::cout << result2.GetErrorMessage() << std::endl;
@@ -161,12 +97,11 @@ bool Pipeline::AddShader(std::string aPath, bool aForceReload) {
       }
       spvResult = { result2.cbegin(), result2.cend() };
 
-      WriteFileBinary(cachePath, (char*)&spvResult[0], static_cast<uint32_t>(spvResult.size()*4));
+      file.WriteCache((char*)&spvResult[0], static_cast<uint32_t>(spvResult.size() * 4));
    } else {
       LOG("Loading from cache\n");
-      std::vector<char> cachedResult(statCache.st_size);
-      spvResult.resize(statCache.st_size/4); 
-      ReadFileBinary(cachePath, (char*)&spvResult[0], statCache.st_size);
+      spvResult.resize(file.GetCacheSize() / 4);
+      file.ReadCache((char*)&spvResult[0]);
    }
 
    VkShaderModuleCreateInfo createInfo{};
