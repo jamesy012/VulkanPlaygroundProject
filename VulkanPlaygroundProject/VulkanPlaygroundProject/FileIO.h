@@ -1,5 +1,6 @@
 #pragma once
 
+#include <map>
 #include <fstream>
 #include <sstream>
 //cache can hold multiple hashes..
@@ -8,40 +9,59 @@ class FileIO {
 public:
    FileIO(std::string aPath);
 
-   //void ReadFile(std::stringstream& aOutput, bool aForceOriginal = false, std::size_t aHash = 0);
-   //void ReadFileBinary(std::vector<char>& aOutput, bool aForceOriginal = false, std::size_t aHash = 0);
-   //void ReadFileBinary(char* aOutput, bool aForceOriginal = false, std::size_t aHash = 0);
+   std::string Read();
+   void StoreCache(std::size_t aHash, char* aInput, std::size_t aSize);
+
+   void Save();
 
    const std::string GetFileExtension() const {
       return mFileExt;
    };
 
-   //temp
-   FileIO(std::string aPath, std::size_t aHash);
+   const void GetHashFileData(std::size_t aHash, char* aOutput);
 
-   void ReadNormal(std::string& aOutput);
-   void ReadCache(char* aOutput);
-   void WriteCache(char* aInput, std::size_t aSize);
+   const std::size_t GetHashFileSize(std::size_t aHash) {
+      auto cache = mOldCacheMap.find(aHash);
+      if (cache != mOldCacheMap.end()) {
+         return cache->second.mSize;
+      }
+      return 0;
+   };
 
-   const bool IsOrginalFileNewer() const {
-      return mOrginialNewer;
+   const bool GetIsHashNewer(std::size_t aHash) {
+      auto cache = mOldCacheMap.find(aHash);
+      if (cache != mOldCacheMap.end()) {
+         return cache->second.mTime > mFileModifyTime;
+      }
+      return false;
    };
-   const std::size_t GetCacheSize() const {
-      return mCacheSize;
-   };
+
 
 private:
+   void StoreCache(std::size_t aHash, char* aInput, std::size_t aSize, time_t aTime);
+
+   void PrepareCache();
+
    std::string mFilePath;
    std::string mFileName;
    std::string mFileExt;
    std::ifstream mCacheFileStream;
    bool mHasFile;
    bool mHasCache;
+   std::size_t mFileModifyTime;
 
 
-   //temp
-   std::string mFileCachePath;
-   bool mOrginialNewer;
-   std::size_t mCacheSize;
+   struct Cache {
+      std::size_t mSize;
+      std::size_t mTime;
+   };
+   struct NewCache : public Cache {
+      char* mData = nullptr;
+   };
+   struct OldCache : public Cache {
+      std::size_t mOffset;
+   };
+   //hash, Cache
+   std::map<std::size_t, NewCache> mNewCacheMap;
+   std::map<std::size_t, OldCache> mOldCacheMap;
 };
-

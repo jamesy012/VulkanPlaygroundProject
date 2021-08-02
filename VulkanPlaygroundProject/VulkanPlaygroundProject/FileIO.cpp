@@ -1,50 +1,10 @@
 #include "stdafx.h"
 #include "FileIO.h"
 
-bool ReadFile(std::string aPath, std::stringstream& aOutput) {
-   std::ifstream fileStream(aPath);
-   if (fileStream.fail()) {
-      return false;
-   }
-   aOutput = std::stringstream();
-   aOutput << fileStream.rdbuf();
-   return true;
-}
-
-bool ReadFileBinary(std::string aPath, char* aOutput, uint32_t aSize) {
-   std::ifstream fileStream(aPath, std::ios::binary);
-   if (fileStream.fail()) {
-      return false;
-   }
-   fileStream.read(aOutput, aSize);
-   return true;
-}
-
-bool WriteFile(std::string aPath, std::string aInput) {
-   std::ofstream fileStream(aPath);
-   if (fileStream.fail()) {
-      return false;
-   }
-   fileStream << aInput;
-   fileStream.close();
-   return true;
-}
-
-bool WriteFileBinary(std::string aPath, const char* aInput, uint32_t aSize) {
-   std::ofstream fileStream(aPath, std::ios::binary);
-   if (fileStream.fail()) {
-      return false;
-   }
-   fileStream.write(aInput, aSize);
-   fileStream.close();
-   return true;
-}
+#include <ctime>
+#include <chrono>
 
 FileIO::FileIO(std::string aPath) {
-
-}
-
-FileIO::FileIO(std::string aPath, std::size_t aHash) {
    mFilePath = aPath;
    size_t fileExtIndex = aPath.find_last_of('.');
    if (fileExtIndex != std::string::npos) {
@@ -63,31 +23,138 @@ FileIO::FileIO(std::string aPath, std::size_t aHash) {
    if (fileNameIndex != std::string::npos) {
       mFileName = aPath.substr(fileNameIndex + 1, aPath.size() - (aPath.size() - fileExtIndex) - fileNameIndex - 1);
    }
-   mFileCachePath = aPath;
-   mFileCachePath.insert(fileExtIndex, "-" + std::to_string(aHash));
-   mFileCachePath += ".cache";
 
+   std::string cachePath = aPath + ".cache";
    struct _stat stat {};
    struct _stat statCache {};
    mHasFile = !_stat(aPath.c_str(), &stat);
-   mHasCache = !_stat(mFileCachePath.c_str(), &statCache);
+   mHasCache = !_stat(cachePath.c_str(), &statCache);
 
-   mCacheSize = statCache.st_size;
+   mFileModifyTime = stat.st_mtime;
 
-   mOrginialNewer = (stat.st_mtime > statCache.st_mtime);
+   PrepareCache();
 }
 
-void FileIO::ReadNormal(std::string& aOutput) {
+std::string FileIO::Read() {
    std::ifstream fileStream(mFilePath);
    std::stringstream dataStream;
    dataStream << fileStream.rdbuf();
-   aOutput = dataStream.str();
+   return dataStream.str();
 }
 
-void FileIO::ReadCache(char* aOutput) {
-   ReadFileBinary(mFileCachePath, aOutput, mCacheSize);
+void FileIO::StoreCache(std::size_t aHash, char* aInput, std::size_t aSize) {
+   StoreCache(aHash, aInput, aSize, std::time(0));
 }
 
-void FileIO::WriteCache(char* aInput, std::size_t aSize) {
-   WriteFileBinary(mFileCachePath, aInput, aSize);
+void FileIO::StoreCache(std::size_t aHash, char* aInput, std::size_t aSize, time_t atime) {
+   NewCache cache;
+   cache.mData = new char[aSize];
+   memcpy(cache.mData, aInput, aSize);
+   cache.mSize = aSize;
+   cache.mTime = atime;
+   mNewCacheMap[aHash] = cache;
+}
+
+template<typename T>
+void WriteData(std::ofstream& stream, const T& data) {
+   stream.write(reinterpret_cast<const char*>(&data), sizeof T);
+}
+
+template<typename T>
+void ReadData(std::ifstream& stream, T& data) {
+   stream.read(reinterpret_cast<char*>(&data), sizeof T);
+}
+
+void FileIO::Save() {
+   std::string cachePath = mFilePath + ".cache";
+   //save out the old stuff
+   {
+      std::ifstream fileStream(cachePath, std::ios::binary);
+      if (fileStream.good()) {
+         for (auto& element : mNewCacheMap) {
+            mOldCacheMap.erase(element.first);
+         }
+         for (auto& element : mOldCacheMap) {
+            fileStream.seekg(element.second.mOffset);
+            std::vector<char> data;
+            data.resize(element.second.mSize);
+            fileStream.read((char*)&data[0], element.second.mSize);
+            StoreCache(element.first, &data[0], element.second.mSize, element.second.mTime);
+         }
+         mOldCacheMap.clear();
+      }
+      fileStream.close();
+   }
+
+   std::ofstream fileStream(cachePath, std::ios::binary);
+   if (fileStream.fail()) {
+      return;
+   }
+   WriteData(fileStream, 'C');
+   WriteData(fileStream, 'A');
+   WriteData(fileStream, 'C');
+   WriteData(fileStream, 'H');
+   WriteData(fileStream, 'E');
+   WriteData(fileStream, '1');
+   WriteData(fileStream, '.');
+   WriteData(fileStream, '0');
+
+   size_t numCache = mNewCacheMap.size();
+
+   WriteData(fileStream, numCache);
+   size_t offset = (sizeof(size_t) * 4) * numCache + (sizeof(size_t) + 8);
+   for (auto& element : mNewCacheMap) {
+      WriteData(fileStream, element.first);
+      WriteData(fileStream, element.second.mSize);
+      WriteData(fileStream, element.second.mTime);
+      WriteData(fileStream, offset);
+      offset += element.second.mSize;
+   }
+   for (auto& element : mOldCacheMap) {
+      WriteData(fileStream, element.first);
+      WriteData(fileStream, element.second.mSize);
+      WriteData(fileStream, element.second.mTime);
+      WriteData(fileStream, offset);
+      offset += element.second.mSize;
+   }
+   for (auto& element : mNewCacheMap) {
+      fileStream.write(element.second.mData, element.second.mSize);
+      delete[] element.second.mData;
+   }
+   fileStream.close();
+
+}
+
+const void FileIO::GetHashFileData(std::size_t aHash, char* aOutput) {
+   auto cache = mOldCacheMap.find(aHash);
+   if (cache == mOldCacheMap.end()) {
+      return;
+   }
+   std::string cachePath = mFilePath + ".cache";
+   std::ifstream fileStream(cachePath, std::ios::binary);
+   if (fileStream.good()) {
+      fileStream.seekg(cache->second.mOffset);
+      fileStream.read(aOutput, cache->second.mSize);
+   }
+   fileStream.close();
+}
+
+void FileIO::PrepareCache() {
+   std::string cachePath = mFilePath + ".cache";
+   std::ifstream fileStream(cachePath, std::ios::binary);
+   if (fileStream.good()) {
+      fileStream.seekg(8);
+      size_t numberElements = 0;
+      ReadData(fileStream, numberElements);
+      for (int i = 0; i < numberElements; i++) {
+         size_t hash;
+         OldCache cache;
+         ReadData(fileStream, hash);
+         ReadData(fileStream, cache.mSize);
+         ReadData(fileStream, cache.mTime);
+         ReadData(fileStream, cache.mOffset);
+         mOldCacheMap[hash] = cache;
+      }
+   }
+   fileStream.close();
 }

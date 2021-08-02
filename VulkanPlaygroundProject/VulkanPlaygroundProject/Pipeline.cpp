@@ -47,7 +47,7 @@ bool Pipeline::AddShader(std::string aPath, bool aForceReload) {
    std::size_t hashValue = stbds_hash_bytes(mShaderMacroArguments.mMacros.data(), sizeof(ShaderMacroArguments::Args) * mShaderMacroArguments.mMacros.size(), 0);
    LOG("hash: %zu\n", hashValue);
 
-   FileIO file(aPath, hashValue);
+   FileIO file(aPath);
 
    shader.mInfo.stage = GetShaderStageFromFileExt(file.GetFileExtension());
    shaderc_shader_kind shadercType = GetShaderCShaderKind(shader.mInfo.stage);
@@ -55,7 +55,7 @@ bool Pipeline::AddShader(std::string aPath, bool aForceReload) {
    if (FORCE_RELOAD || aForceReload) {
       reloadFromFile = true;
    } else {
-      reloadFromFile = file.IsOrginalFileNewer();
+      reloadFromFile = !file.GetIsHashNewer(hashValue);
    }
 
    std::vector<uint32_t> spvResult;
@@ -88,8 +88,7 @@ bool Pipeline::AddShader(std::string aPath, bool aForceReload) {
       //}
       //std::string compileResult = { result.cbegin(), result.cend() };
 
-      std::string fileData;
-      file.ReadNormal(fileData);
+      std::string fileData = file.Read();
       shaderc::SpvCompilationResult result2 = compiler.CompileGlslToSpv(fileData, shadercType, aPath.c_str(), options);
       if (result2.GetCompilationStatus() != shaderc_compilation_status_success) {
          std::cout << result2.GetErrorMessage() << std::endl;
@@ -97,11 +96,12 @@ bool Pipeline::AddShader(std::string aPath, bool aForceReload) {
       }
       spvResult = { result2.cbegin(), result2.cend() };
 
-      file.WriteCache((char*)&spvResult[0], static_cast<uint32_t>(spvResult.size() * 4));
+      file.StoreCache(hashValue, (char*)&spvResult[0], static_cast<uint32_t>(spvResult.size() * 4));
+      file.Save();
    } else {
       LOG("Loading from cache\n");
-      spvResult.resize(file.GetCacheSize() / 4);
-      file.ReadCache((char*)&spvResult[0]);
+      spvResult.resize(file.GetHashFileSize(hashValue) / 4);
+      file.GetHashFileData(hashValue, (char*)&spvResult[0]);
    }
 
    VkShaderModuleCreateInfo createInfo{};
