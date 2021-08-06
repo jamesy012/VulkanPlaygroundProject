@@ -1,27 +1,25 @@
 #include "stdafx.h"
 #include "Pipeline.h"
 
-#include <shaderc/shaderc.hpp>
-
 #include "RenderPass.h"
 #include "Vertex.h"
 
 #define STB_DS_IMPLEMENTATION
 #include <stb_ds.h>
 
-shaderc_shader_kind GetShaderCShaderKind(VkShaderStageFlagBits aType) {
-   switch (aType) {
-      case VK_SHADER_STAGE_VERTEX_BIT:
-         return shaderc_shader_kind::shaderc_glsl_vertex_shader;
-      case VK_SHADER_STAGE_FRAGMENT_BIT:
-         return shaderc_shader_kind::shaderc_glsl_fragment_shader;
-      case VK_SHADER_STAGE_COMPUTE_BIT:
-         return shaderc_shader_kind::shaderc_glsl_compute_shader;
-      default:
-         ASSERT(false);
-   }
-   return shaderc_vertex_shader;
-}
+//shaderc_shader_kind GetShaderCShaderKind(VkShaderStageFlagBits aType) {
+//   switch (aType) {
+//      case VK_SHADER_STAGE_VERTEX_BIT:
+//         return shaderc_shader_kind::shaderc_glsl_vertex_shader;
+//      case VK_SHADER_STAGE_FRAGMENT_BIT:
+//         return shaderc_shader_kind::shaderc_glsl_fragment_shader;
+//      case VK_SHADER_STAGE_COMPUTE_BIT:
+//         return shaderc_shader_kind::shaderc_glsl_compute_shader;
+//      default:
+//         ASSERT(false);
+//   }
+//   return shaderc_vertex_shader;
+//}
 
 VkShaderStageFlagBits GetShaderStageFromFileExt(std::string aFileExt) {
    if (aFileExt == "vert") {
@@ -37,7 +35,7 @@ VkShaderStageFlagBits GetShaderStageFromFileExt(std::string aFileExt) {
 
 bool Pipeline::AddShader(std::string aPath, bool aForceReload) {
    LOG_SCOPED_NAME("Pipeline Shader Compile");
-   LOG("%s\n", aPath.c_str());
+   LOG_ARGS("%s\n", aPath.c_str());
    Shader shader;
 
 
@@ -45,12 +43,12 @@ bool Pipeline::AddShader(std::string aPath, bool aForceReload) {
    static const bool FORCE_RELOAD = false;
 
    std::size_t hashValue = stbds_hash_bytes(mShaderMacroArguments.mMacros.data(), sizeof(ShaderMacroArguments::Args) * mShaderMacroArguments.mMacros.size(), 0);
-   LOG("hash: %zu\n", hashValue);
+   LOG_ARGS("hash: %zu\n", hashValue);
 
    FileIO file(aPath);
 
    shader.mInfo.stage = GetShaderStageFromFileExt(file.GetFileExtension());
-   shaderc_shader_kind shadercType = GetShaderCShaderKind(shader.mInfo.stage);
+   //shaderc_shader_kind shadercType = GetShaderCShaderKind(shader.mInfo.stage);
 
    if (FORCE_RELOAD || aForceReload) {
       reloadFromFile = true;
@@ -61,45 +59,45 @@ bool Pipeline::AddShader(std::string aPath, bool aForceReload) {
    std::vector<uint32_t> spvResult;
    if(reloadFromFile)
    {
-      LOG("Recompiling...\n");
+      LOG_ARGS("Recompiling...\n");
 
-      shaderc::Compiler compiler;
-      shaderc::CompileOptions options;
-      //options.SetOptimizationLevel(shaderc_optimization_level::shaderc_optimization_level_performance);
-      options.SetOptimizationLevel(shaderc_optimization_level::shaderc_optimization_level_zero);
-      options.SetGenerateDebugInfo();
-      options.SetWarningsAsErrors();
-
-      for (size_t i = 0; i < mShaderMacroArguments.mMacros.size(); i++) {
-         options.AddMacroDefinition(ShaderMacroArguments::ArgsToString(mShaderMacroArguments.mMacros[i]));
-      }
-      
-      //shaderc::PreprocessedSourceCompilationResult result = compiler.PreprocessGlsl(dataStream.str(), shadercType, aPath.c_str(), options);
+      //shaderc::Compiler compiler;
+      //shaderc::CompileOptions options;
+      ////options.SetOptimizationLevel(shaderc_optimization_level::shaderc_optimization_level_performance);
+      //options.SetOptimizationLevel(shaderc_optimization_level::shaderc_optimization_level_zero);
+      //options.SetGenerateDebugInfo();
+      //options.SetWarningsAsErrors();
       //
-      //if (result.GetCompilationStatus() != shaderc_compilation_status_success) {
+      //for (size_t i = 0; i < mShaderMacroArguments.mMacros.size(); i++) {
+      //   options.AddMacroDefinition(ShaderMacroArguments::ArgsToString(mShaderMacroArguments.mMacros[i]));
+      //}
+      //
+      ////shaderc::PreprocessedSourceCompilationResult result = compiler.PreprocessGlsl(dataStream.str(), shadercType, aPath.c_str(), options);
+      ////
+      ////if (result.GetCompilationStatus() != shaderc_compilation_status_success) {
+      ////   ASSERT_RET_FALSE("Failed shader compilation");
+      ////}
+      ////std::string preProcessResult = { result.cbegin(), result.cend() };
+      //
+      ////result = compiler.CompileGlslToSpvAssembly(dataStream.str(), shadercType, aPath.c_str(), options);
+      ////
+      ////if (result.GetCompilationStatus() != shaderc_compilation_status_success) {
+      ////   ASSERT_RET_FALSE("Failed shader compilation");
+      ////}
+      ////std::string compileResult = { result.cbegin(), result.cend() };
+      //
+      //std::string fileData = file.Read();
+      //shaderc::SpvCompilationResult result2 = compiler.CompileGlslToSpv(fileData, shadercType, aPath.c_str(), options);
+      //if (result2.GetCompilationStatus() != shaderc_compilation_status_success) {
+      //   std::cout << result2.GetErrorMessage() << std::endl;
       //   ASSERT_RET_FALSE("Failed shader compilation");
       //}
-      //std::string preProcessResult = { result.cbegin(), result.cend() };
-
-      //result = compiler.CompileGlslToSpvAssembly(dataStream.str(), shadercType, aPath.c_str(), options);
+      //spvResult = { result2.cbegin(), result2.cend() };
       //
-      //if (result.GetCompilationStatus() != shaderc_compilation_status_success) {
-      //   ASSERT_RET_FALSE("Failed shader compilation");
-      //}
-      //std::string compileResult = { result.cbegin(), result.cend() };
-
-      std::string fileData = file.Read();
-      shaderc::SpvCompilationResult result2 = compiler.CompileGlslToSpv(fileData, shadercType, aPath.c_str(), options);
-      if (result2.GetCompilationStatus() != shaderc_compilation_status_success) {
-         std::cout << result2.GetErrorMessage() << std::endl;
-         ASSERT_RET_FALSE("Failed shader compilation");
-      }
-      spvResult = { result2.cbegin(), result2.cend() };
-
-      file.StoreCache(hashValue, (char*)&spvResult[0], static_cast<uint32_t>(spvResult.size() * 4));
-      file.Save();
+      //file.StoreCache(hashValue, (char*)&spvResult[0], static_cast<uint32_t>(spvResult.size() * 4));
+      //file.Save();
    } else {
-      LOG("Loading from cache\n");
+      LOG_ARGS("Loading from cache\n");
       spvResult.resize(file.GetHashFileSize(hashValue) / 4);
       file.GetHashFileData(hashValue, (char*)&spvResult[0]);
    }
@@ -116,7 +114,7 @@ bool Pipeline::AddShader(std::string aPath, bool aForceReload) {
    shader.mInfo.pName = "main";
 
    mShaders.push_back(shader);
-   LOG("Finished\n");
+   LOG_ARGS("Finished\n");
    return true;
 }
 

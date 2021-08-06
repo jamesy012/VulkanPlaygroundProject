@@ -30,7 +30,7 @@ private:
    void CreateDelayedSizeDependent();
    void DestroySizeDependent();
 
-   Window* mWindow;
+   Window* mWindow = nullptr;
    VulkanManager* mVkManager;
 
 private:

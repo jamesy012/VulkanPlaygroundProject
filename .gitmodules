@@ -16,3 +16,9 @@
 [submodule "VulkanPlaygroundProject/WorkDir/sponza"]
 	path = VulkanPlaygroundProject/WorkDir/sponza
 	url = https://github.com/jimmiebergmann/Sponza.git
+[submodule "Libraries/cef-project"]
+	path = Libraries/cef-project
+	url = https://bitbucket.org/chromiumembedded/cef-project.git
+[submodule "Libraries/glfw"]
+	path = Libraries/glfw
+	url = https://github.com/glfw/glfw.git

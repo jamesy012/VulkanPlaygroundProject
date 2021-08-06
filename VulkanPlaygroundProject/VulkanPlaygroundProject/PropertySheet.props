@@ -3,13 +3,17 @@
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <IncludePath>$(VULKAN_SDK)\Include;$(SolutionDir)..\Libraries\glfw-3.3.4.bin.WIN64\include;$(SolutionDir)..\Libraries\glm;$(SolutionDir)..\Libraries\stb;$(SolutionDir)..\Libraries\imgui;$(SolutionDir)..\Libraries\assimp\include;$(SolutionDir)..\Libraries\VulkanMemoryAllocator\include;$(IncludePath)</IncludePath>
+    <IncludePath>$(VULKAN_SDK)\Include;$(SolutionDir)..\Libraries\glfw\include;$(SolutionDir)..\Libraries\glm;$(SolutionDir)..\Libraries\stb;$(SolutionDir)..\Libraries\imgui;$(SolutionDir)..\Libraries\assimp\include;$(SolutionDir)..\Libraries\VulkanMemoryAllocator\include;$(SolutionDir)..\Libraries\cef-project\third_party\cef\cef_binary_91.1.23+g04c8d56+chromium-91.0.4472.164_windows64;$(IncludePath)</IncludePath>
+    <LibraryPath>$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <Link>
-      <AdditionalDependencies>vulkan-1.lib;glfw3.lib;dxguid.lib;dinput8.lib;assimp-vc142-mt.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(VULKAN_SDK)\Lib;$(SolutionDir)..\Libraries\glfw-3.3.4.bin.WIN64\lib-vc2019;$(SolutionDir)..\Libraries\assimp\lib\Release</AdditionalLibraryDirectories>
+      <AdditionalDependencies>vulkan-1.lib;dxguid.lib;dinput8.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(VULKAN_SDK)\Lib;$(SolutionDir)..\Libraries\glfw\build\src;$(SolutionDir)..\Libraries\assimp\lib;F:\proj\vulkan\VulkanPlaygroundProject\Libraries\cef-project\third_party\cef\cef_binary_91.1.23+g04c8d56+chromium-91.0.4472.164_windows64\;F:\proj\vulkan\VulkanPlaygroundProject\Libraries\cef-project\build\libcef_dll_wrapper</AdditionalLibraryDirectories>
     </Link>
+    <ClCompile>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+    </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup />
 </Project>

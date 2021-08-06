@@ -13,6 +13,10 @@
 
 #include "Terrain.h"
 
+#include "Browser.h"
+
+Browser* browser;
+
 ShadowDirectional mShadowCascade;
 
 uint32_t shadowOffsets[NUM_SHADOW_CASCADES];
@@ -44,12 +48,20 @@ struct ComputeTestStruct {
 };
 
 void Application::Start() {
+   //BrowserStart(mWindow->GetWindow());
+   //BrowserStart(nullptr);
    mWindow = new Window();
    mWindow->Create(800, 600, "vulkan");
+
+   //browser = new Browser(mWindow->GetWindow());
+   //browser->load("www.google.com");
+
    mVkManager = new VulkanManager();
    mVkManager->Create(mWindow);
    _CInput = new InputHandler();
    _CInput->Startup(mWindow->GetWindow());
+
+   BrowserStart(mWindow->GetWindow());
 
    ShadowManager::Create();
 
@@ -650,6 +662,9 @@ void Application::Draw() {
    vkCmdBlitImage(buffer, mScreenSpaceRT.GetColorImage(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, mVkManager->GetPresentImage(frameIndex), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VkFilter::VK_FILTER_LINEAR);
    SetImageLayout(buffer, mVkManager->GetPresentImage(frameIndex), VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
    _VulkanManager->DebugMarkerEnd(buffer);
+
+   //browser->draw();
+   BrowserUpdate();
 
    vkEndCommandBuffer(buffer);
 

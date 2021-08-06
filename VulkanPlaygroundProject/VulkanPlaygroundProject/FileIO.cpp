@@ -5,6 +5,18 @@
 #include <chrono>
 
 FileIO::FileIO(std::string aPath) {
+   //const std::type_info& fileio = typeid(FileIO);
+   //const std::type_info& thisPtrId = typeid(this);
+   //const std::type_info& thisId = typeid(*this);
+   //const std::type_info& path = typeid(aPath);
+   //const std::type_info& string = typeid(std::string);
+   //auto test = [](const std::type_info& info) {LOG_SCOPED_INDENT(); LOG_ARGS("Name: %s, hash: %zu\n", info.name(), info.hash_code())};
+   //test(fileio);
+   //test(thisPtrId);
+   //test(thisId);
+   //test(path);
+   //test(string);
+
    mFilePath = aPath;
    size_t fileExtIndex = aPath.find_last_of('.');
    if (fileExtIndex != std::string::npos) {

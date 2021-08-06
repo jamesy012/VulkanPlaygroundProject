@@ -15,7 +15,7 @@ static inline glm::mat4 mat4_cast(const aiMatrix3x3& m) { return glm::transpose(
 
 bool Model::LoadModel(std::string aPath, VkDescriptorSetLayout aMaterialDescriptorSet, std::vector<VkWriteDescriptorSet> aWriteSets) {
    LOG_SCOPED_NAME("Model Loading");
-   LOG("%s\n", aPath.c_str());
+   LOG_ARGS("%s\n", aPath.c_str());
    Assimp::Importer importer;
    const aiScene* scene = importer.ReadFile(aPath,
                                             aiProcess_CalcTangentSpace |
@@ -37,11 +37,11 @@ bool Model::LoadModel(std::string aPath, VkDescriptorSetLayout aMaterialDescript
       index = mName.find_last_of('.');
       mName = mName.substr(0, index);
    }
-   LOG("Starting Mesh\n");
+   LOG_ARGS("Starting Mesh\n");
    ProcessMeshs(scene);
-   LOG("Starting Materials\n");
+   LOG_ARGS("Starting Materials\n");
    ProcessMaterials(scene);
-   LOG("Starting Images\n");
+   LOG_ARGS("Starting Images\n");
    LoadImages();
 
    {
@@ -69,7 +69,7 @@ bool Model::LoadModel(std::string aPath, VkDescriptorSetLayout aMaterialDescript
 
    }
 
-   LOG("Done\n");
+   LOG_ARGS("Done\n");
    return true;
 }
 

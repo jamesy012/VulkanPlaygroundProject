@@ -257,7 +257,7 @@ namespace Logger {
 
 #define LOG_GET_NAME ((const std::string)Logger::mLogCat)
 
-#define LOG(...) Logger::LogMessage(__VA_ARGS__);
+#define LOG_ARGS(...) Logger::LogMessage(__VA_ARGS__);
 //#define LOG_LIT(Message, ...) Logger::LogMessage("%s\n", #Message, __VA_ARGS__);
 #define LOG_WITH_LINE(Message) Logger::LogMessage("(%s #%i) %s", __FUNCTION__, __LINE__, Message);
 

@@ -148,7 +148,7 @@ public:
 #if defined(_DEBUG)
          uint32_t frame = _VulkanManager->GetCurrentFrameCounter();
          if (frame == mLastOverflowFrame) {
-            LOG("RingBuffer being used too much per frame\n");
+            LOG_ARGS("RingBuffer being used too much per frame\n");
          }
          mLastOverflowFrame = frame;
 #endif
