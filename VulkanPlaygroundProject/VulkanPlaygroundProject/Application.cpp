@@ -15,7 +15,7 @@
 
 #include "Browser.h"
 
-Browser* browser;
+//Browser* browser;
 
 ShadowDirectional mShadowCascade;
 
@@ -673,6 +673,9 @@ void Application::Draw() {
 
 
 void Application::Destroy() {
+
+   BrowserDestroy();
+
    _CInput->Shutdown();
    delete _CInput;
    mVkManager->WaitDevice();

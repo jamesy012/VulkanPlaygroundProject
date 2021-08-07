@@ -1,151 +1,11 @@
 #include "stdafx.h"
 #include "Browser.h"
 
-#include <include/cef_app.h>
-#include <include/cef_browser.h>
-//#include <include/cef_sandbox_win.h>
-
+#include <GLFW/glfw3.h>
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include <GLFW/glfw3native.h>
 
-void BrowserRender::init(void) {
-   initialized = true;
-}
-
-void BrowserRender::draw(void) {
-}
-
-void BrowserRender::reshape(int, int) {
-}
-
-void BrowserRender::OnPaint(CefRefPtr<CefBrowser> browser, PaintElementType type, const RectList& dirtyRects, const void* buffer, int width, int height) {
-
-}
-
-void BrowserRender::GetViewRect(CefRefPtr<CefBrowser> browser, CefRect& rect) {
-}
-
-void initCefgui(int argc, char** argv) {
-
-   void* sandbox_info = nullptr;
-   //// Manage the life span of the sandbox information object. This is necessary
-   //// for sandbox support on Windows. See cef_sandbox_win.h for complete details.
-   //CefScopedSandboxInfo scoped_sandbox;
-   //sandbox_info = scoped_sandbox.sandbox_info();
-
-   HINSTANCE hInstance = GetModuleHandle(NULL);
-   CefMainArgs args(hInstance);
-   int result = CefExecuteProcess(args, nullptr, sandbox_info);
-   if (result >= 0) // child proccess has endend, so exit.
-   {
-      return;
-   }
-   if (result == -1) {
-      // we are here in the father proccess.
-   }
-
-   CefSettings settings;
-   settings.windowless_rendering_enabled = true;
-   settings.no_sandbox = true;
-   settings.multi_threaded_message_loop = false;
-   settings.persist_session_cookies = false;
-   CefString(&settings.user_agent).FromASCII("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/38.0.2125.104 Safari/537.36");
-   CefString(&settings.cache_path).FromASCII("");
-
-   result = CefInitialize(args, settings, nullptr, sandbox_info);
-   if (!result) {
-      // handle error
-      return;
-   }
-}
-
-Browser::Browser(GLFWwindow* a_InputWindow) {
-   initCefgui(0, nullptr);
-
-   CefWindowInfo windowInfo;
-   CefBrowserSettings settings;
-
-   HWND hwnd = glfwGetWin32Window(a_InputWindow);
-   windowInfo.SetAsWindowless(hwnd);
-
-   windowInfo.windowless_rendering_enabled = true;
-   CefString(&windowInfo.window_name).FromASCII("windowless");
-
-   renderHandler = new BrowserRender();
-
-   client = new BrowserClient(renderHandler);
-   browser = CefBrowserHost::CreateBrowserSync(windowInfo, client.get(), "http://deanm.github.io/pre3d/monster.html", settings, nullptr, nullptr);
-
-   reshape(1000, 1000);
-   CefRect rect;
-   renderHandler->GetViewRect(browser, rect);
-
-}
-
-void Browser::load(const char* url) {
-   if (!renderHandler->initialized) {
-      renderHandler->init();
-   }
-   //browser->GetMainFrame()->LoadURL("http://www.google.com");
-   browser->GetMainFrame()->LoadURL("file:///D:/coding/websites/drawGame/index.html");
-}
-
-void Browser::draw(void) {
-   CefDoMessageLoopWork();
-   renderHandler->draw();
-}
-
-void Browser::reshape(int w, int h) {
-   renderHandler->reshape(w, h);
-   browser->GetHost()->WasResized();
-}
-
-void Browser::mouseMove(int x, int y) {
-   mouseX = x;
-   mouseY = y;
-
-   CefMouseEvent event;
-   event.x = x;
-   event.y = y;
-
-   browser->GetHost()->SendMouseMoveEvent(event, false);
-}
-
-void Browser::mouseClick(int btn, int state) {
-   CefMouseEvent event;
-   event.x = mouseX;
-   event.y = mouseY;
-
-   bool mouseUp = state == 0;
-   CefBrowserHost::MouseButtonType btnType = MBT_LEFT;
-   browser->GetHost()->SendMouseClickEvent(event, btnType, mouseUp, 1);
-}
-
-void Browser::keyPress(int key) {
-   CefKeyEvent event;
-   event.native_key_code = key;
-   event.type = KEYEVENT_KEYDOWN;
-
-   browser->GetHost()->SendKeyEvent(event);
-}
-
-void Browser::executeJS(const char* command) {
-   CefRefPtr<CefFrame> frame = browser->GetMainFrame();
-   frame->ExecuteJavaScript(command, frame->GetURL(), 0);
-
-   // TODO limit frequency of texture updating
-   //CefRect rect;
-   //renderHandler->GetViewRect(browser, rect);
-   browser->GetHost()->Invalidate(PET_VIEW);
-}
-
-BrowserClient::BrowserClient(BrowserRender* renderHandler) {
-   handler = renderHandler;
-}
-
-CefRefPtr<CefRenderHandler> BrowserClient::GetRenderHandler() {
-   return handler;
-}
+#include <include/cef_app.h>
 
 //~~~~~~~~~~~~~~~~~~~~
 
@@ -531,6 +391,10 @@ bool SimpleHandler::IsChromeRuntimeEnabled() {
 
 //~~~~~~~~~~~~~~~~~~~~
 
+static SimpleApp* app;
+
+//~~~~~~~~~~~~~~~~~~~~
+
 int BrowserStart(GLFWwindow* aWindow, bool quickTest) {
    CefEnableHighDPISupport();
 
@@ -551,6 +415,7 @@ int BrowserStart(GLFWwindow* aWindow, bool quickTest) {
       // command args and resources.
       if (result >= 0) // child proccess has endend, so exit.
       {
+         CefShutdown();
          return result;
       }
       if (result == -1) {
@@ -559,6 +424,7 @@ int BrowserStart(GLFWwindow* aWindow, bool quickTest) {
    }
 
    if (quickTest) {
+      CefShutdown();
       return -1;
    }
 
@@ -640,4 +506,12 @@ int BrowserStart(GLFWwindow* aWindow, bool quickTest) {
 
    return 1;
 
+}
+
+void BrowserUpdate() {
+   CefDoMessageLoopWork();
+}
+
+void BrowserDestroy() {
+   CefShutdown();
 }
