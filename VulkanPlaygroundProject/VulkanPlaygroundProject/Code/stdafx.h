@@ -262,14 +262,14 @@ namespace Logger {
 #define LOG_WITH_LINE(Message) Logger::LogMessage("(%s #%i) %s", __FUNCTION__, __LINE__, Message);
 
 //~~~~~~~ COMMON OBJECTS
-#include "FileIO.h"
+#include "Engine/FileIO.h"
 
 //~~~~~~~ VULKAN OBJECTS
-#include "VulkanManager.h"
+#include "Engine/VulkanManager.h"
 
 extern class VulkanManager* _VulkanManager;
 
-#include "Profiler.h"
+#include "Engine/Profiler.h"
 
 template <class T>
 static void DebugSetObjName(VkObjectType aType, T aObject, std::string aName) {

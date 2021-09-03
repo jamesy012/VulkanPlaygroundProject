@@ -229,26 +229,26 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="Application.cpp" />
-    <ClCompile Include="Buffer.cpp" />
-    <ClCompile Include="Camera.cpp" />
-    <ClCompile Include="FileIO.cpp" />
-    <ClCompile Include="FlyCamera.cpp" />
-    <ClCompile Include="Framebuffer.cpp" />
-    <ClCompile Include="Image.cpp" />
-    <ClCompile Include="InputHandler.cpp" />
-    <ClCompile Include="Model.cpp" />
-    <ClCompile Include="Pipeline.cpp" />
-    <ClCompile Include="RenderPass.cpp" />
-    <ClCompile Include="RenderTarget.cpp" />
-    <ClCompile Include="Shadow.cpp" />
-    <ClCompile Include="stdafx.cpp" />
-    <ClCompile Include="Terrain.cpp" />
-    <ClCompile Include="Transform.cpp" />
-    <ClCompile Include="Vertex.cpp" />
-    <ClCompile Include="VulkanManager.cpp" />
-    <ClCompile Include="VulkanPlaygroundProject.cpp" />
-    <ClCompile Include="Window.cpp" />
+    <ClCompile Include="Code\Application.cpp" />
+    <ClCompile Include="Code\Engine\Buffer.cpp" />
+    <ClCompile Include="Code\Engine\Camera.cpp" />
+    <ClCompile Include="Code\Engine\FileIO.cpp" />
+    <ClCompile Include="Code\Engine\FlyCamera.cpp" />
+    <ClCompile Include="Code\Engine\Framebuffer.cpp" />
+    <ClCompile Include="Code\Engine\Image.cpp" />
+    <ClCompile Include="Code\Engine\InputHandler.cpp" />
+    <ClCompile Include="Code\Engine\Model.cpp" />
+    <ClCompile Include="Code\Engine\Pipeline.cpp" />
+    <ClCompile Include="Code\Engine\RenderPass.cpp" />
+    <ClCompile Include="Code\Engine\RenderTarget.cpp" />
+    <ClCompile Include="Code\Engine\Shadow.cpp" />
+    <ClCompile Include="Code\stdafx.cpp" />
+    <ClCompile Include="Code\Engine\Terrain.cpp" />
+    <ClCompile Include="Code\Engine\Transform.cpp" />
+    <ClCompile Include="Code\Engine\Vertex.cpp" />
+    <ClCompile Include="Code\Engine\VulkanManager.cpp" />
+    <ClCompile Include="Code\VulkanPlaygroundProject.cpp" />
+    <ClCompile Include="Code\Engine\Window.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="..\..\Libraries\glm\util\glm.natvis" />
@@ -256,27 +256,27 @@
     <Natvis Include="..\..\Libraries\VulkanMemoryAllocator\src\vk_mem_alloc.natvis" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Application.h" />
-    <ClInclude Include="Buffer.h" />
-    <ClInclude Include="Camera.h" />
-    <ClInclude Include="FileIO.h" />
-    <ClInclude Include="FlyCamera.h" />
-    <ClInclude Include="Framebuffer.h" />
-    <ClInclude Include="Image.h" />
-    <ClInclude Include="InputHandler.h" />
-    <ClInclude Include="InputKeys.h" />
-    <ClInclude Include="Model.h" />
-    <ClInclude Include="Pipeline.h" />
-    <ClInclude Include="Profiler.h" />
-    <ClInclude Include="RenderPass.h" />
-    <ClInclude Include="RenderTarget.h" />
-    <ClInclude Include="Shadow.h" />
-    <ClInclude Include="stdafx.h" />
-    <ClInclude Include="Terrain.h" />
-    <ClInclude Include="Transform.h" />
-    <ClInclude Include="Vertex.h" />
-    <ClInclude Include="VulkanManager.h" />
-    <ClInclude Include="Window.h" />
+    <ClInclude Include="Code\Application.h" />
+    <ClInclude Include="Code\Engine\Buffer.h" />
+    <ClInclude Include="Code\Engine\Camera.h" />
+    <ClInclude Include="Code\Engine\FileIO.h" />
+    <ClInclude Include="Code\Engine\FlyCamera.h" />
+    <ClInclude Include="Code\Engine\Framebuffer.h" />
+    <ClInclude Include="Code\Engine\Image.h" />
+    <ClInclude Include="Code\Engine\InputHandler.h" />
+    <ClInclude Include="Code\Engine\InputKeys.h" />
+    <ClInclude Include="Code\Engine\Model.h" />
+    <ClInclude Include="Code\Engine\Pipeline.h" />
+    <ClInclude Include="Code\Engine\Profiler.h" />
+    <ClInclude Include="Code\Engine\RenderPass.h" />
+    <ClInclude Include="Code\Engine\RenderTarget.h" />
+    <ClInclude Include="Code\Engine\Shadow.h" />
+    <ClInclude Include="Code\stdafx.h" />
+    <ClInclude Include="Code\Engine\Terrain.h" />
+    <ClInclude Include="Code\Engine\Transform.h" />
+    <ClInclude Include="Code\Engine\Vertex.h" />
+    <ClInclude Include="Code\Engine\VulkanManager.h" />
+    <ClInclude Include="Code\Engine\Window.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

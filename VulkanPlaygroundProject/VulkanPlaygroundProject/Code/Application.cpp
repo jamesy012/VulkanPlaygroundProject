@@ -3,15 +3,15 @@
 
 #include <imgui.h>
 
-#include "VulkanManager.h"
-#include "Window.h"
-#include "InputHandler.h"
+#include "Engine/VulkanManager.h"
+#include "Engine/Window.h"
+#include "Engine/InputHandler.h"
 
-#include "Vertex.h"
+#include "Engine/Vertex.h"
 
-#include "Shadow.h"
+#include "Engine/Shadow.h"
 
-#include "Terrain.h"
+#include "Engine/Terrain.h"
 
 ShadowDirectional mShadowCascade;
 

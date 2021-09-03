@@ -3,7 +3,8 @@
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <IncludePath>$(VULKAN_SDK)\Include;$(SolutionDir)..\Libraries\glfw-3.3.4.bin.WIN64\include;$(SolutionDir)..\Libraries\glm;$(SolutionDir)..\Libraries\stb;$(SolutionDir)..\Libraries\imgui;$(SolutionDir)..\Libraries\assimp\include;$(SolutionDir)..\Libraries\VulkanMemoryAllocator\include;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir)Code;$(IncludePath)</IncludePath>
+    <ExternalIncludePath>$(VULKAN_SDK)\Include;$(SolutionDir)..\Libraries\glfw-3.3.4.bin.WIN64\include;$(SolutionDir)..\Libraries\glm;$(SolutionDir)..\Libraries\stb;$(SolutionDir)..\Libraries\imgui;$(SolutionDir)..\Libraries\assimp\include;$(SolutionDir)..\Libraries\VulkanMemoryAllocator\include;$(ExternalIncludePath)</ExternalIncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <Link>
