@@ -249,6 +249,7 @@
     <ClCompile Include="Code\Engine\VulkanManager.cpp" />
     <ClCompile Include="Code\VulkanPlaygroundProject.cpp" />
     <ClCompile Include="Code\Engine\Window.cpp" />
+    <ClCompile Include="Code\Engine\RenderManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="..\..\Libraries\glm\util\glm.natvis" />
@@ -277,6 +278,7 @@
     <ClInclude Include="Code\Engine\Vertex.h" />
     <ClInclude Include="Code\Engine\VulkanManager.h" />
     <ClInclude Include="Code\Engine\Window.h" />
+    <ClInclude Include="Code\Engine\RenderManager.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

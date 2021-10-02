@@ -9,17 +9,21 @@ public:
    void UnMap();
 
    void SetName(std::string aName) {
+      ASSERT_VULKAN_VALUE( mBuffer );
       DebugSetObjName(VK_OBJECT_TYPE_BUFFER, mBuffer, aName);
    }
 
    const VkBuffer GetBuffer() const {
+      ASSERT_VULKAN_VALUE( mBuffer );
       return mBuffer;
    }
    const VkDeviceSize GetSize() const {
+      ASSERT_IF( mSize != 0);
       return mSize;
    }
 
    const VkDeviceSize GetAllocatedSize() const {
+      ASSERT_IF( mAllocatedSize != 0 );
       return mAllocatedSize;
    }
 
@@ -59,7 +63,7 @@ class BufferUniform : protected Buffer {
 public:
    bool Create(uint32_t aCount, VkDeviceSize aStructSize) {
       mStructSize = aStructSize;
-      mAllignedStructSize = RoundUp((int)aStructSize, _VulkanManager->GetUniformBufferAllignment());
+      mAllignedStructSize = RoundUp((int)aStructSize, VulkanManager::Get()->GetUniformBufferAllignment());
       mCount = aCount;
       bool res = Create(aCount * (VkDeviceSize)mAllignedStructSize);
       if (!res) {
@@ -77,16 +81,20 @@ public:
    }
 
    void Destroy() {
-      //vkFreeDescriptorSets(_VulkanManager->GetDevice(), mDescriptorPool, 1, &mDescriptorSet); //needs VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT and needs to know the pool too
+      //vkFreeDescriptorSets(VulkanManager::Get()->GetDevice(), mDescriptorPool, 1, &mDescriptorSet); //needs VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT and needs to know the pool too
       Buffer::Destroy();
    }
 
    void AddToDescriptorSet(VkDescriptorSet aDescriptorSet, uint32_t aBinding, bool aDynamic = true) {
+      if ( aDescriptorSet == VK_NULL_HANDLE )
+      {
+         return;
+      }
       VkDescriptorBufferInfo bufferInfo{};
       bufferInfo.buffer = GetBuffer();
       bufferInfo.range = mStructSize;
       VkWriteDescriptorSet sceneSet = CreateWriteDescriptorSet(GetDescriptorType(aDynamic), aDescriptorSet, &bufferInfo, aBinding);
-      vkUpdateDescriptorSets(_VulkanManager->GetDevice(), 1, &sceneSet, 0, nullptr);
+      vkUpdateDescriptorSets(VulkanManager::Get()->GetDevice(), 1, &sceneSet, 0, nullptr);
    }
 
    void SetName(std::string aName) {
@@ -95,6 +103,14 @@ public:
 
    const VkDeviceSize GetStructSize() const {
       return mStructSize;
+   } 
+   
+   const VkDeviceSize GetSize() const {
+      return Buffer::GetSize();
+   } 
+   
+   const uint32_t GetCount() const {
+      return mCount;
    }
 
    void Map(void** aData) {
@@ -146,7 +162,7 @@ public:
       if (mOffsetCount >= mCount) {
          mOffsetCount = 0;
 #if defined(_DEBUG)
-         uint32_t frame = _VulkanManager->GetCurrentFrameCounter();
+         uint32_t frame = VulkanManager::Get()->GetCurrentFrameCounter();
          if (frame == mLastOverflowFrame) {
             LOG("RingBuffer being used too much per frame\n");
          }
@@ -171,9 +187,15 @@ public:
    bool Create(uint32_t aCount, VkDeviceSize aStructSize, VkDescriptorSet aDescriptorSet, uint32_t aBinding, bool aDynamic = true) {
       return BufferUniform::Create(aCount, aStructSize, aDescriptorSet, aBinding, aDynamic);
    }
+
+   const VkBuffer GetBuffer() const
+   {
+      return Buffer::GetBuffer();
+   }
+
 private:
    bool Create(VkDeviceSize aSize) override {
-      return Buffer::Create(aSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
+      return Buffer::Create(aSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
    }
    VkDescriptorType GetDescriptorType(bool aDynamic) override {
       if (aDynamic) {

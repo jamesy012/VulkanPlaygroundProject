@@ -36,37 +36,23 @@ private:
 private:
    BufferVertex mScreenQuad;
    BufferVertex mBillboardQuad;
-   Pipeline mPipelineTest;
    Pipeline mPipeline;
-   Pipeline mPipelineShadow;
-   Pipeline mComputeTest;
    Model mModelTest;
 
    VkDescriptorSetLayout mSceneDescriptorSet;
    VkDescriptorSetLayout mObjectDescriptorSet;
    VkDescriptorSetLayout mMaterialDescriptorSet;
-   VkDescriptorSetLayout mComputeTestDescriptorSet;
    VkDescriptorSet mSceneSet;
-   VkDescriptorSet mSceneShadowSet;
    VkDescriptorSet mObjectSet;
-   VkDescriptorSet mMaterialSet;
-   VkDescriptorSet mComputeTestSet;
    BufferRingUniform mSceneBuffer;
-   BufferRingUniform mSceneShadowBuffer;
    BufferRingUniform mObjectBuffer;
-   BufferStorageUniform mComputeTestInputBuffer;
-   BufferStorageUniform mComputeTestOutputBuffer;
 
    RenderPass mRenderPass;
    RenderPass mRenderPassNoDepth;
    RenderTarget mRenderTarget;
-   Image mTestImg;
 
    SceneUBO mSceneUbo{};
-   SceneSimpleUBO mSceneShadowUbo{};
 
    FlyCamera mFlyCamera;
-
-   glm::vec3 mLightPos;
 };
 

@@ -4,10 +4,19 @@
 #include "Framebuffer.h"
 
 class Window;
-class RenderPass;
+class RenderTarget;
+
 
 class VulkanManager {
+   //Singleton
+private:
+   static VulkanManager* _VulkanManager;
 public:
+   static inline VulkanManager* Get() { return _VulkanManager; };
+
+   //Implementation
+public:
+
    void Create(Window* aWindow);
    void Destroy();
    void WaitDevice();
@@ -76,6 +85,8 @@ public:
    const uint32_t GetCurrentFrameCounter() const {
       return mCurrentFrameCounter;
    }
+
+   const void BlitRenderTargetToBackBuffer(VkCommandBuffer aCommandBuffer, RenderTarget* aRenderTarget) const;
 
    std::function<void(void)> mSizeDependentCreateCallback;
    std::function<void(void)> mSizeDependentDestroyCallback;

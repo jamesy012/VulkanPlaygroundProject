@@ -89,6 +89,9 @@ public:
    glm::vec3 GetScale() {
       return mBase.mTransform.GetScale();
    }
+   glm::mat4 GetMatrix() {
+      return mBase.GetMatrixWithParents();
+   }
 
    void SetRenderMode(unsigned int aMode) {
       mRenderModes = aMode;
@@ -148,4 +151,6 @@ private:
 
    BufferVertex mVertexBuffer;
    BufferIndex mIndexBuffer;
+
+   friend class RenderManager;
 };

@@ -57,7 +57,7 @@ bool Image::LoadImage(std::string aPath) {
       };
 
       VkCommandBuffer commandBuffer;
-      _VulkanManager->OneTimeCommandBufferStart(commandBuffer);
+      VulkanManager::Get()->OneTimeCommandBufferStart(commandBuffer);
       SetImageLayout(commandBuffer, mImage, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
       vkCmdCopyBufferToImage(
          commandBuffer,
@@ -68,7 +68,7 @@ bool Image::LoadImage(std::string aPath) {
          &region
       );
       SetImageLayout(commandBuffer, mImage, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-      _VulkanManager->OneTimeCommandBufferEnd(commandBuffer);
+      VulkanManager::Get()->OneTimeCommandBufferEnd(commandBuffer);
    }
 
    staging.Destroy();
@@ -134,7 +134,7 @@ bool Image::LoadImageForArray(std::string aPath, uint32_t aArrayIndex) {
       };
 
       VkCommandBuffer commandBuffer;
-      _VulkanManager->OneTimeCommandBufferStart(commandBuffer);
+      VulkanManager::Get()->OneTimeCommandBufferStart(commandBuffer);
       SetImageLayout(commandBuffer, mImage, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, aArrayIndex);
       vkCmdCopyBufferToImage(
          commandBuffer,
@@ -145,8 +145,8 @@ bool Image::LoadImageForArray(std::string aPath, uint32_t aArrayIndex) {
          &region
       );
       SetImageLayout(commandBuffer, mImage, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, aArrayIndex);
-      _VulkanManager->OneTimeCommandBufferEnd(commandBuffer);
-      _VulkanManager->WaitDevice();
+      VulkanManager::Get()->OneTimeCommandBufferEnd(commandBuffer);
+      VulkanManager::Get()->WaitDevice();
    }
 
    staging.Destroy();
@@ -181,12 +181,12 @@ void Image::SetName(std::string aName) {
 
 void Image::Destroy() {
    for (uint32_t i = 0; i < mNumArrays && mNumArrays != 1; i++) {
-      vkDestroyImageView(_VulkanManager->GetDevice(), mArrayImageViews[i], GetAllocationCallback());
+      vkDestroyImageView(VulkanManager::Get()->GetDevice(), mArrayImageViews[i], GetAllocationCallback());
    }
    mArrayImageViews.clear();
-   vkDestroyImageView(_VulkanManager->GetDevice(), mImageView, GetAllocationCallback());
+   vkDestroyImageView(VulkanManager::Get()->GetDevice(), mImageView, GetAllocationCallback());
 
-   vmaDestroyImage(_VulkanManager->GetAllocator(), mImage, mAllocation);
+   vmaDestroyImage(VulkanManager::Get()->GetAllocator(), mImage, mAllocation);
    mImage = VK_NULL_HANDLE;
 }
 
@@ -209,7 +209,7 @@ bool Image::CreateImage(VkFormat aFormat, VkImageUsageFlags aUsage) {
    allocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 
    VmaAllocationInfo info;
-   VkResult result = vmaCreateImage(_VulkanManager->GetAllocator(), &imageInfo, &allocInfo, &mImage, &mAllocation, &info);
+   VkResult result = vmaCreateImage(VulkanManager::Get()->GetAllocator(), &imageInfo, &allocInfo, &mImage, &mAllocation, &info);
    ASSERT_VULKAN_SUCCESS_RET_FALSE(result);
 
    mDataSize = mSize.width * mSize.height * BITS_PER_PIXEL;
@@ -233,14 +233,14 @@ bool Image::CreateImageViews(VkFormat aFormat, VkImageAspectFlags aAspect) {
    imageViewInfo.subresourceRange.levelCount = mNumMips;
    imageViewInfo.image = mImage;
 
-   VkResult result = vkCreateImageView(_VulkanManager->GetDevice(), &imageViewInfo, GetAllocationCallback(), &mImageView);
+   VkResult result = vkCreateImageView(VulkanManager::Get()->GetDevice(), &imageViewInfo, GetAllocationCallback(), &mImageView);
 
    mArrayImageViews.resize(mNumArrays);
    if (mNumArrays != 1) {
       imageViewInfo.subresourceRange.layerCount = 1;
       for (uint32_t i = 0; i < mNumArrays; i++) {
          imageViewInfo.subresourceRange.baseArrayLayer = i;
-         VkResult result = vkCreateImageView(_VulkanManager->GetDevice(), &imageViewInfo, GetAllocationCallback(), &mArrayImageViews[i]);
+         VkResult result = vkCreateImageView(VulkanManager::Get()->GetDevice(), &imageViewInfo, GetAllocationCallback(), &mArrayImageViews[i]);
          ASSERT_VULKAN_SUCCESS_RET_FALSE(result);
       }
    } else {

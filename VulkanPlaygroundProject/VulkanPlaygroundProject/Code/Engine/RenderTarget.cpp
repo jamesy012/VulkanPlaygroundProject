@@ -23,7 +23,7 @@ bool RenderTarget::Create(VkDevice aDevice, RenderPass* aRenderPass, VkExtent2D 
    allocInfo.usage = VmaMemoryUsage::VMA_MEMORY_USAGE_GPU_ONLY;
 
    VmaAllocationInfo allocationInfo;
-   result = vmaCreateImage(_VulkanManager->GetAllocator(), &info, &allocInfo, &mColor, &mColorAllocation,&allocationInfo);
+   result = vmaCreateImage(VulkanManager::Get()->GetAllocator(), &info, &allocInfo, &mColor, &mColorAllocation,&allocationInfo);
    ASSERT_VULKAN_SUCCESS_RET_FALSE(result);
 
    VkImageViewCreateInfo viewInfo{};
@@ -41,7 +41,7 @@ bool RenderTarget::Create(VkDevice aDevice, RenderPass* aRenderPass, VkExtent2D 
       info.format = aRenderPass->GetDepthFormat();
       info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
       VmaAllocationInfo allocationInfo;
-      result = vmaCreateImage(_VulkanManager->GetAllocator(), &info, &allocInfo, &mDepth, &mDepthAllocation, &allocationInfo);
+      result = vmaCreateImage(VulkanManager::Get()->GetAllocator(), &info, &allocInfo, &mDepth, &mDepthAllocation, &allocationInfo);
       ASSERT_VULKAN_SUCCESS_RET_FALSE(result);
 
       VkImageViewCreateInfo viewInfo{};
@@ -71,16 +71,16 @@ bool RenderTarget::Create(VkDevice aDevice, RenderPass* aRenderPass, VkExtent2D 
 }
 
 void RenderTarget::Destroy() {
-   const VkDevice device = _VulkanManager->GetDevice();
+   const VkDevice device = VulkanManager::Get()->GetDevice();
    mFramebuffer.Destroy(device);
    vkDestroyImageView(device, mColorView, GetAllocationCallback());
-   vmaDestroyImage(_VulkanManager->GetAllocator(), mColor, mColorAllocation);
+   vmaDestroyImage(VulkanManager::Get()->GetAllocator(), mColor, mColorAllocation);
    mColorView = VK_NULL_HANDLE;
    mColor = VK_NULL_HANDLE;
    mColorAllocation = nullptr;
    if (mDepth != VK_NULL_HANDLE) {
       vkDestroyImageView(device, mDepthView, GetAllocationCallback());
-      vmaDestroyImage(_VulkanManager->GetAllocator(), mDepth, mDepthAllocation);
+      vmaDestroyImage(VulkanManager::Get()->GetAllocator(), mDepth, mDepthAllocation);
       mDepth = VK_NULL_HANDLE;
       mDepthView = VK_NULL_HANDLE;
       mDepthAllocation = nullptr;

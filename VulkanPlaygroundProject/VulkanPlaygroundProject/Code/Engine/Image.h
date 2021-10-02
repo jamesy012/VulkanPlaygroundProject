@@ -41,24 +41,24 @@ private:
    bool mHasData = false;
 };
 
-static VkWriteDescriptorSet GetWriteDescriptorSet(VkDescriptorImageInfo& aImageInfo, const VkImageLayout aImageLayout, const VkImageView aImageView, VkDescriptorSet aDescriptorSet, VkSampler aSampler, uint32_t aBinding) {
-   aImageInfo = {};
-   aImageInfo.imageView = aImageView;
-   aImageInfo.imageLayout = aImageLayout;
-   aImageInfo.sampler = aSampler;
-   return CreateWriteDescriptorSet(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, aDescriptorSet, &aImageInfo, aBinding);
-}
-static VkWriteDescriptorSet GetWriteDescriptorSet(VkDescriptorImageInfo& aImageInfo, const Image* aImage, VkDescriptorSet aDescriptorSet, VkSampler aSampler, uint32_t aBinding) {
-   return GetWriteDescriptorSet(aImageInfo, aImage->GetImageLayout(), aImage->GetImageView(), aDescriptorSet, aSampler, aBinding);
-}
-
-static void UpdateImageDescriptorSet(const VkImageLayout aImageLayout, const VkImageView aImageView, VkDescriptorSet aDescriptorSet, VkSampler aSampler, uint32_t aBinding) {
-   VkDescriptorImageInfo imgInfo;
-   VkWriteDescriptorSet writeSet = GetWriteDescriptorSet(imgInfo, aImageLayout, aImageView, aDescriptorSet, aSampler, aBinding);
-   vkUpdateDescriptorSets(_VulkanManager->GetDevice(), 1, &writeSet, 0, nullptr);
-}
-
-static void UpdateImageDescriptorSet(const Image* aImage, VkDescriptorSet aDescriptorSet, VkSampler aSampler, uint32_t aBinding) {
-   UpdateImageDescriptorSet(aImage->GetImageLayout(), aImage->GetImageView(), aDescriptorSet, aSampler, aBinding);
-}
+//static VkWriteDescriptorSet GetWriteDescriptorSet(VkDescriptorImageInfo& aImageInfo, const VkImageLayout aImageLayout, const VkImageView aImageView, VkDescriptorSet aDescriptorSet, VkSampler aSampler, uint32_t aBinding) {
+//   aImageInfo = {};
+//   aImageInfo.imageView = aImageView;
+//   aImageInfo.imageLayout = aImageLayout;
+//   aImageInfo.sampler = aSampler;
+//   return CreateWriteDescriptorSet(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, aDescriptorSet, &aImageInfo, aBinding);
+//}
+//static VkWriteDescriptorSet GetWriteDescriptorSet(VkDescriptorImageInfo& aImageInfo, const Image* aImage, VkDescriptorSet aDescriptorSet, VkSampler aSampler, uint32_t aBinding) {
+//   return GetWriteDescriptorSet(aImageInfo, aImage->GetImageLayout(), aImage->GetImageView(), aDescriptorSet, aSampler, aBinding);
+//}
+//
+//static void UpdateImageDescriptorSet(const VkImageLayout aImageLayout, const VkImageView aImageView, VkDescriptorSet aDescriptorSet, VkSampler aSampler, uint32_t aBinding) {
+//   VkDescriptorImageInfo imgInfo;
+//   VkWriteDescriptorSet writeSet = GetWriteDescriptorSet(imgInfo, aImageLayout, aImageView, aDescriptorSet, aSampler, aBinding);
+//   vkUpdateDescriptorSets(VulkanManager::Get()->GetDevice(), 1, &writeSet, 0, nullptr);
+//}
+//
+//static void UpdateImageDescriptorSet(const Image* aImage, VkDescriptorSet aDescriptorSet, VkSampler aSampler, uint32_t aBinding) {
+//   UpdateImageDescriptorSet(aImage->GetImageLayout(), aImage->GetImageView(), aDescriptorSet, aSampler, aBinding);
+//}
 

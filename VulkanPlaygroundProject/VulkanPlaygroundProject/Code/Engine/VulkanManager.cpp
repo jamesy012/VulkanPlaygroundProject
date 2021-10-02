@@ -15,7 +15,12 @@
 
 #include "Window.h"
 
-VulkanManager* _VulkanManager;
+#include "RenderTarget.h"
+#include "RenderManager.h"
+
+VulkanManager* VulkanManager::_VulkanManager = nullptr;
+
+RenderManager* gRenderManager = nullptr;
 
 #define VULKAN_API_VERSION VK_HEADER_VERSION_COMPLETE
 
@@ -46,7 +51,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
    const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
    void* pUserData) {
 
-   std::cerr << "VULKAN: " << pCallbackData->pMessageIdName << ":\n\t" << pCallbackData->pMessage << std::endl;
+   LOG("VULKAN %s: \n\t %s\n", pCallbackData->pMessageIdName, pCallbackData->pMessage);
 
    if (pCallbackData->messageIdNumber != 0) {
       ASSERT("Vulkan Error");
@@ -56,7 +61,12 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
 }
 
 void VulkanManager::Create(Window* aWindow) {
+   ASSERT_IF( _VulkanManager == nullptr );
    _VulkanManager = this;
+
+   ASSERT_IF( gRenderManager == nullptr );
+   gRenderManager = new RenderManager();
+
    mWindow = aWindow;
    CreateInstance();
    if (aWindow->CreateSurface(GetInstance())) {
@@ -202,6 +212,13 @@ void VulkanManager::Destroy() {
    }
 
    vkDestroyInstance(mInstance, GetAllocationCallback());
+
+   ASSERT_IF( gRenderManager != nullptr );
+   delete gRenderManager;
+   gRenderManager = nullptr;
+
+   ASSERT_IF( _VulkanManager != nullptr );
+   _VulkanManager = nullptr;
 }
 
 void VulkanManager::WaitDevice() {
@@ -433,6 +450,29 @@ bool CheckVkLayerSupport(const std::vector<const char*> aLayersToCheck) {
       }
    }
    return true;
+}
+
+const void VulkanManager::BlitRenderTargetToBackBuffer(VkCommandBuffer aCommandBuffer, RenderTarget* aRenderTarget) const {
+   VulkanManager::Get()->DebugMarkerStart(aCommandBuffer, "Blit RT to Backbuffer");
+
+   const VkImage presentImage = GetPresentImage(mCurrentFrameIndex);
+
+   SetImageLayout(aCommandBuffer, presentImage, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+   VkImageBlit blit{};
+   blit.srcOffsets[1].x = aRenderTarget->GetSize().width;
+   blit.srcOffsets[1].y = aRenderTarget->GetSize().height;
+   blit.srcOffsets[1].z = 1;
+   blit.dstOffsets[1].x = GetSwapchainExtent().width;
+   blit.dstOffsets[1].y = GetSwapchainExtent().height;
+   blit.dstOffsets[1].z = 1;
+   blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+   blit.srcSubresource.layerCount = 1;
+   blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+   blit.dstSubresource.layerCount = 1;
+   vkCmdBlitImage(aCommandBuffer, aRenderTarget->GetColorImage(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, presentImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VkFilter::VK_FILTER_LINEAR);
+   SetImageLayout(aCommandBuffer, presentImage, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
+   
+   VulkanManager::Get()->DebugMarkerEnd(aCommandBuffer);
 }
 
 bool VulkanManager::CreateInstance() {
@@ -676,6 +716,7 @@ bool VulkanManager::CreateDevice() {
 
       VkPhysicalDeviceFeatures deviceFeatures{};
       deviceFeatures.samplerAnisotropy = VK_TRUE;
+      deviceFeatures.multiDrawIndirect = VK_TRUE;
       VkDeviceCreateInfo deviceCreateInfo{};
       deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
       deviceCreateInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
@@ -1031,7 +1072,7 @@ void VulkanManager::RenderImGui() {
          bufferBeginInfo.flags |= VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
          result = vkBeginCommandBuffer(mImGuiCommandBuffers[mCurrentImageIndex], &bufferBeginInfo);
          ASSERT_VULKAN_SUCCESS(result);
-         _VulkanManager->DebugMarkerStart(mImGuiCommandBuffers[mCurrentImageIndex], "ImGui Render");
+         VulkanManager::Get()->DebugMarkerStart(mImGuiCommandBuffers[mCurrentImageIndex], "ImGui Render");
 
          VkRenderPassBeginInfo renderBeginInfo = {};
          renderBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -1051,7 +1092,7 @@ void VulkanManager::RenderImGui() {
          // Submit command buffer
          vkCmdEndRenderPass(mImGuiCommandBuffers[mCurrentImageIndex]);
 
-         _VulkanManager->DebugMarkerEnd(mImGuiCommandBuffers[mCurrentImageIndex]);
+         VulkanManager::Get()->DebugMarkerEnd(mImGuiCommandBuffers[mCurrentImageIndex]);
          result = vkEndCommandBuffer(mImGuiCommandBuffers[mCurrentImageIndex]);
          ASSERT_VULKAN_SUCCESS(result);
       }

@@ -6,6 +6,8 @@
 #include <assimp/postprocess.h>     // Post processing flags
 #include <assimp/pbrmaterial.h>     // PBR
 
+#include "RenderManager.h"
+
 static inline glm::vec4 vec4_cast(const aiColor4D& v) { return glm::vec4(v.r, v.g, v.b, v.a); }
 static inline glm::vec3 vec3_cast(const aiVector3D& v) { return glm::vec3(v.x, v.y, v.z); }
 static inline glm::vec2 vec2_cast(const aiVector3D& v) { return glm::vec2(v.x, v.y); }
@@ -27,6 +29,26 @@ bool Model::LoadModel(std::string aPath, VkDescriptorSetLayout aMaterialDescript
    if (scene == nullptr) {
       ASSERT_RET_FALSE("Failed to load");
    }
+   if (scene->mFlags != 0) {
+      if (scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE) {
+         LOG("Mesh INCOMPLETE\n");
+      }
+      if (scene->mFlags & AI_SCENE_FLAGS_VALIDATED) {
+         LOG("Mesh VALIDATED\n");
+      }
+      if (scene->mFlags & AI_SCENE_FLAGS_VALIDATION_WARNING) {
+         LOG("Mesh VALIDATION_WARNING\n");
+      }
+      if (scene->mFlags & AI_SCENE_FLAGS_NON_VERBOSE_FORMAT) {
+         LOG("Mesh NON_VERBOSE_FORMAT\n");
+      }
+      if (scene->mFlags & AI_SCENE_FLAGS_TERRAIN) {
+         LOG("Mesh TERRAIN\n");
+      }
+      if (scene->mFlags & AI_SCENE_FLAGS_ALLOW_SHARED) {
+         LOG("Mesh ALLOW_SHARED\n");
+      }
+   }
    {
       size_t index = aPath.find_last_of('/') + 1;
       if (index == 0) {
@@ -44,30 +66,32 @@ bool Model::LoadModel(std::string aPath, VkDescriptorSetLayout aMaterialDescript
    LOG("Starting Images\n");
    LoadImages();
 
-   {
-      for (size_t i = 0; i < mMaterials.size(); i++) {
-         VkDescriptorSetAllocateInfo setAllocate{};
-         setAllocate.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-         setAllocate.descriptorPool = _VulkanManager->GetDescriptorPool();
-         setAllocate.descriptorSetCount = 1;
-         setAllocate.pSetLayouts = &aMaterialDescriptorSet;
-         vkAllocateDescriptorSets(_VulkanManager->GetDevice(), &setAllocate, &mMaterials[i].mDescriptorSet);
-         DebugSetObjName(VK_OBJECT_TYPE_DESCRIPTOR_SET, mMaterials[i].mDescriptorSet, mName + " Material set " + std::to_string(i));
+   //{
+   //   for (size_t i = 0; i < mMaterials.size(); i++) {
+   //      VkDescriptorSetAllocateInfo setAllocate{};
+   //      setAllocate.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+   //      setAllocate.descriptorPool = VulkanManager::Get()->GetDescriptorPool();
+   //      setAllocate.descriptorSetCount = 1;
+   //      setAllocate.pSetLayouts = &aMaterialDescriptorSet;
+   //      vkAllocateDescriptorSets(VulkanManager::Get()->GetDevice(), &setAllocate, &mMaterials[i].mDescriptorSet);
+   //      DebugSetObjName(VK_OBJECT_TYPE_DESCRIPTOR_SET, mMaterials[i].mDescriptorSet, mName + " Material set " + std::to_string(i));
+   //
+   //      std::vector<VkWriteDescriptorSet> write = aWriteSets;
+   //      VkDescriptorImageInfo info;
+   //      if (!mMaterials[i].mDiffuse.empty()) {
+   //         write.push_back(GetWriteDescriptorSet(info, mMaterials[i].mDiffuse[0], mMaterials[i].mDescriptorSet, VulkanManager::Get()->GetDefaultSampler(), 0));
+   //      } else {
+   //         //write.push_back(GetWriteDescriptorSet(info, &mImages[0], mMaterials[i].mDescriptorSet, VulkanManager::Get()->GetDefaultSampler(), 0));
+   //      }
+   //      for (size_t q = 0; q < write.size(); q++) {
+   //         write[q].dstSet = mMaterials[i].mDescriptorSet;
+   //      }
+   //      vkUpdateDescriptorSets(VulkanManager::Get()->GetDevice(), static_cast<uint32_t>(write.size()), write.data(), 0, nullptr);
+   //   }
+   //
+   //}
 
-         std::vector<VkWriteDescriptorSet> write = aWriteSets;
-         VkDescriptorImageInfo info;
-         if (!mMaterials[i].mDiffuse.empty()) {
-            write.push_back(GetWriteDescriptorSet(info, mMaterials[i].mDiffuse[0], mMaterials[i].mDescriptorSet, _VulkanManager->GetDefaultSampler(), 0));
-         } else {
-            write.push_back(GetWriteDescriptorSet(info, &mImages[0], mMaterials[i].mDescriptorSet, _VulkanManager->GetDefaultSampler(), 0));
-         }
-         for (size_t q = 0; q < write.size(); q++) {
-            write[q].dstSet = mMaterials[i].mDescriptorSet;
-         }
-         vkUpdateDescriptorSets(_VulkanManager->GetDevice(), static_cast<uint32_t>(write.size()), write.data(), 0, nullptr);
-      }
-
-   }
+   RenderManager::Get()->AddModel( this );
 
    LOG("Done\n");
    return true;
@@ -246,38 +270,38 @@ void Model::Render(DescriptorUBO* aRenderDescriptor, RenderMode aRenderMode) {
       return;
    }
    PROFILE_START_SCOPED("Model Render: " + mName);
-   _VulkanManager->DebugMarkerStart(aRenderDescriptor->mCommandBuffer, mName);
+   VulkanManager::Get()->DebugMarkerStart(aRenderDescriptor->mCommandBuffer, mName);
    mVertexBuffer.Bind(aRenderDescriptor->mCommandBuffer);
    mIndexBuffer.Bind(aRenderDescriptor->mCommandBuffer);
 
-   for (size_t i = 0; i < mNodes.size(); i++) {
-      Node* node = mNodes[i];
-      if (!node->mMesh.empty()) {
-         ObjectUBO ubo;
-         ubo.mModel = node->GetMatrixWithParents();
-         aRenderDescriptor->UpdateObjectAndBind(&ubo);
-
-         for (int i = 0; i < node->mMesh.size(); i++) {
-            Mesh& mesh = node->mMesh[i];
-#if defined(CULLING_TEST)
-            glm::vec3 min = glm::vec4(mesh.mMin, 0) * node->mTransform.GetGlobalMatrix();
-            glm::vec3 max = glm::vec4(mesh.mMax, 0) * node->mTransform.GetGlobalMatrix();
-            if ((pos.x > min.x && pos.x < max.x) && (pos.y > min.y && pos.y < max.y) && (pos.z > min.z && pos.z < max.z))
-#endif
-            {
-               if (aRenderMode == RenderMode::NORMAL) {
-                  Material& material = mMaterials[node->mMesh[i].mMaterialID];
-                  if (!material.mDiffuse.empty()) {
-                     vkCmdBindDescriptorSets(aRenderDescriptor->mCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, aRenderDescriptor->mPipelineLayout, 2, 1, &material.mDescriptorSet, 0, nullptr);
-                  }
-               }
-
-               vkCmdDrawIndexed(aRenderDescriptor->mCommandBuffer, static_cast<uint32_t>(node->mMesh[i].mCount), 1, node->mMesh[i].mStartIndex, 0, 0);
-            }
-         }
-      }
-   }
-   _VulkanManager->DebugMarkerEnd(aRenderDescriptor->mCommandBuffer);
+//   for (size_t i = 0; i < mNodes.size(); i++) {
+//      Node* node = mNodes[i];
+//      if (!node->mMesh.empty()) {
+//         ObjectUBO ubo;
+//         ubo.mModel = node->GetMatrixWithParents();
+//         //aRenderDescriptor->UpdateObjectAndBind(&ubo);
+//
+//         for (int i = 0; i < node->mMesh.size(); i++) {
+//            Mesh& mesh = node->mMesh[i];
+//#if defined(CULLING_TEST)
+//            glm::vec3 min = glm::vec4(mesh.mMin, 0) * node->mTransform.GetGlobalMatrix();
+//            glm::vec3 max = glm::vec4(mesh.mMax, 0) * node->mTransform.GetGlobalMatrix();
+//            if ((pos.x > min.x && pos.x < max.x) && (pos.y > min.y && pos.y < max.y) && (pos.z > min.z && pos.z < max.z))
+//#endif
+//            {
+//               if (aRenderMode == RenderMode::NORMAL) {
+//                  Material& material = mMaterials[node->mMesh[i].mMaterialID];
+//                  if (!material.mDiffuse.empty()) {
+//                     //vkCmdBindDescriptorSets(aRenderDescriptor->mCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, aRenderDescriptor->mPipelineLayout, 2, 1, &material.mDescriptorSet, 0, nullptr);
+//                  }
+//               }
+//
+//               vkCmdDrawIndexed(aRenderDescriptor->mCommandBuffer, static_cast<uint32_t>(node->mMesh[i].mCount), 1, node->mMesh[i].mStartIndex, 0, 0);
+//            }
+//         }
+//      }
+//   }
+   VulkanManager::Get()->DebugMarkerEnd(aRenderDescriptor->mCommandBuffer);
 
 }
 

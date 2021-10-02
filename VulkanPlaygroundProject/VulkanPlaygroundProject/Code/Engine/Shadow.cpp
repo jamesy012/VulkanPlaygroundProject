@@ -13,13 +13,13 @@ void ShadowManager::Create() {
    mInstance = new ShadowManager();
 
    mInstance->mRenderPass = new RenderPass();
-   mInstance->mRenderPass->Create(_VulkanManager->GetDevice(), VK_FORMAT_UNDEFINED, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, DEPTHFORMAT);
+   mInstance->mRenderPass->Create(VulkanManager::Get()->GetDevice(), VK_FORMAT_UNDEFINED, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, DEPTHFORMAT);
    mInstance->mRenderPass->SetName("Shadow Manager Render Pass");
 }
 
 void ShadowManager::Destroy() {
    ASSERT_IF(mInstance != nullptr);
-   mInstance->mRenderPass->Destroy(_VulkanManager->GetDevice());
+   mInstance->mRenderPass->Destroy(VulkanManager::Get()->GetDevice());
    mInstance->mRenderPass = nullptr;
 
    delete mInstance;
@@ -38,18 +38,19 @@ void Shadow::Create(VkExtent2D aSize, VkDescriptorSetLayout aShadowSetLayout, ui
    for (uint32_t i = 0; i < mNumCascades; i++) {
       mFramebuffers[i] = new Framebuffer();
       std::vector<VkImageView> depthView = { mDepthImage->GetArrayImageView(i) };
-      mFramebuffers[i]->Create(_VulkanManager->GetDevice(), aSize, ShadowManager::GetRenderPass(), depthView);
+      mFramebuffers[i]->Create(VulkanManager::Get()->GetDevice(), aSize, ShadowManager::GetRenderPass(), depthView);
    }
 
    if (aShadowSetLayout != VK_NULL_HANDLE) {
       VkDescriptorSetAllocateInfo setAllocate{};
       setAllocate.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-      setAllocate.descriptorPool = _VulkanManager->GetDescriptorPool();
+      setAllocate.descriptorPool = VulkanManager::Get()->GetDescriptorPool();
       setAllocate.descriptorSetCount = 1;
       setAllocate.pSetLayouts = &aShadowSetLayout;
-      vkAllocateDescriptorSets(_VulkanManager->GetDevice(), &setAllocate, &mShadowSet);
+      vkAllocateDescriptorSets(VulkanManager::Get()->GetDevice(), &setAllocate, &mShadowSet);
 
-      UpdateImageDescriptorSet(mDepthImage, mShadowSet, _VulkanManager->GetDefaultSampler(), 1);
+      ASSERT("change implementation");
+      //UpdateImageDescriptorSet(mDepthImage, mShadowSet, VulkanManager::Get()->GetDefaultSampler(), 1);
    }
 
    SetName("Shadow");
@@ -57,7 +58,7 @@ void Shadow::Create(VkExtent2D aSize, VkDescriptorSetLayout aShadowSetLayout, ui
 
 void Shadow::Destroy() {
    for (uint32_t i = 0; i < mNumCascades; i++) {
-      mFramebuffers[i]->Destroy(_VulkanManager->GetDevice());
+      mFramebuffers[i]->Destroy(VulkanManager::Get()->GetDevice());
    }
    mDepthImage->Destroy();
    mDepthImage = nullptr;
@@ -66,7 +67,7 @@ void Shadow::Destroy() {
 
 void Shadow::StartRenderPass(VkCommandBuffer aBuffer, uint32_t aCascadeIndex) {
    ASSERT_RET(IndexValid(aCascadeIndex));
-   _VulkanManager->DebugMarkerStart(aBuffer, "Shadow Render cascade:" + std::to_string(aCascadeIndex), glm::vec4(0.1f, 0.1f, 0.1f, 0.2f));
+   VulkanManager::Get()->DebugMarkerStart(aBuffer, "Shadow Render cascade:" + std::to_string(aCascadeIndex), glm::vec4(0.1f, 0.1f, 0.1f, 0.2f));
    VkClearValue clearColor{};
    clearColor.depthStencil.depth = 1.0f;
    clearColor.depthStencil.stencil = 0;
@@ -88,7 +89,7 @@ void Shadow::StartRenderPass(VkCommandBuffer aBuffer, uint32_t aCascadeIndex) {
 void Shadow::EndRenderPass(VkCommandBuffer aBuffer, uint32_t aCascadeIndex) {
    ASSERT_RET(IndexValid(aCascadeIndex));
    vkCmdEndRenderPass(aBuffer);
-   _VulkanManager->DebugMarkerEnd(aBuffer);
+   VulkanManager::Get()->DebugMarkerEnd(aBuffer);
 }
 
 void Shadow::SetName(std::string aName) {

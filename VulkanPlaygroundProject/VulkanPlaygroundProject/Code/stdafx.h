@@ -267,11 +267,9 @@ namespace Logger {
 //~~~~~~~ VULKAN OBJECTS
 #include "Engine/VulkanManager.h"
 
-extern class VulkanManager* _VulkanManager;
-
 #include "Engine/Profiler.h"
 
 template <class T>
 static void DebugSetObjName(VkObjectType aType, T aObject, std::string aName) {
-   _VulkanManager->DebugSetName(aType, (uint64_t)aObject, aName);
+   VulkanManager::Get()->DebugSetName(aType, (uint64_t)aObject, aName);
 }

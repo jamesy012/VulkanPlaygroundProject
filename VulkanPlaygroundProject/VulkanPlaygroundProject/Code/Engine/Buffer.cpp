@@ -2,15 +2,17 @@
 #include "Buffer.h"
 
 void Buffer::CopyFrom(Buffer* aBuffer, const VkCommandBuffer aCommandList) {
+   ASSERT_VULKAN_VALUE( mBuffer );
+   ASSERT_VULKAN_VALUE( aBuffer );
    VkCommandBuffer commandBuffer = aCommandList;
    if (aCommandList == VK_NULL_HANDLE) {
-      _VulkanManager->OneTimeCommandBufferStart(commandBuffer);
+      VulkanManager::Get()->OneTimeCommandBufferStart(commandBuffer);
    }
    VkBufferCopy copyRegion{};
    copyRegion.size = std::min(GetSize(), aBuffer->GetSize());
    vkCmdCopyBuffer(commandBuffer, aBuffer->GetBuffer(), GetBuffer(), 1, &copyRegion);
    if (aCommandList == VK_NULL_HANDLE) {
-      _VulkanManager->OneTimeCommandBufferEnd(commandBuffer);
+      VulkanManager::Get()->OneTimeCommandBufferEnd(commandBuffer);
    }
 }
 
@@ -25,7 +27,7 @@ bool Buffer::Create(VkDeviceSize aSize, VkBufferUsageFlags aUseage, VmaMemoryUsa
    allocInfo.usage = aMemUsage;
 
    VmaAllocationInfo info;
-   VkResult result = vmaCreateBuffer(_VulkanManager->GetAllocator(), &bufferInfo, &allocInfo, &mBuffer, &mAllocation, &info);
+   VkResult result = vmaCreateBuffer(VulkanManager::Get()->GetAllocator(), &bufferInfo, &allocInfo, &mBuffer, &mAllocation, &info);
    ASSERT_VULKAN_SUCCESS_RET_FALSE(result);
 
    mSize = aSize;
@@ -34,12 +36,14 @@ bool Buffer::Create(VkDeviceSize aSize, VkBufferUsageFlags aUseage, VmaMemoryUsa
 }
 
 void Buffer::Destroy() {
-   vmaDestroyBuffer(_VulkanManager->GetAllocator(), mBuffer, mAllocation);
+   ASSERT_VULKAN_VALUE( mBuffer );
+   vmaDestroyBuffer(VulkanManager::Get()->GetAllocator(), mBuffer, mAllocation);
 }
 
 void Buffer::Map(void** aData) {
+   ASSERT_VULKAN_VALUE( mBuffer );
    if (mMapCounter++ == 0) {
-      vmaMapMemory(_VulkanManager->GetAllocator(), mAllocation, &mMapPtr);
+      vmaMapMemory(VulkanManager::Get()->GetAllocator(), mAllocation, &mMapPtr);
    }
    if (aData != nullptr) {
       *aData = mMapPtr;
@@ -47,7 +51,8 @@ void Buffer::Map(void** aData) {
 }
 
 void Buffer::UnMap() {
+   ASSERT_VULKAN_VALUE( mBuffer );
    if (--mMapCounter == 0) {
-      vmaUnmapMemory(_VulkanManager->GetAllocator(), mAllocation);
+      vmaUnmapMemory(VulkanManager::Get()->GetAllocator(), mAllocation);
    }
 }

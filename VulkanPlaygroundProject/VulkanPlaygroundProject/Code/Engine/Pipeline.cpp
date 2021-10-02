@@ -110,7 +110,7 @@ bool Pipeline::AddShader(std::string aPath, bool aForceReload) {
    createInfo.pCode = spvResult.data();
 
 
-   VkResult result = vkCreateShaderModule(_VulkanManager->GetDevice(), &createInfo, GetAllocationCallback(), &shader.mInfo.module);
+   VkResult result = vkCreateShaderModule(VulkanManager::Get()->GetDevice(), &createInfo, GetAllocationCallback(), &shader.mInfo.module);
    ASSERT_VULKAN_SUCCESS_RET_FALSE(result);
 
    shader.mInfo.pName = "main";
@@ -145,7 +145,7 @@ bool Pipeline::Create(const VkExtent2D aSize, const RenderPass* aRenderPass) {
       pipelineLayout.pSetLayouts = mDescriptorSets.data();
       pipelineLayout.pushConstantRangeCount = static_cast<uint32_t>(mPushConstants.size());
       pipelineLayout.pPushConstantRanges = mPushConstants.data();
-      vkCreatePipelineLayout(_VulkanManager->GetDevice(), &pipelineLayout, nullptr, &mPipelineLayout);
+      vkCreatePipelineLayout(VulkanManager::Get()->GetDevice(), &pipelineLayout, nullptr, &mPipelineLayout);
       //helper->setObjName(VK_OBJECT_TYPE_PIPELINE_LAYOUT, (uint64_t)mPipelineLayout, aName + " Layout");
    }
 
@@ -285,7 +285,7 @@ bool Pipeline::Create(const VkExtent2D aSize, const RenderPass* aRenderPass) {
       graphicsPipeline.subpass = 0;
       graphicsPipeline.basePipelineHandle = VK_NULL_HANDLE; // Optional
       graphicsPipeline.basePipelineIndex = -1; // Optional
-      vkCreateGraphicsPipelines(_VulkanManager->GetDevice(), VK_NULL_HANDLE, 1, &graphicsPipeline, nullptr, &mPipeline);
+      vkCreateGraphicsPipelines(VulkanManager::Get()->GetDevice(), VK_NULL_HANDLE, 1, &graphicsPipeline, nullptr, &mPipeline);
       //helper->setObjName(VK_OBJECT_TYPE_PIPELINE, (uint64_t)mPipeline, aName);
    } else {
       if (shaderStages.size() == 1) {
@@ -294,7 +294,7 @@ bool Pipeline::Create(const VkExtent2D aSize, const RenderPass* aRenderPass) {
          computePipeline.layout = mPipelineLayout;
          computePipeline.stage = shaderStages[0];
 
-         vkCreateComputePipelines(_VulkanManager->GetDevice(), VK_NULL_HANDLE, 1, &computePipeline, nullptr, &mPipeline);
+         vkCreateComputePipelines(VulkanManager::Get()->GetDevice(), VK_NULL_HANDLE, 1, &computePipeline, nullptr, &mPipeline);
       } else {
          ASSERT("Number of Shader Stages incorrect");
       }
@@ -302,7 +302,7 @@ bool Pipeline::Create(const VkExtent2D aSize, const RenderPass* aRenderPass) {
 
 
    for (size_t i = 0; i < mShaders.size(); i++) {
-      vkDestroyShaderModule(_VulkanManager->GetDevice(), mShaders[i].mInfo.module, GetAllocationCallback());
+      vkDestroyShaderModule(VulkanManager::Get()->GetDevice(), mShaders[i].mInfo.module, GetAllocationCallback());
    }
    mShaders.clear();
 
@@ -311,10 +311,10 @@ bool Pipeline::Create(const VkExtent2D aSize, const RenderPass* aRenderPass) {
 
 void Pipeline::Destroy() {
    if (mPipeline != VK_NULL_HANDLE) {
-      vkDestroyPipeline(_VulkanManager->GetDevice(), mPipeline, nullptr);
+      vkDestroyPipeline(VulkanManager::Get()->GetDevice(), mPipeline, nullptr);
    }
    if (mPipelineLayout != VK_NULL_HANDLE) {
-      vkDestroyPipelineLayout(_VulkanManager->GetDevice(), mPipelineLayout, nullptr);
+      vkDestroyPipelineLayout(VulkanManager::Get()->GetDevice(), mPipelineLayout, nullptr);
    }
    mPipeline = VK_NULL_HANDLE;
    mPipelineLayout = VK_NULL_HANDLE;
