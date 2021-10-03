@@ -273,3 +273,19 @@ template <class T>
 static void DebugSetObjName(VkObjectType aType, T aObject, std::string aName) {
    VulkanManager::Get()->DebugSetName(aType, (uint64_t)aObject, aName);
 }
+
+static void OneTimeCommandBuffer( VkCommandBuffer aCommandList, const std::function<void( VkCommandBuffer )> aFunction )
+{
+   VkCommandBuffer commandBuffer = aCommandList;
+   if ( aCommandList == VK_NULL_HANDLE )
+   {
+      VulkanManager::Get()->OneTimeCommandBufferStart( commandBuffer );
+   }
+
+   aFunction( commandBuffer );
+
+   if ( aCommandList == VK_NULL_HANDLE )
+   {
+      VulkanManager::Get()->OneTimeCommandBufferEnd( commandBuffer );
+   }
+}

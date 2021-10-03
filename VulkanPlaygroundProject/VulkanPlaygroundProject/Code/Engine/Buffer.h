@@ -2,6 +2,8 @@
 
 class Buffer {
 public:
+   ~Buffer();
+
    virtual bool Create(VkDeviceSize aSize) = 0;
    void Destroy();
    
@@ -34,7 +36,7 @@ protected:
    bool Create(VkDeviceSize aSize, VkBufferUsageFlags aUseage, VmaMemoryUsage aMemUsage);
 private:
    VkBuffer mBuffer = VK_NULL_HANDLE;
-   VmaAllocation mAllocation = nullptr;
+   VmaAllocation mAllocation = VK_NULL_HANDLE;
    VkDeviceSize mSize = 0;
    VkDeviceSize mAllocatedSize = 0;
    //number of times this is mapped, to track when to unmap or map the data

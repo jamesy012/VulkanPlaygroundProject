@@ -11,24 +11,6 @@
 
 #include "Engine/Vertex.h"
 
-struct RenderingBufferOUT {
-   uint32_t    indexCount;
-   uint32_t    instanceCount;
-   uint32_t    firstIndex;
-   int32_t     vertexOffset;
-   uint32_t    firstInstance;
-};
-struct RenderingBufferMODEL_IN {
-   uint32_t    indexCount;
-   uint32_t    instanceCount;
-   uint32_t    firstIndex;
-   int32_t     vertexOffset;
-   uint32_t    firstInstance;
-};
-BufferStorageUniform renderIndirectBufferOUT;
-BufferStorageUniform renderIndirectBufferMODEL_IN;
-BufferStorageUniform renderIndirectBufferOBJECT_IN;
-
 void Application::Start() {
    mWindow = new Window();
    mWindow->Create(800, 600, "vulkan");
@@ -94,9 +76,11 @@ void Application::Start() {
       }
 
       {
-         mPipeline.AddShader(GetWorkDir() + "Shaders/Simple.vert");
+         //mPipeline.AddShader(GetWorkDir() + "Shaders/Simple.vert");
+         //mPipeline.SetVertexType(VertexTypeDefault);
+         mPipeline.AddShader(GetWorkDir() + "Shaders/Instanced.vert");
+         mPipeline.SetVertexType(VertexTypeInstanced);
          mPipeline.AddShader(GetWorkDir() + "Shaders/Simple.frag");
-         mPipeline.SetVertexType(VertexTypeDefault);
          mPipeline.AddDescriptorSetLayout(mSceneDescriptorSet);
          mPipeline.AddDescriptorSetLayout(mObjectDescriptorSet);
          mPipeline.SetBlendingEnabled(true);
@@ -128,23 +112,6 @@ void Application::Start() {
 
    //mFlyCamera.SetPosition(glm::vec3(130, 50, 150));
    mFlyCamera.SetFarClip(150.0f);
-
-   {
-      renderIndirectBufferOUT.Create( 3, sizeof( RenderingBufferOUT ), VK_NULL_HANDLE, 0, false );
-      RenderingBufferOUT* data;
-      renderIndirectBufferOUT.Map( (void**)&data );
-      memset( data, 0, renderIndirectBufferOUT.GetSize() );
-      data[0].indexCount = 69624;
-      data[0].instanceCount = 1;
-      data[1].firstIndex = 69624;
-      data[1].indexCount = 56832;
-      data[1].instanceCount = 1;
-      data[2].indexCount = 126456;
-      data[2].indexCount = 43008;
-      data[2].instanceCount = 1;
-      renderIndirectBufferOUT.UnMap();
-
-   }
 
    CreateDelayedSizeDependent();
 }
@@ -291,16 +258,17 @@ void Application::Draw() {
       vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline.GetPipelineLayout(), 0, 1, &mSceneSet, 1, descriptorSetOffsets);
 
       //render Light facing camera
-      {
-         DescriptorUBO des = DescriptorUBO(commandBuffer, mPipeline.GetPipelineLayout(), &mObjectBuffer, mObjectSet);
-         ObjectUBO ubo;
-         ubo.mModel = glm::rotate(mModelTest.GetMatrix(), abs(sin((frameCounter * 0.5f) / 5000.0f)), glm::vec3(0,1,0));
-         des.UpdateObjectAndBind(&ubo);
-
-         mModelTest.Render(&des, RenderMode::NORMAL);
-
-      }
-      vkCmdDrawIndexedIndirect(commandBuffer, renderIndirectBufferOUT.GetBuffer(), 0, renderIndirectBufferOUT.GetCount(), sizeof( VkDrawIndexedIndirectCommand ) );
+      //{
+      //   DescriptorUBO des = DescriptorUBO(commandBuffer, mPipeline.GetPipelineLayout(), &mObjectBuffer, mObjectSet);
+      //   ObjectUBO ubo;
+      //   ubo.mModel = glm::rotate(mModelTest.GetMatrix(), abs(sin((frameCounter * 0.5f) / 5000.0f)), glm::vec3(0,1,0));
+      //   des.UpdateObjectAndBind(&ubo);
+      //
+      //   mModelTest.Render(&des, RenderMode::NORMAL);
+      //
+      //}
+      RenderManager::Get()->Render( commandBuffer );
+      //vkCmdDrawIndexedIndirect(commandBuffer, renderIndirectBufferOUT.GetBuffer(), 0, renderIndirectBufferOUT.GetCount(), sizeof( VkDrawIndexedIndirectCommand ) );
       //vkCmdDrawIndexedIndirect(commandBuffer, buffer, offset, drawCount, stride);
       //vkCmdDrawIndexedIndirectCount(commandBuffer, buffer, offset, countbuffer, countbufferoffset, maxDrawCount, stride);
       //vkCmdDrawIndexed(commandBuffer, indexCount, instanceCount, firstIndex, vertexOFfset, firstInstance);
@@ -325,11 +293,7 @@ void Application::Destroy() {
    delete _CInput;
    mVkManager->WaitDevice();
 
-   renderIndirectBufferOUT.Destroy();
-
-
    {
-
       mSceneBuffer.Destroy();
       mObjectBuffer.Destroy();
       vkDestroyDescriptorSetLayout(mVkManager->GetDevice(), mSceneDescriptorSet, GetAllocationCallback());

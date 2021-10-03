@@ -274,33 +274,33 @@ void Model::Render(DescriptorUBO* aRenderDescriptor, RenderMode aRenderMode) {
    mVertexBuffer.Bind(aRenderDescriptor->mCommandBuffer);
    mIndexBuffer.Bind(aRenderDescriptor->mCommandBuffer);
 
-//   for (size_t i = 0; i < mNodes.size(); i++) {
-//      Node* node = mNodes[i];
-//      if (!node->mMesh.empty()) {
-//         ObjectUBO ubo;
-//         ubo.mModel = node->GetMatrixWithParents();
-//         //aRenderDescriptor->UpdateObjectAndBind(&ubo);
-//
-//         for (int i = 0; i < node->mMesh.size(); i++) {
-//            Mesh& mesh = node->mMesh[i];
-//#if defined(CULLING_TEST)
-//            glm::vec3 min = glm::vec4(mesh.mMin, 0) * node->mTransform.GetGlobalMatrix();
-//            glm::vec3 max = glm::vec4(mesh.mMax, 0) * node->mTransform.GetGlobalMatrix();
-//            if ((pos.x > min.x && pos.x < max.x) && (pos.y > min.y && pos.y < max.y) && (pos.z > min.z && pos.z < max.z))
-//#endif
-//            {
-//               if (aRenderMode == RenderMode::NORMAL) {
-//                  Material& material = mMaterials[node->mMesh[i].mMaterialID];
-//                  if (!material.mDiffuse.empty()) {
-//                     //vkCmdBindDescriptorSets(aRenderDescriptor->mCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, aRenderDescriptor->mPipelineLayout, 2, 1, &material.mDescriptorSet, 0, nullptr);
-//                  }
-//               }
-//
-//               vkCmdDrawIndexed(aRenderDescriptor->mCommandBuffer, static_cast<uint32_t>(node->mMesh[i].mCount), 1, node->mMesh[i].mStartIndex, 0, 0);
-//            }
-//         }
-//      }
-//   }
+   for (size_t i = 0; i < mNodes.size(); i++) {
+      Node* node = mNodes[i];
+      if (!node->mMesh.empty()) {
+         ObjectUBO ubo;
+         ubo.mModel = node->GetMatrixWithParents();
+         //aRenderDescriptor->UpdateObjectAndBind(&ubo);
+
+         for (int i = 0; i < node->mMesh.size(); i++) {
+            Mesh& mesh = node->mMesh[i];
+#if defined(CULLING_TEST)
+            glm::vec3 min = glm::vec4(mesh.mMin, 0) * node->mTransform.GetGlobalMatrix();
+            glm::vec3 max = glm::vec4(mesh.mMax, 0) * node->mTransform.GetGlobalMatrix();
+            if ((pos.x > min.x && pos.x < max.x) && (pos.y > min.y && pos.y < max.y) && (pos.z > min.z && pos.z < max.z))
+#endif
+            {
+               if (aRenderMode == RenderMode::NORMAL) {
+                  Material& material = mMaterials[node->mMesh[i].mMaterialID];
+                  if (!material.mDiffuse.empty()) {
+                     //vkCmdBindDescriptorSets(aRenderDescriptor->mCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, aRenderDescriptor->mPipelineLayout, 2, 1, &material.mDescriptorSet, 0, nullptr);
+                  }
+               }
+
+               vkCmdDrawIndexed(aRenderDescriptor->mCommandBuffer, static_cast<uint32_t>(node->mMesh[i].mCount), 1, node->mMesh[i].mStartIndex, 0, 0);
+            }
+         }
+      }
+   }
    VulkanManager::Get()->DebugMarkerEnd(aRenderDescriptor->mCommandBuffer);
 
 }

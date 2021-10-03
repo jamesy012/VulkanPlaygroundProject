@@ -144,11 +144,17 @@ void VulkanManager::Create(Window* aWindow) {
       }
    }
 
+
    //Pre first run setup
    {
+      //setup managers
+      gRenderManager->StartUp();
+
+      //setup anything that needs to be in a command buffer
       VkCommandBuffer buffer;
       OneTimeCommandBufferStart(buffer);
       {
+         //imgui text, debug only?
          ImGui_ImplVulkan_CreateFontsTexture(buffer);
       }
       OneTimeCommandBufferEnd(buffer);
@@ -197,6 +203,10 @@ void VulkanManager::Destroy() {
    vkDestroyCommandPool(mDevice, mGraphicsCommandPool, GetAllocationCallback());
    mGraphicsCommandPool = VK_NULL_HANDLE;
 
+   ASSERT_IF( gRenderManager != nullptr );
+   delete gRenderManager;
+   gRenderManager = nullptr;
+
    vmaDestroyAllocator(mAllocator);
 
    vkDestroyDevice(mDevice, CreateAllocationCallbacks());
@@ -212,10 +222,6 @@ void VulkanManager::Destroy() {
    }
 
    vkDestroyInstance(mInstance, GetAllocationCallback());
-
-   ASSERT_IF( gRenderManager != nullptr );
-   delete gRenderManager;
-   gRenderManager = nullptr;
 
    ASSERT_IF( _VulkanManager != nullptr );
    _VulkanManager = nullptr;
