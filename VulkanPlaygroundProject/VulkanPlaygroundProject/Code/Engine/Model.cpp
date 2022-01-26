@@ -101,21 +101,21 @@ void Model::ProcessMeshs(const aiScene* aScene) {
    mMeshs.resize(aScene->mNumMeshes);
    ProcessMesh(aScene, aScene->mRootNode, &mBase);
 
-   mVertexBuffer.Create(mVertices.size() * sizeof(Vertex));
-   mIndexBuffer.Create(mIndices.size() * sizeof(uint32_t));
-   mVertexBuffer.SetName(mName + " Vertex Buffer");
-   mIndexBuffer.SetName(mName + " Index Buffer");
-
-   BufferStaging staging;
-   staging.Create(std::max(mVertexBuffer.GetAllocatedSize(), mIndexBuffer.GetAllocatedSize()));
-   void* data;
-   staging.Map(&data);
-   memcpy(data, mVertices.data(), mVertexBuffer.GetSize());
-   mVertexBuffer.CopyFrom(&staging);
-   memcpy(data, mIndices.data(), mIndexBuffer.GetSize());
-   mIndexBuffer.CopyFrom(&staging);
-   staging.UnMap();
-   staging.Destroy();
+   //mVertexBuffer.Create(mVertices.size() * sizeof(Vertex));
+   //mIndexBuffer.Create(mIndices.size() * sizeof(uint32_t));
+   //mVertexBuffer.SetName(mName + " Vertex Buffer");
+   //mIndexBuffer.SetName(mName + " Index Buffer");
+   //
+   //BufferStaging staging;
+   //staging.Create(std::max(mVertexBuffer.GetAllocatedSize(), mIndexBuffer.GetAllocatedSize()));
+   //void* data;
+   //staging.Map(&data);
+   //memcpy(data, mVertices.data(), mVertexBuffer.GetSize());
+   //mVertexBuffer.CopyFrom(&staging);
+   //memcpy(data, mIndices.data(), mIndexBuffer.GetSize());
+   //mIndexBuffer.CopyFrom(&staging);
+   //staging.UnMap();
+   //staging.Destroy();
 }
 
 void Model::ProcessMesh(const aiScene* aScene, const aiNode* aNode, Node* aParent) {
@@ -265,52 +265,52 @@ void Model::LoadImages() {
 }
 
 void Model::Render(DescriptorUBO* aRenderDescriptor, RenderMode aRenderMode) {
-   ASSERT_IF((aRenderMode & (aRenderMode - 1)) == 0);
-   if (!(mRenderModes & aRenderMode)) {
-      return;
-   }
-   PROFILE_START_SCOPED("Model Render: " + mName);
-   VulkanManager::Get()->DebugMarkerStart(aRenderDescriptor->mCommandBuffer, mName);
-   mVertexBuffer.Bind(aRenderDescriptor->mCommandBuffer);
-   mIndexBuffer.Bind(aRenderDescriptor->mCommandBuffer);
-
-   for (size_t i = 0; i < mNodes.size(); i++) {
-      Node* node = mNodes[i];
-      if (!node->mMesh.empty()) {
-         ObjectUBO ubo;
-         ubo.mModel = node->GetMatrixWithParents();
-         //aRenderDescriptor->UpdateObjectAndBind(&ubo);
-
-         for (int i = 0; i < node->mMesh.size(); i++) {
-            Mesh& mesh = node->mMesh[i];
-#if defined(CULLING_TEST)
-            glm::vec3 min = glm::vec4(mesh.mMin, 0) * node->mTransform.GetGlobalMatrix();
-            glm::vec3 max = glm::vec4(mesh.mMax, 0) * node->mTransform.GetGlobalMatrix();
-            if ((pos.x > min.x && pos.x < max.x) && (pos.y > min.y && pos.y < max.y) && (pos.z > min.z && pos.z < max.z))
-#endif
-            {
-               if (aRenderMode == RenderMode::NORMAL) {
-                  Material& material = mMaterials[node->mMesh[i].mMaterialID];
-                  if (!material.mDiffuse.empty()) {
-                     //vkCmdBindDescriptorSets(aRenderDescriptor->mCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, aRenderDescriptor->mPipelineLayout, 2, 1, &material.mDescriptorSet, 0, nullptr);
-                  }
-               }
-
-               vkCmdDrawIndexed(aRenderDescriptor->mCommandBuffer, static_cast<uint32_t>(node->mMesh[i].mCount), 1, node->mMesh[i].mStartIndex, 0, 0);
-            }
-         }
-      }
-   }
-   VulkanManager::Get()->DebugMarkerEnd(aRenderDescriptor->mCommandBuffer);
-
+//   ASSERT_IF((aRenderMode & (aRenderMode - 1)) == 0);
+//   if (!(mRenderModes & aRenderMode)) {
+//      return;
+//   }
+//   PROFILE_START_SCOPED("Model Render: " + mName);
+//   VulkanManager::Get()->DebugMarkerStart(aRenderDescriptor->mCommandBuffer, mName);
+//   mVertexBuffer.Bind(aRenderDescriptor->mCommandBuffer);
+//   mIndexBuffer.Bind(aRenderDescriptor->mCommandBuffer);
+//
+//   for (size_t i = 0; i < mNodes.size(); i++) {
+//      Node* node = mNodes[i];
+//      if (!node->mMesh.empty()) {
+//         ObjectUBO ubo;
+//         ubo.mModel = node->GetMatrixWithParents();
+//         //aRenderDescriptor->UpdateObjectAndBind(&ubo);
+//
+//         for (int i = 0; i < node->mMesh.size(); i++) {
+//            Mesh& mesh = node->mMesh[i];
+//#if defined(CULLING_TEST)
+//            glm::vec3 min = glm::vec4(mesh.mMin, 0) * node->mTransform.GetGlobalMatrix();
+//            glm::vec3 max = glm::vec4(mesh.mMax, 0) * node->mTransform.GetGlobalMatrix();
+//            if ((pos.x > min.x && pos.x < max.x) && (pos.y > min.y && pos.y < max.y) && (pos.z > min.z && pos.z < max.z))
+//#endif
+//            {
+//               if (aRenderMode == RenderMode::NORMAL) {
+//                  Material& material = mMaterials[node->mMesh[i].mMaterialID];
+//                  if (!material.mDiffuse.empty()) {
+//                     //vkCmdBindDescriptorSets(aRenderDescriptor->mCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, aRenderDescriptor->mPipelineLayout, 2, 1, &material.mDescriptorSet, 0, nullptr);
+//                  }
+//               }
+//
+//               vkCmdDrawIndexed(aRenderDescriptor->mCommandBuffer, static_cast<uint32_t>(node->mMesh[i].mCount), 1, node->mMesh[i].mStartIndex, 0, 0);
+//            }
+//         }
+//      }
+//   }
+//   VulkanManager::Get()->DebugMarkerEnd(aRenderDescriptor->mCommandBuffer);
+//
 }
 
 void Model::Destroy() {
    for (size_t i = 0; i < mImages.size(); i++) {
       mImages[i].Destroy();
    }
-   mVertexBuffer.Destroy();
-   mIndexBuffer.Destroy();
+   //mVertexBuffer.Destroy();
+   //mIndexBuffer.Destroy();
    mVertices.clear();
    mIndices.clear();
 }

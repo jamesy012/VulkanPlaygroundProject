@@ -27,4 +27,7 @@ void main(){
 
     gl_Position = sceneData.viewProj * pos;
     fragTexCoord = vertexTexCoord;
+    //fragTexCoord.x = (gl_InstanceIndex % 255) / 255; 
+    fragTexCoord.x = (gl_InstanceIndex % 36) / 35.0f;// 35
+    fragTexCoord.y = 0; 
 }

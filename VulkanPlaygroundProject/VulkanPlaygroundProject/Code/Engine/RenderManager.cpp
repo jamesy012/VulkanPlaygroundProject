@@ -21,14 +21,6 @@ struct RenderingBufferOUT //could replace with VkDrawIndexedIndirectCommand
 	uint32_t    firstInstance;
 };
 
-struct InstanceData {
-	uint32_t    indexCount;
-	uint32_t    instanceCount;
-	uint32_t    firstIndex;
-	int32_t     vertexOffset;
-	uint32_t    firstInstance;
-};
-
 RenderManager::RenderManager() : mDrawDataBuffer(nullptr), mDrawDataBufferMappedData(nullptr) {
 	ASSERT_IF(_RenderManager == nullptr);
 	_RenderManager = this;
@@ -76,7 +68,7 @@ void RenderManager::StartUp() {
 		VertexInstanceInstance* data;
 		staging.Map((void**)&data);
 		data[0].instancePos = glm::vec3(0);
-		data[1].instancePos = glm::vec3(0,0,90);
+		data[1].instancePos = glm::vec3(0, 0, 90);
 		staging.UnMap();
 
 		mVertexInstanceBuffer->CopyFrom(&staging);
@@ -89,8 +81,9 @@ void RenderManager::AddModel(Model* aModel) {
 	ASSERT_IF(mVertexBuffer->GetSize() > mVertexCount + aModel->mVertices.size());
 	ASSERT_IF(mIndexBuffer->GetSize() > mIndexCount + aModel->mIndices.size());
 
-	uint32_t vertexCount = mVertexCount;
-	uint32_t indexCount = mIndexCount;
+	const uint32_t vertexOffset = mVertexCount;
+	const uint32_t indexOffset = mIndexCount;
+
 	for(int i = 0; i < aModel->GetNumNodes(); i++) {
 		Model::Node* node = aModel->GetNode(i);
 		for(int q = 0; q < node->mMesh.size(); q++) {
@@ -98,28 +91,48 @@ void RenderManager::AddModel(Model* aModel) {
 			RenderingBufferOUT* bufferPtr = GetDrawDataBuffer(MappedModelDataIndex++);//ptr to memory
 			if(bufferPtr) {
 				memset(bufferPtr, 0, sizeof(RenderingBufferOUT));
-				bufferPtr->firstIndex = indexCount + mesh->mStartIndex;
+				bufferPtr->firstIndex = indexOffset + mesh->mStartIndex;
 				bufferPtr->indexCount = mesh->mCount;
 				bufferPtr->instanceCount = 2; //incremented via AddObject?
+				bufferPtr->firstInstance = MappedModelDataIndex;
 			}
 		}
 	}
 
 	mVertexCount += aModel->mVertices.size();
 	mIndexCount += aModel->mIndices.size();
+
+	//modify indices array to add vertexOffset
+	std::vector<uint32_t> indices = aModel->mIndices;
+	for(auto& number : indices) {
+		number += vertexOffset;
+	}
+
 	//mVertexBuffer->CopyFrom(&aModel->mVertexBuffer);
 	//mIndexBuffer->CopyFrom(&aModel->mIndexBuffer);
 	{
+		static VkDeviceSize vertexOffset = 0;
+		static VkDeviceSize indexOffset = 0;
+
+		const VkDeviceSize vertexSize = aModel->mVertices.size() * sizeof(Vertex);
+		const VkDeviceSize indexSize = indices.size() * sizeof(uint32_t);
+
 		BufferStaging staging;
-		staging.Create(std::max(aModel->mVertexBuffer.GetAllocatedSize(), aModel->mIndexBuffer.GetAllocatedSize()));
+		staging.Create(std::max(vertexSize, indexSize));
 		void* data;
 		staging.Map(&data);
-		memcpy(data, aModel->mVertices.data(), aModel->mVertexBuffer.GetSize());
-		mVertexBuffer->CopyFrom(&staging);
-		memcpy(data, aModel->mIndices.data(), aModel->mIndexBuffer.GetSize());
-		mIndexBuffer->CopyFrom(&staging);
+		OneTimeCommandBuffer(nullptr,
+							 [&](VkCommandBuffer commandBuffer) {
+								 memcpy(data, aModel->mVertices.data(), vertexSize);
+								 mVertexBuffer->CopyFrom(&staging, vertexOffset, 0, vertexSize);
+								 memcpy(data, indices.data(), indexSize);
+								 mIndexBuffer->CopyFrom(&staging, indexOffset, 0, indexSize);
+							 });
 		staging.UnMap();
 		staging.Destroy();
+
+		vertexOffset += vertexSize;
+		indexOffset += indexSize;
 	}
 }
 

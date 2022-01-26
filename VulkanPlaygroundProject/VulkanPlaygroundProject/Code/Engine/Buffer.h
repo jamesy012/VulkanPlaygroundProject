@@ -30,7 +30,7 @@ public:
    }
 
    //copies the data from aBuffer to this buffer via commandList
-   void CopyFrom(Buffer* aBuffer, const VkCommandBuffer aCommandList = VK_NULL_HANDLE);
+   void CopyFrom(Buffer* aBuffer, VkDeviceSize aOffset = 0, VkDeviceSize aFromOffset = 0, VkDeviceSize aSize = -1, const VkCommandBuffer aCommandList = VK_NULL_HANDLE);
 
 protected:
    bool Create(VkDeviceSize aSize, VkBufferUsageFlags aUseage, VmaMemoryUsage aMemUsage);

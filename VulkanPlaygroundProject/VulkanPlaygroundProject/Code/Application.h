@@ -38,6 +38,7 @@ private:
    BufferVertex mBillboardQuad;
    Pipeline mPipeline;
    Model mModelTest;
+   Model mModelTest2;
 
    VkDescriptorSetLayout mSceneDescriptorSet;
    VkDescriptorSetLayout mObjectDescriptorSet;

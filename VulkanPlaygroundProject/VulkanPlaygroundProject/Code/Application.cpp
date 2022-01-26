@@ -109,6 +109,7 @@ void Application::Start() {
    //mModelTest.LoadModel(GetWorkDir() + "Models/treeTest.fbx", nullptr, {});
    mModelTest.LoadModel(GetWorkDir() + "Sponza/Sponza.obj", nullptr, {});
    mModelTest.SetScale(0.05f);
+   mModelTest2.LoadModel(GetWorkDir() + "Models/mandalorian-star-wars/source/Mandalorian_Anim_fixed_textures.fbx", nullptr, {});
 
    //mFlyCamera.SetPosition(glm::vec3(130, 50, 150));
    mFlyCamera.SetFarClip(150.0f);
@@ -307,6 +308,7 @@ void Application::Destroy() {
    mScreenQuad.Destroy();
    mPipeline.Destroy();
    mModelTest.Destroy();
+   mModelTest2.Destroy();
 
    mVkManager->Destroy();
    mWindow->Destroy();
