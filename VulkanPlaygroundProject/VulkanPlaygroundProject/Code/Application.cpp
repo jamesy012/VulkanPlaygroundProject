@@ -64,25 +64,26 @@ void Application::Start() {
          layoutInfo.bindingCount = 1;
          layoutInfo.pBindings = bindings;
          vkCreateDescriptorSetLayout(mVkManager->GetDevice(), &layoutInfo, GetAllocationCallback(), &mObjectDescriptorSet);
-      }     
-      if(false) {
-         VkDescriptorSetLayoutBinding materialLayout = CreateDescriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_SHADER_STAGE_FRAGMENT_BIT, 0);
-         VkDescriptorSetLayoutBinding bindings[] = { materialLayout };
+      }   
+      {
+         VkDescriptorSetLayoutBinding diffuseLayout = CreateDescriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0);
+         VkDescriptorSetLayoutBinding bindings[] = { diffuseLayout };
          VkDescriptorSetLayoutCreateInfo layoutInfo{};
          layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-         layoutInfo.bindingCount = 8;
+         layoutInfo.bindingCount = sizeof(bindings)/sizeof(VkDescriptorSetLayoutBinding);
          layoutInfo.pBindings = bindings;
          vkCreateDescriptorSetLayout(mVkManager->GetDevice(), &layoutInfo, GetAllocationCallback(), &mMaterialDescriptorSet);
-      }
+      }     
 
       {
          //mPipeline.AddShader(GetWorkDir() + "Shaders/Simple.vert");
          //mPipeline.SetVertexType(VertexTypeDefault);
-         mPipeline.AddShader(GetWorkDir() + "Shaders/Instanced.vert");
-         mPipeline.SetVertexType(VertexTypeInstanced);
-         mPipeline.AddShader(GetWorkDir() + "Shaders/Simple.frag");
+         mPipeline.AddShader(GetWorkDir() + "Shaders/Simple.vert");
+         mPipeline.SetVertexType(VertexTypeDefault);
+         mPipeline.AddShader(GetWorkDir() + "Shaders/Textured.frag");
          mPipeline.AddDescriptorSetLayout(mSceneDescriptorSet);
          mPipeline.AddDescriptorSetLayout(mObjectDescriptorSet);
+         mPipeline.AddDescriptorSetLayout(mMaterialDescriptorSet);
          mPipeline.SetBlendingEnabled(true);
          mPipeline.Create(mVkManager->GetSwapchainExtent(), &mRenderPass);
       }
@@ -96,7 +97,10 @@ void Application::Start() {
          vkAllocateDescriptorSets(mVkManager->GetDevice(), &setAllocate, &mSceneSet);
 
          setAllocate.pSetLayouts = &mObjectDescriptorSet;
-         vkAllocateDescriptorSets(mVkManager->GetDevice(), &setAllocate, &mObjectSet);
+         vkAllocateDescriptorSets(mVkManager->GetDevice(), &setAllocate, &mObjectSet); 
+         
+         setAllocate.pSetLayouts = &mMaterialDescriptorSet;
+         vkAllocateDescriptorSets(mVkManager->GetDevice(), &setAllocate, &mMaterialSet);
 
          mSceneBuffer.Create(3, sizeof(SceneUBO), mSceneSet, 0);
          mSceneBuffer.SetName("Scene Buffer");
@@ -107,7 +111,7 @@ void Application::Start() {
    }
 
    //mModelTest.LoadModel(GetWorkDir() + "Models/treeTest.fbx", nullptr, {});
-   mModelTest.LoadModel(GetWorkDir() + "Sponza/Sponza.obj", nullptr, {});
+   mModelTest.LoadModel(GetWorkDir() + "Sponza/Sponza.obj", mMaterialDescriptorSet, {});
    mModelTest.SetScale(0.05f);
    mModelTest2.LoadModel(GetWorkDir() + "Models/mandalorian-star-wars/source/Mandalorian_Anim_fixed_textures.fbx", nullptr, {});
 
@@ -259,16 +263,16 @@ void Application::Draw() {
       vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline.GetPipelineLayout(), 0, 1, &mSceneSet, 1, descriptorSetOffsets);
 
       //render Light facing camera
-      //{
-      //   DescriptorUBO des = DescriptorUBO(commandBuffer, mPipeline.GetPipelineLayout(), &mObjectBuffer, mObjectSet);
-      //   ObjectUBO ubo;
-      //   ubo.mModel = glm::rotate(mModelTest.GetMatrix(), abs(sin((frameCounter * 0.5f) / 5000.0f)), glm::vec3(0,1,0));
-      //   des.UpdateObjectAndBind(&ubo);
-      //
-      //   mModelTest.Render(&des, RenderMode::NORMAL);
-      //
-      //}
-      RenderManager::Get()->Render( commandBuffer );
+      {
+         DescriptorUBO des = DescriptorUBO(commandBuffer, mPipeline.GetPipelineLayout(), &mObjectBuffer, mObjectSet);
+         ObjectUBO ubo;
+         ubo.mModel = glm::rotate(mModelTest.GetMatrix(), abs(sin((frameCounter * 0.5f) / 5000.0f)), glm::vec3(0,1,0));
+         des.UpdateObjectAndBind(&ubo);
+      
+         mModelTest.Render(&des, RenderMode::NORMAL);
+      
+      }
+      //RenderManager::Get()->Render( commandBuffer );
       //vkCmdDrawIndexedIndirect(commandBuffer, renderIndirectBufferOUT.GetBuffer(), 0, renderIndirectBufferOUT.GetCount(), sizeof( VkDrawIndexedIndirectCommand ) );
       //vkCmdDrawIndexedIndirect(commandBuffer, buffer, offset, drawCount, stride);
       //vkCmdDrawIndexedIndirectCount(commandBuffer, buffer, offset, countbuffer, countbufferoffset, maxDrawCount, stride);
@@ -297,6 +301,7 @@ void Application::Destroy() {
    {
       mSceneBuffer.Destroy();
       mObjectBuffer.Destroy();
+      vkDestroyDescriptorSetLayout(mVkManager->GetDevice(), mMaterialDescriptorSet, GetAllocationCallback());
       vkDestroyDescriptorSetLayout(mVkManager->GetDevice(), mSceneDescriptorSet, GetAllocationCallback());
       vkDestroyDescriptorSetLayout(mVkManager->GetDevice(), mObjectDescriptorSet, GetAllocationCallback());
    }

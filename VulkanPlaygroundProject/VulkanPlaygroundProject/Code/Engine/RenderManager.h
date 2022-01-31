@@ -3,10 +3,17 @@
 class Model;
 class Transform;
 class BufferStorageUniform;
+class Material;
 
 struct RenderingBufferOUT;
 class BufferVertex;
 class BufferIndex;
+
+struct RenderCommand {
+	Model* mModel;
+	Transform* mTransform;
+	Material* mMaterial;
+};
 
 class RenderManager {
 	//Singleton
@@ -27,16 +34,7 @@ public:
 
 	void Render(VkCommandBuffer aBuffer);
 private:
-	BufferStorageUniform* mDrawDataBuffer;
-	RenderingBufferOUT* mDrawDataBufferMappedData;
-
-	BufferVertex* mVertexBuffer;
-	BufferVertex* mVertexInstanceBuffer;
-	BufferIndex* mIndexBuffer;
-	uint32_t mVertexCount = 0;
-	uint32_t mIndexCount = 0;
 
 
-	RenderingBufferOUT* GetDrawDataBuffer(uint32_t aIndex = 0);
 };
 

@@ -4,11 +4,6 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 17.0.31521.260
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "VulkanPlaygroundProject", "VulkanPlaygroundProject\VulkanPlaygroundProject.vcxproj", "{7F9AD77E-50FB-4C25-86DD-43DBA8A5E8D6}"
-	ProjectSection(ProjectDependencies) = postProject
-		{FEF34EE0-EBDB-383E-92B9-33AD4D86C64F} = {FEF34EE0-EBDB-383E-92B9-33AD4D86C64F}
-	EndProjectSection
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "assimp", "..\Libraries\assimp\build\code\assimp.vcxproj", "{FEF34EE0-EBDB-383E-92B9-33AD4D86C64F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -38,22 +33,6 @@ Global
 		{7F9AD77E-50FB-4C25-86DD-43DBA8A5E8D6}.RelWithDebInfo|x64.Build.0 = Release|x64
 		{7F9AD77E-50FB-4C25-86DD-43DBA8A5E8D6}.RelWithDebInfo|x86.ActiveCfg = Release|Win32
 		{7F9AD77E-50FB-4C25-86DD-43DBA8A5E8D6}.RelWithDebInfo|x86.Build.0 = Release|Win32
-		{FEF34EE0-EBDB-383E-92B9-33AD4D86C64F}.Debug|x64.ActiveCfg = Debug|x64
-		{FEF34EE0-EBDB-383E-92B9-33AD4D86C64F}.Debug|x64.Build.0 = Debug|x64
-		{FEF34EE0-EBDB-383E-92B9-33AD4D86C64F}.Debug|x86.ActiveCfg = Debug|x64
-		{FEF34EE0-EBDB-383E-92B9-33AD4D86C64F}.Debug|x86.Build.0 = Debug|x64
-		{FEF34EE0-EBDB-383E-92B9-33AD4D86C64F}.MinSizeRel|x64.ActiveCfg = MinSizeRel|x64
-		{FEF34EE0-EBDB-383E-92B9-33AD4D86C64F}.MinSizeRel|x64.Build.0 = MinSizeRel|x64
-		{FEF34EE0-EBDB-383E-92B9-33AD4D86C64F}.MinSizeRel|x86.ActiveCfg = MinSizeRel|x64
-		{FEF34EE0-EBDB-383E-92B9-33AD4D86C64F}.MinSizeRel|x86.Build.0 = MinSizeRel|x64
-		{FEF34EE0-EBDB-383E-92B9-33AD4D86C64F}.Release|x64.ActiveCfg = Release|x64
-		{FEF34EE0-EBDB-383E-92B9-33AD4D86C64F}.Release|x64.Build.0 = Release|x64
-		{FEF34EE0-EBDB-383E-92B9-33AD4D86C64F}.Release|x86.ActiveCfg = Release|x64
-		{FEF34EE0-EBDB-383E-92B9-33AD4D86C64F}.Release|x86.Build.0 = Release|x64
-		{FEF34EE0-EBDB-383E-92B9-33AD4D86C64F}.RelWithDebInfo|x64.ActiveCfg = RelWithDebInfo|x64
-		{FEF34EE0-EBDB-383E-92B9-33AD4D86C64F}.RelWithDebInfo|x64.Build.0 = RelWithDebInfo|x64
-		{FEF34EE0-EBDB-383E-92B9-33AD4D86C64F}.RelWithDebInfo|x86.ActiveCfg = RelWithDebInfo|x64
-		{FEF34EE0-EBDB-383E-92B9-33AD4D86C64F}.RelWithDebInfo|x86.Build.0 = RelWithDebInfo|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

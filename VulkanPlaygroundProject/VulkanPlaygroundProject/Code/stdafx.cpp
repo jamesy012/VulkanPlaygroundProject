@@ -41,5 +41,4 @@ void Logger::LogMessage(const char* aMessage, ...) {
 
 	va_end(argptr);
 
-
 }

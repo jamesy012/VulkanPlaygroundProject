@@ -117,6 +117,18 @@ static VkWriteDescriptorSet  CreateWriteDescriptorSet(VkDescriptorType aType, Vk
    return set;
 }
 
+static VkWriteDescriptorSet GetWriteDescriptorSet(VkDescriptorImageInfo& aImageInfo, const VkImageLayout aImageLayout, const VkImageView aImageView, VkDescriptorSet aDescriptorSet, VkSampler aSampler, uint32_t aBinding) {
+   aImageInfo = {};
+   aImageInfo.imageView = aImageView;
+   aImageInfo.imageLayout = aImageLayout;
+   aImageInfo.sampler = aSampler;
+   return CreateWriteDescriptorSet(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, aDescriptorSet, &aImageInfo, aBinding);
+}
+
+//static VkWriteDescriptorSet GetWriteDescriptorSet(VkDescriptorImageInfo& aImageInfo, const Image* aImage, VkDescriptorSet aDescriptorSet, VkSampler aSampler, uint32_t aBinding) {
+//   return GetWriteDescriptorSet(aImageInfo, aImage->GetImageLayout(), aImage->GetImageView(), aDescriptorSet, aSampler, aBinding);
+//}
+
 static void SetImageLayout(VkCommandBuffer aBuffer, VkImage aImage, VkImageAspectFlags aAspectMask, VkImageLayout aOldImageLayout,
                            VkImageLayout aNewImageLayout, VkPipelineStageFlags aSrcStages, VkPipelineStageFlags aDestStages, uint32_t aArrayIndex = 0) {
 

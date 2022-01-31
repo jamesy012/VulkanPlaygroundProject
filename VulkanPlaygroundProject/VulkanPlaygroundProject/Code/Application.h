@@ -45,6 +45,7 @@ private:
    VkDescriptorSetLayout mMaterialDescriptorSet;
    VkDescriptorSet mSceneSet;
    VkDescriptorSet mObjectSet;
+   VkDescriptorSet mMaterialSet;
    BufferRingUniform mSceneBuffer;
    BufferRingUniform mObjectBuffer;
 
