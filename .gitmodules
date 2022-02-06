@@ -16,6 +16,3 @@
 [submodule "VulkanPlaygroundProject/WorkDir/sponza"]
 	path = VulkanPlaygroundProject/WorkDir/sponza
 	url = https://github.com/jimmiebergmann/Sponza.git
-[submodule "Libraries/Ultralight"]
-	path = Libraries/Ultralight
-	url = https://github.com/ultralight-ux/Ultralight.git

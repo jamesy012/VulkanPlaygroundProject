@@ -266,13 +266,13 @@ InputHandler::InputHandler() {
 	mKeyboardRemapper[IKEY_Delete] = DIK_DELETE;
 }
 
-
+HWND hwnd;
 InputHandler::~InputHandler() {
 }
 
 bool InputHandler::Startup(GLFWwindow* a_InputWindow) {
 	HINSTANCE hInstance = GetModuleHandle(NULL);
-	HWND hwnd = glfwGetWin32Window(a_InputWindow);
+	hwnd = glfwGetWin32Window(a_InputWindow);
 	HRESULT hr;
 
 	hr = DirectInput8Create(hInstance, DIRECTINPUT_VERSION, IID_IDirectInput8, (VOID**)&mDirectInput, NULL);
@@ -460,13 +460,13 @@ bool InputHandler::ReadMouse() {
 	HRESULT hr;
 
 
-	//POINT pos;
-	//if (::GetCursorPos(&pos) && ::ScreenToClient(Win32Application::GetHwnd(), &pos)) {
-	//	mMouseDeltaX = m_MouseX - pos.x;
-	//	mMouseDeltaY = m_MouseY - pos.y;
-	//	m_MouseX = (float)pos.x;
-	//	m_MouseY = (float)pos.y;
-	//}
+	POINT pos;
+	if (::GetCursorPos(&pos) && ::ScreenToClient(hwnd, &pos)) {
+		//mMouseDeltaX = m_MouseX - pos.x;
+		//mMouseDeltaY = m_MouseY - pos.y;
+		mMouseX = (float)pos.x;
+		mMouseY = (float)pos.y;
+	}
 
 	if (mMouse == nullptr) {
 		return false;

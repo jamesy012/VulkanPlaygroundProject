@@ -55,6 +55,10 @@ public:
 
    bool Create(const VkExtent2D aSize, const RenderPass* aRenderPass);
    void Destroy();
+
+   //temp
+   bool mDepthTest = true;
+
 private:
    struct Shader {
    public:

@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      width: 100%;
+    }
+
+    #container {
+      min-height: 100%;
+      position: relative;
+    }
+
+    #header {
+      background: #ff0;
+      padding: 10px;
+    }
+
+    #body {
+      padding: 10px;
+      padding-bottom: 60px;
+      /* Height of the footer */
+    }
+
+    #footer {
+      position: absolute;
+      bottom: 0;
+      width: 100%;
+      height: 20px;
+      margin-left: auto; 
+      margin-right: 0;
+      text-align:right;
+      float: right;
+      display: flex; justify-content: flex-end;
+      /* Height of the footer */
+      /* background: rgb(112, 102, 255); */
+      /* background-image: linear-gradient(to right, rgba(112, 102, 255,0), rgba(112, 102, 255, 1)); */
+    }
+
+     #footerTextHolder {
+      position: absolute;
+      bottom: 0;
+      width: 25%;
+      min-width: 50px;
+      float: right;
+      text-align:right;
+      /* background-color: red; */
+      /* Height of the footer */
+      /* background: rgb(112, 102, 255); */
+      background-image: linear-gradient(to right, rgba(112, 102, 255,0), rgba(112, 102, 255, 1));
+    } 
+  </style>
+  <script type="text/javascript">
+    function updateTime() {
+      const dayNames = ["Sunday",
+                        "Monday",
+                        "Tuesday",
+                        "Wednesday",
+                        "Thursday",
+                        "Friday",
+                        "Saturday"]
+      const monthNames = ["January",
+                          "February",
+                          "March",
+                          "April",
+                          "May",
+                          "June",
+                          "July",
+                          "August",
+                          "September",
+                          "October",
+                          "November",
+                          "December"];
+      var date = new Date();
+      var h = date.getHours();//(date.getHours() + 24) % 12 || 12;
+      var m = date.getMinutes();
+      m = m < 10 ? "0" + m : m;
+      var timeStr = h + ":" + m;
+      var dateStr = dayNames[date.getDay()] +  ", " + 
+        monthNames[date.getMonth()] + " " + date.getDate();
+      document.getElementById('time').innerText = timeStr;
+      //document.getElementById('date').innerText = dateStr;
+      var t = setTimeout(updateTime, 10000);
+    }
+    </script>
+</head>
+
+<body onload="updateTime();">
+  <div id="container">
+    <!-- <div id="header">header</div> -->
+    <!-- <div id="body">body</div> -->
+    <div id="footer"><div id="footerTextHolder"><div id="time"></div></div></div>
+  </div>
+
+</body>
+
+</html>

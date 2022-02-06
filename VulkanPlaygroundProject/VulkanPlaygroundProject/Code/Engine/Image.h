@@ -6,8 +6,13 @@ public:
    bool LoadImage(std::string aPath);
    bool LoadImageData(const int aWidth, const int aHeight, const unsigned char* aData);
    bool LoadImageForArray(std::string aPath, uint32_t aArrayIndex);
+   bool CreateImageEmpty(const int aWidth, const int aHeight);
+
+   //todo - remove these CreateImage?
    bool CreateImage(VkExtent2D aSize, VkFormat aFormat, VkImageUsageFlags aUsage, VkImageAspectFlags aAspect, uint32_t aNumArrays = 1u, uint32_t aNumMips = 1u);
    bool CreateImage(VkExtent2D aSize, uint32_t aNumArrays = 1u, uint32_t aNumMips = 1u);
+
+   void SetImageData(const unsigned char* aData);
 
    const VkImage GetImage() const {
       return mImage;
@@ -21,13 +26,25 @@ public:
       return mImageView;
    }
 
-   const VkImageLayout GetImageLayout()const {
+   const VkImageLayout GetImageLayout() const {
       return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
    }
 
    void SetName(std::string aName);
 
    void Destroy();
+
+   uint32_t GetWidth() const {
+       return mSize.width;
+   }
+
+   uint32_t GetHeight() const {
+       return mSize.height;
+   }
+
+   uint32_t GetStride() const {
+       return 4;
+   }
 private:
    bool CreateImage(VkFormat aFormat, VkImageUsageFlags aUsage);
    bool CreateImageViews(VkFormat aFormat, VkImageAspectFlags aAspect);
