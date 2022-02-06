@@ -47,6 +47,12 @@ void Application::Start() {
    mBillboardQuad.CreatePrimitive(VertexPrimitives::QUAD);
 
    {
+       Image::WHITE = new Image();
+       const unsigned char data[4] = { 255,255,255,255 };
+       Image::WHITE->LoadImageData(1, 1, data);
+   }
+
+   {
       {
          VkDescriptorSetLayoutBinding sceneLayout = CreateDescriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0);
          VkDescriptorSetLayoutBinding bindings[] = { sceneLayout };
@@ -113,7 +119,9 @@ void Application::Start() {
    //mModelTest.LoadModel(GetWorkDir() + "Models/treeTest.fbx", nullptr, {});
    mModelTest.LoadModel(GetWorkDir() + "Sponza/Sponza.obj", mMaterialDescriptorSet, {});
    mModelTest.SetScale(0.05f);
-   mModelTest2.LoadModel(GetWorkDir() + "Models/mandalorian-star-wars/source/Mandalorian_Anim_fixed_textures.fbx", nullptr, {});
+   mModelTest2.LoadModel(GetWorkDir() + "Models/mandalorian-star-wars/source/Mandalorian_Anim_fixed_textures.fbx", mMaterialDescriptorSet, {});
+   mModelTest2.SetScale(0.05f);
+   mModelTest2.SetRotation(glm::vec3(-90, 0, 0));
 
    //mFlyCamera.SetPosition(glm::vec3(130, 50, 150));
    mFlyCamera.SetFarClip(150.0f);
@@ -266,10 +274,15 @@ void Application::Draw() {
       {
          DescriptorUBO des = DescriptorUBO(commandBuffer, mPipeline.GetPipelineLayout(), &mObjectBuffer, mObjectSet);
          ObjectUBO ubo;
-         ubo.mModel = glm::rotate(mModelTest.GetMatrix(), abs(sin((frameCounter * 0.5f) / 5000.0f)), glm::vec3(0,1,0));
+         ubo.mModel = mModelTest.GetMatrix();
+         //ubo.mModel = glm::rotate(mModelTest.GetMatrix(), abs(sin((frameCounter * 0.5f) / 5000.0f)), glm::vec3(0,1,0));
          des.UpdateObjectAndBind(&ubo);
       
          mModelTest.Render(&des, RenderMode::NORMAL);
+
+         ubo.mModel = mModelTest2.GetMatrix();
+         des.UpdateObjectAndBind(&ubo);
+         mModelTest2.Render(&des, RenderMode::NORMAL);
       
       }
       //RenderManager::Get()->Render( commandBuffer );
@@ -314,6 +327,9 @@ void Application::Destroy() {
    mPipeline.Destroy();
    mModelTest.Destroy();
    mModelTest2.Destroy();
+
+   Image::WHITE->Destroy();
+   delete Image::WHITE;
 
    mVkManager->Destroy();
    mWindow->Destroy();

@@ -1,7 +1,10 @@
 #pragma once
 class Image {
 public:
+    static Image* WHITE;
+public:
    bool LoadImage(std::string aPath);
+   bool LoadImageData(const int aWidth, const int aHeight, const unsigned char* aData);
    bool LoadImageForArray(std::string aPath, uint32_t aArrayIndex);
    bool CreateImage(VkExtent2D aSize, VkFormat aFormat, VkImageUsageFlags aUsage, VkImageAspectFlags aAspect, uint32_t aNumArrays = 1u, uint32_t aNumMips = 1u);
    bool CreateImage(VkExtent2D aSize, uint32_t aNumArrays = 1u, uint32_t aNumMips = 1u);

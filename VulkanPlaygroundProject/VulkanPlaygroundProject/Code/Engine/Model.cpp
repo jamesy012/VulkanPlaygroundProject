@@ -81,7 +81,7 @@ bool Model::LoadModel(std::string aPath, VkDescriptorSetLayout aMaterialDescript
          if (!mMaterials[i].mDiffuse.empty()) {
             write.push_back(GetWriteDescriptorSet(info, mMaterials[i].mDiffuse[0]->GetImageLayout(), mMaterials[i].mDiffuse[0]->GetImageView(), mMaterials[i].mDescriptorSet, VulkanManager::Get()->GetDefaultSampler(), 0));
          } else {
-            //write.push_back(GetWriteDescriptorSet(info, &mImages[0], mMaterials[i].mDescriptorSet, VulkanManager::Get()->GetDefaultSampler(), 0));
+            write.push_back(GetWriteDescriptorSet(info, Image::WHITE->GetImageLayout(), Image::WHITE->GetImageView(), mMaterials[i].mDescriptorSet, VulkanManager::Get()->GetDefaultSampler(), 0));
          }
          for (size_t q = 0; q < write.size(); q++) {
             write[q].dstSet = mMaterials[i].mDescriptorSet;
@@ -291,7 +291,7 @@ void Model::Render(DescriptorUBO* aRenderDescriptor, RenderMode aRenderMode) {
             {
                if (aRenderMode == RenderMode::NORMAL) {
                   Material& material = mMaterials[node->mMesh[i].mMaterialID];
-                  if (!material.mDiffuse.empty()) {
+                  if (material.mDescriptorSet != VK_NULL_HANDLE) {
                      vkCmdBindDescriptorSets(aRenderDescriptor->mCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, aRenderDescriptor->mPipelineLayout, 2, 1, &material.mDescriptorSet, 0, nullptr);
                   }
                }

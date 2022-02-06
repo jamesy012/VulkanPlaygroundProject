@@ -8,13 +8,13 @@
 
 #define BITS_PER_PIXEL 4
 
+Image* Image::WHITE;
+
 bool Image::LoadImage(std::string aPath) {
    int width;
    int height;
    int texChannels;
    stbi_uc* pixels = stbi_load(aPath.c_str(), &width, &height, &texChannels, STBI_rgb_alpha);
-   mSize.width = width;
-   mSize.height = height;
 
    mNumArrays = 1;
    mNumMips = 1;
@@ -24,62 +24,68 @@ bool Image::LoadImage(std::string aPath) {
       return false;
    }
 
-   bool result = CreateImage(VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
-   ASSERT_RET_VALUE(result, false);
-
-   BufferStaging staging;
-   staging.Create(mDataSize);
-   {
-      void* data;
-      staging.Map(&data);
-      memcpy(data, pixels, mDataSize);
-      staging.UnMap();
-   }
+   bool result = LoadImageData(width, height, pixels);
 
    stbi_image_free(pixels);
 
-   {
-      VkBufferImageCopy region{};
-      region.bufferOffset = 0;
-      region.bufferRowLength = 0;
-      region.bufferImageHeight = 0;
-
-      region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-      region.imageSubresource.mipLevel = 0;
-      region.imageSubresource.baseArrayLayer = 0;
-      region.imageSubresource.layerCount = 1;
-
-      region.imageOffset = { 0, 0, 0 };
-      region.imageExtent = {
-         mSize.width,
-         mSize.height,
-         1
-      };
-
-      VkCommandBuffer commandBuffer;
-      VulkanManager::Get()->OneTimeCommandBufferStart(commandBuffer);
-      SetImageLayout(commandBuffer, mImage, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
-      vkCmdCopyBufferToImage(
-         commandBuffer,
-         staging.GetBuffer(),
-         mImage,
-         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-         1,
-         &region
-      );
-      SetImageLayout(commandBuffer, mImage, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-      VulkanManager::Get()->OneTimeCommandBufferEnd(commandBuffer);
-   }
-
-   staging.Destroy();
-
-   result = CreateImageViews(VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
-   ASSERT_RET_VALUE(result, false);
-
-   mHasData = true;
-
    SetName(aPath);
-   return true;
+   return result;
+}
+
+bool Image::LoadImageData(const int aWidth, const int aHeight, const unsigned char* aData) {
+    mSize.width = aWidth;
+    mSize.height = aHeight;
+
+    bool result = CreateImage(VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+    ASSERT_RET_VALUE(result, false);
+
+    BufferStaging staging;
+    staging.Create(mDataSize);
+    {
+        void* data;
+        staging.Map(&data);
+        memcpy(data, aData, mDataSize);
+        staging.UnMap();
+    }
+
+    {
+        VkBufferImageCopy region{};
+        region.bufferOffset = 0;
+        region.bufferRowLength = 0;
+        region.bufferImageHeight = 0;
+
+        region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        region.imageSubresource.mipLevel = 0;
+        region.imageSubresource.baseArrayLayer = 0;
+        region.imageSubresource.layerCount = 1;
+
+        region.imageOffset = { 0, 0, 0 };
+        region.imageExtent = {
+           mSize.width,
+           mSize.height,
+           1
+        };
+
+        OneTimeCommandBuffer(VK_NULL_HANDLE, [&](VkCommandBuffer commandBuffer) {
+            SetImageLayout(commandBuffer, mImage, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+            vkCmdCopyBufferToImage(
+                commandBuffer,
+                staging.GetBuffer(),
+                mImage,
+                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                1,
+                &region
+            );
+            SetImageLayout(commandBuffer, mImage, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+        });
+    }
+
+    staging.Destroy();
+
+    result = CreateImageViews(VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
+    ASSERT_RET_VALUE(result, false);
+
+    mHasData = true;
 }
 
 bool Image::LoadImageForArray(std::string aPath, uint32_t aArrayIndex) {
