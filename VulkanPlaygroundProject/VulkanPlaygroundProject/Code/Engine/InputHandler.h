@@ -18,15 +18,18 @@ public:
 
 	void Update();
 
-	std::string GetKeysDown();
+	std::string GetKeysDown() const;
+	std::vector<char> GetKeysDownArray() const;
 
-	bool IsKeyDown(IKeys aKey);
-	bool WasKeyPressed(IKeys aKey);
-	glm::vec2 GetMousePos();
-	glm::vec2 GetMouseDelta();
-	bool IsMouseKeyDown(IMouseKeys aKey);
-	bool WasMouseKeyPressed(IMouseKeys aKey);
-	float GetMouseScroll();
+	bool IsKeyDown(IKeys aKey) const;
+	bool WasKeyPressed(IKeys aKey) const;
+	bool WasKeyReleased(IKeys aKey) const;
+	glm::vec2 GetMousePos() const;
+	glm::vec2 GetMouseDelta() const;
+	bool IsMouseKeyDown(IMouseKeys aKey) const;
+	bool WasMouseKeyPressed(IMouseKeys aKey) const;
+	bool WasMouseKeyReleased(IMouseKeys aKey) const;
+	float GetMouseScroll() const;
 
 	void AllowInput(bool aShouldProcessInput) {
 		mGetNewValues = aShouldProcessInput;

@@ -368,36 +368,61 @@ void InputHandler::Update() {
 
 }
 
-bool InputHandler::IsKeyDown(IKeys aKey) {
+bool InputHandler::IsKeyDown(IKeys aKey) const {
 	return mKeyboardState[mKeyboardRemapper[aKey]];
 }
 
-bool InputHandler::WasKeyPressed(IKeys aKey) {
+bool InputHandler::WasKeyPressed(IKeys aKey) const {
 	const int index = mKeyboardRemapper[aKey];
 	return mKeyboardState[index] && !mKeyboardStateOld[index];
 }
 
-glm::vec2 InputHandler::GetMousePos() {
+bool InputHandler::WasKeyReleased(IKeys aKey) const {
+	const int index = mKeyboardRemapper[aKey];
+	return !mKeyboardState[index] && mKeyboardStateOld[index];
+}
+
+glm::vec2 InputHandler::GetMousePos() const {
 	return glm::vec2(mMouseX, mMouseY);
 }
 
-glm::vec2 InputHandler::GetMouseDelta() {
+glm::vec2 InputHandler::GetMouseDelta() const {
 	return glm::vec2(mMouseDeltaX, mMouseDeltaY);
 }
 
-bool InputHandler::IsMouseKeyDown(IMouseKeys aKey) {
+bool InputHandler::IsMouseKeyDown(IMouseKeys aKey) const {
 	return mMouseState.rgbButtons[aKey] & 0x80;
 }
 
-bool InputHandler::WasMouseKeyPressed(IMouseKeys aKey) {
+bool InputHandler::WasMouseKeyPressed(IMouseKeys aKey) const {
 	return (mMouseState.rgbButtons[aKey] & 0x80) && !(mMouseStateOld.rgbButtons[aKey] & 0x80);
 }
 
-float InputHandler::GetMouseScroll() {
+bool InputHandler::WasMouseKeyReleased(IMouseKeys aKey) const {
+	return !(mMouseState.rgbButtons[aKey] & 0x80) && (mMouseStateOld.rgbButtons[aKey] & 0x80);
+}
+
+float InputHandler::GetMouseScroll() const {
 	return (float)mMouseState.lZ;
 }
 
-std::string InputHandler::GetKeysDown() {
+std::vector<char> InputHandler::GetKeysDownArray() const {
+	std::vector<char> output;
+	for (int i = 0; i < 10; i++) {
+		if (IsKeyDown(IKeys(IKEY_0 + i))) {
+			output.push_back('0' + i);
+		}
+	}
+	for (int i = 0; i < 27; i++) {
+		if (IsKeyDown(IKeys(IKEY_A + i))) {
+			output.push_back('a' + i);
+		}
+	}
+
+	return output;
+}
+
+std::string InputHandler::GetKeysDown() const {
 	//only 0-9 and A-Z
 
 	std::string output;

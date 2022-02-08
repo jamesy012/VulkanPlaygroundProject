@@ -465,6 +465,7 @@ const void VulkanManager::BlitRenderTargetToBackBuffer(VkCommandBuffer aCommandB
 
    SetImageLayout(aCommandBuffer, presentImage, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
    VkImageBlit blit{};
+   //[0] being 0,0 to get the full image
    blit.srcOffsets[1].x = aRenderTarget->GetSize().width;
    blit.srcOffsets[1].y = aRenderTarget->GetSize().height;
    blit.srcOffsets[1].z = 1;

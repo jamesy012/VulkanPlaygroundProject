@@ -20,13 +20,71 @@ Image mHtmlUI;
 VkDescriptorSet mHtmlUISet;
 Pipeline mScreenSpacePipeline;
 
+JSValueRef OnButtonClick(JSContextRef ctx, JSObjectRef function,
+    JSObjectRef thisObject, size_t argumentCount,
+    const JSValueRef arguments[], JSValueRef* exception) {
+    static int counter = 0;
 
-void CopyBitmapToTexture(Image* image, ultralight::RefPtr<ultralight::Bitmap> bitmap) {
+    std::string str =
+        "document.getElementById('time').innerText = '";
+    str += std::to_string(++counter);
+    str+="'";
+
+    // Create our string of JavaScript
+    JSStringRef script = JSStringCreateWithUTF8CString(str.c_str());
+
+    // Execute it with JSEvaluateScript, ignoring other parameters for now
+    JSEvaluateScript(ctx, script, 0, 0, 0, 0);
+
+    // Release our string (we only Release what we Create)
+    JSStringRelease(script);
+
+    return JSValueMakeNull(ctx);
+}
+
+void Application::JavaScriptTest(const ultralight::JSObject& thisObject, const ultralight::JSArgs& args) {
+    for (int i = 0; i < args.size(); i++) {
+        auto arg = args[i];
+        ultralight::String string = arg.ToString();
+        LOG("%s",string.utf16().data());
+    }
+    static int counter = 0;
+
+    std::string str =
+        "document.getElementById('time').innerText = '";
+    str += std::to_string(++counter);
+    str += "'";
+
+    // Create our string of JavaScript
+    JSStringRef script = JSStringCreateWithUTF8CString(str.c_str());
+
+    // Execute it with JSEvaluateScript, ignoring other parameters for now
+    JSEvaluateScript(thisObject.context(), script, 0, 0, 0, 0);
+
+    // Release our string (we only Release what we Create)
+    JSStringRelease(script);
+
+}
+
+ultralight::JSValue Application::JavaScriptTestRet(const ultralight::JSObject& thisObject, const ultralight::JSArgs& args) {
+    for (int i = 0; i < args.size(); i++) {
+        auto arg = args[i];
+        ultralight::String string = arg.ToString();
+        LOG("%s", string.utf8().data());
+    }
+    static int counter = 0;
+
+    return ultralight::JSValue(++counter);
+
+}
+
+void CopyBitmapToTexture(Image* image, ultralight::IntRect bounds, ultralight::RefPtr<ultralight::Bitmap> bitmap) {
+    bitmap->SwapRedBlueChannels();
+    
     ///
     /// Lock the Bitmap to retrieve the raw pixels.
     /// The format is BGRA, 8-bpp, premultiplied alpha.
     ///
-    bitmap->SwapRedBlueChannels();
 
     void* pixels = bitmap->LockPixels();
 
@@ -36,13 +94,15 @@ void CopyBitmapToTexture(Image* image, ultralight::RefPtr<ultralight::Bitmap> bi
     uint32_t width = bitmap->width();
     uint32_t height = bitmap->height();
     uint32_t stride = bitmap->row_bytes();
+    ultralight::BitmapFormat format = bitmap->format();
 
     if (image->GetWidth() == width || image->GetHeight() == height/* || image->GetStride() == stride*/) {
         ///
         /// Psuedo-code to upload our pixels to a GPU texture.
         ///
         //CopyPixelsToTexture(pixels, width, height, stride);
-        image->SetImageData((const unsigned char*)pixels);
+        //image->SetImageData((const unsigned char*)pixels);
+        image->SetImageData(VkExtent2D(bounds.left, bounds.top),VkExtent2D(bounds.width(), bounds.height()), (const unsigned char*)pixels);
     }
     ///
     /// Unlock the Bitmap when we are done.
@@ -245,6 +305,34 @@ void Application::Start() {
    /// Notify the View it has input focus (updates appearance).
    ///
    view->Focus();
+   
+
+   ultralight::Ref<ultralight::JSContext> context = view->LockJSContext();
+   ultralight::SetJSContext(context.get());
+   ultralight::JSObject global = ultralight::JSGlobalObject();
+   //global["OnButtonClick"] = (ultralight::JSCallback)std::bind(&Application::JavaScriptTest, this, std::placeholders::_1, std::placeholders::_2);
+   global["OnButtonClick"] = (ultralight::JSCallbackWithRetval)std::bind(&Application::JavaScriptTestRet, this, std::placeholders::_1, std::placeholders::_2);
+
+   //// Get the underlying JSContextRef for use with the
+   //// JavaScriptCore C API.
+   //JSContextRef ctx = context.get();
+   //
+   //// Create a JavaScript String containing the name of our callback.
+   //JSStringRef name = JSStringCreateWithUTF8CString("OnButtonClick");
+   //// Create a garbage-collected JavaScript function that is bound to our
+   //// native C callback 'OnButtonClick()'.
+   //JSObjectRef func = JSObjectMakeFunctionWithCallback(ctx, name,
+   //    OnButtonClick);
+   //
+   //// Get the global JavaScript object (aka 'window')
+   //JSObjectRef globalObj = JSContextGetGlobalObject(ctx);
+   //
+   //// Store our function in the page's global JavaScript object so that it
+   //// accessible from the page as 'OnButtonClick()'.
+   //JSObjectSetProperty(ctx, globalObj, name, func, 0, 0);
+   //
+   //// Release the JavaScript String we created earlier.
+   //JSStringRelease(name);
 
    mHtmlUI.CreateImageEmpty(mVkManager->GetSwapchainExtent().width, mVkManager->GetSwapchainExtent().height);
    VkDescriptorImageInfo info;
@@ -333,19 +421,37 @@ void Application::Update() {
    }
 
    //mModelTest.SetRotation(glm::vec3(0, frameCounter * 0.07f, 0));
-
-   if (_CInput->GetMouseDelta() != glm::vec2(0, 0)) {
+   {//mouse
        ultralight::MouseEvent evt;
-       evt.type = ultralight::MouseEvent::kType_MouseMoved;
        evt.x = _CInput->GetMousePos().x;
        evt.y = _CInput->GetMousePos().y;
-       evt.button = ultralight::MouseEvent::kButton_None;
-       view->FireMouseEvent(evt);
+       const ultralight::MouseEvent::Button remap[] = {ultralight::MouseEvent::kButton_Left,ultralight::MouseEvent::kButton_Right, ultralight::MouseEvent::kButton_Middle};
+       for (int i = 0; i < 3; i++) {
+           evt.button = remap[i];
+           if (_CInput->WasMouseKeyPressed((IMouseKeys)i)) {
+               evt.type = ultralight::MouseEvent::kType_MouseDown;
+               view->FireMouseEvent(evt);
+               LOG("Down %i\n", i);
+           }
+           if (_CInput->WasMouseKeyReleased((IMouseKeys)i)) {
+               evt.type = ultralight::MouseEvent::kType_MouseUp;
+               view->FireMouseEvent(evt);
+               LOG("Up %i\n", i);
+           }
+       }
+       if (_CInput->GetMouseDelta() != glm::vec2(0, 0)) {
+           evt.type = ultralight::MouseEvent::kType_MouseMoved;
+           evt.button = ultralight::MouseEvent::kButton_None;
+           view->FireMouseEvent(evt);
+       }
    }
-   if (_CInput->GetKeysDown().length() != 0) {
+   std::vector<char> keysDown = _CInput->GetKeysDownArray();
+   char keyValue[] = {0,0};//add a 0 terminator to the end?
+   for (int i = 0; i < keysDown.size();i++) {
        ultralight::KeyEvent  evt;
-       evt.type = ultralight::KeyEvent::kType_Char;
-       evt.text = _CInput->GetKeysDown().c_str();
+       evt.type = ultralight::KeyEvent::kType_Char;//kType_RawKeyDown?
+       keyValue[0] = keysDown[i];
+       evt.text = keyValue;
        evt.unmodified_text = evt.text;
        view->FireKeyEvent(evt);
    }
@@ -402,7 +508,7 @@ void Application::Draw() {
            ///
            /// Psuedo-code to upload Surface's bitmap to GPU texture.
            ///
-           CopyBitmapToTexture(&mHtmlUI, surface->bitmap());
+           CopyBitmapToTexture(&mHtmlUI, surface->dirty_bounds(), surface->bitmap());
 
            ///
            /// Clear the dirty bounds.

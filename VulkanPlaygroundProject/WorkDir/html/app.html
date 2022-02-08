@@ -52,7 +52,7 @@
       /* background-color: red; */
       /* Height of the footer */
       /* background: rgb(112, 102, 255); */
-      background-image: linear-gradient(to right, rgba(112, 102, 255,0), rgba(112, 102, 255, 1));
+      background-image: linear-gradient(to right, rgba(112, 102, 255, 0), rgba(112, 102, 255, 1));
     } 
   </style>
   <script type="text/javascript">
@@ -88,10 +88,23 @@
       var t = setTimeout(updateTime, 10000);
     }
     </script>
+        <script type="text/javascript">
+          function HandleButton(evt) {
+            // Call our C++ callback 'GetMessage'
+            var message = OnButtonClick("Heck", parseInt(document.getElementById('time').innerHTML));
+            
+            // Display the result in our 'message' div element and apply the
+            // rainbow effect to our document's body.
+            document.getElementById('time').innerHTML = message;
+          }
+          </script>
 </head>
 
 <body onload="updateTime();">
   <div id="container">
+    <button onclick="HandleButton(event);">Click Me</button>
+    <!-- <button onclick="OnButtonClick();">Click Me</button> -->
+    <div id="result"></div>
     <!-- <div id="header">header</div> -->
     <!-- <div id="body">body</div> -->
     <div id="footer"><div id="footerTextHolder"><div id="time"></div></div></div>

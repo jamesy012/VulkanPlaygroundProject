@@ -13,6 +13,7 @@ public:
    bool CreateImage(VkExtent2D aSize, uint32_t aNumArrays = 1u, uint32_t aNumMips = 1u);
 
    void SetImageData(const unsigned char* aData);
+   void SetImageData(const VkExtent2D aStart, const VkExtent2D aSize, const unsigned char* aData);
 
    const VkImage GetImage() const {
       return mImage;
@@ -45,6 +46,10 @@ public:
    uint32_t GetStride() const {
        return 4;
    }
+
+   //temp
+   bool mIncludeTransferSrcBit = false;
+
 private:
    bool CreateImage(VkFormat aFormat, VkImageUsageFlags aUsage);
    bool CreateImageViews(VkFormat aFormat, VkImageAspectFlags aAspect);

@@ -50,7 +50,12 @@ bool Image::CreateImageEmpty(const int aWidth, const int aHeight) {
     mSize.width = aWidth;
     mSize.height = aHeight;
 
-    bool result = CreateImage(VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+    int flags = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+    if (mIncludeTransferSrcBit) {
+        flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    }
+
+    bool result = CreateImage(VK_FORMAT_R8G8B8A8_SRGB, flags);
     ASSERT_RET_VALUE(result, false);
 
     result = CreateImageViews(VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
@@ -64,6 +69,9 @@ bool Image::CreateImageEmpty(const int aWidth, const int aHeight) {
 }
 
 void Image::SetImageData(const unsigned char* aData) {
+    //chould check size of aData 
+    //to make sure we arent copying too far over the array?
+
     BufferStaging staging;
     staging.Create(mDataSize);
     {
@@ -107,6 +115,47 @@ void Image::SetImageData(const unsigned char* aData) {
 
     staging.Destroy();
 }
+
+void Image::SetImageData(const VkExtent2D aStart, const VkExtent2D aSize, const unsigned char* aData) {
+    //chould check size's of data?
+    //to make sure we arent copying too far over the array?
+
+
+    Image img;
+    img.mIncludeTransferSrcBit = true;
+    img.LoadImageData(GetWidth(), aSize.height, aData + (0 + (aStart.height * GetWidth())) * img.GetStride());
+
+    {
+        VkImageBlit blit{};
+        //[0] being 0,0 to get the full image
+        blit.dstOffsets[0].x = 0;// aStart.width;
+        blit.dstOffsets[0].y = aStart.height;
+        blit.dstOffsets[0].z = 0;
+
+        blit.srcOffsets[1].x = GetWidth();// aSize.width;
+        blit.srcOffsets[1].y = aSize.height;
+        blit.srcOffsets[1].z = 1;
+        blit.dstOffsets[1].x = GetWidth();//aStart.width + aSize.width;
+        blit.dstOffsets[1].y = aStart.height + aSize.height;
+        blit.dstOffsets[1].z = 1;
+        blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        blit.srcSubresource.layerCount = 1;
+        blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        blit.dstSubresource.layerCount = 1;
+
+        OneTimeCommandBuffer(VK_NULL_HANDLE, [&](VkCommandBuffer commandBuffer) {
+            //no need to change this back as we delete it afterwards
+            SetImageLayout(commandBuffer, img.GetImage(), VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+
+            SetImageLayout(commandBuffer, mImage, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+            vkCmdBlitImage(commandBuffer, img.GetImage(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, mImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VkFilter::VK_FILTER_LINEAR);
+
+            SetImageLayout(commandBuffer, mImage, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+            });
+    }
+    img.Destroy();
+}
+
 
 bool Image::LoadImageForArray(std::string aPath, uint32_t aArrayIndex) {
    ASSERT_IF(aArrayIndex < mNumArrays);
