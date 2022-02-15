@@ -489,8 +489,8 @@ bool InputHandler::ReadMouse() {
 	if (::GetCursorPos(&pos) && ::ScreenToClient(hwnd, &pos)) {
 		//mMouseDeltaX = m_MouseX - pos.x;
 		//mMouseDeltaY = m_MouseY - pos.y;
-		mMouseX = (float)pos.x;
-		mMouseY = (float)pos.y;
+		mMouseX = (int)pos.x;
+		mMouseY = (int)pos.y;
 	}
 
 	if (mMouse == nullptr) {

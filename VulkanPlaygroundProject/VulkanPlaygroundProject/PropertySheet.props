@@ -4,12 +4,12 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
     <IncludePath>$(ProjectDir)Code;$(IncludePath)</IncludePath>
-    <ExternalIncludePath>$(VULKAN_SDK)\Include;$(SolutionDir)..\Libraries\glfw-3.3.4.bin.WIN64\include;$(SolutionDir)..\Libraries\glm;$(SolutionDir)..\Libraries\stb;$(SolutionDir)..\Libraries\imgui;$(SolutionDir)..\Libraries\assimp\include;$(SolutionDir)..\Libraries\VulkanMemoryAllocator\include;$(SolutionDir)..\Libraries\Ultralight\include;$(ExternalIncludePath)</ExternalIncludePath>
+    <ExternalIncludePath>$(VULKAN_SDK)\Include;$(SolutionDir)..\Libraries\glfw-3.3.4.bin.WIN64\include;$(SolutionDir)..\Libraries\glm;$(SolutionDir)..\Libraries\stb;$(SolutionDir)..\Libraries\imgui;$(SolutionDir)..\Libraries\assimp\include;$(SolutionDir)..\Libraries\VulkanMemoryAllocator\include;$(ExternalIncludePath)</ExternalIncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <Link>
-      <AdditionalDependencies>vulkan-1.lib;glfw3.lib;dxguid.lib;dinput8.lib;assimp-vc142-mt.lib;Ultralight.lib;UltralightCore.lib;WebCore.lib;AppCore.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(VULKAN_SDK)\Lib;$(SolutionDir)..\Libraries\glfw-3.3.4.bin.WIN64\lib-vc2019;$(SolutionDir)..\Libraries\assimp\lib\Release;$(SolutionDir)..\Libraries\ultralight\lib\</AdditionalLibraryDirectories>
+      <AdditionalDependencies>vulkan-1.lib;glfw3.lib;dxguid.lib;dinput8.lib;assimp-vc142-mt.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(VULKAN_SDK)\Lib;$(SolutionDir)..\Libraries\glfw-3.3.4.bin.WIN64\lib-vc2019;$(SolutionDir)..\Libraries\assimp\lib\Release</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup />

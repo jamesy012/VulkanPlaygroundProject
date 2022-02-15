@@ -130,6 +130,10 @@ void Pipeline::AddDescriptorSetLayout( VkDescriptorSetLayout aSetLayout ) {
 	mDescriptorSets.push_back( aSetLayout );
 }
 
+void Pipeline::AddDescriptorSetLayout(std::vector<VkDescriptorSetLayout> aSetLayouts) {
+	mDescriptorSets.insert(mDescriptorSets.end(), aSetLayouts.begin(), aSetLayouts.end());
+}
+
 void Pipeline::AddPushConstant( VkShaderStageFlags aStage, uint32_t aOffset, uint32_t aSize ) {
 	VkPushConstantRange range;
 	range.stageFlags = aStage;

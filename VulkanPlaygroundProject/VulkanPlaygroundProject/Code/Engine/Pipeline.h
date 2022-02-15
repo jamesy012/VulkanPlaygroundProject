@@ -31,6 +31,7 @@ public:
    bool AddShader(std::string aPath, bool aForceReload = false);
    void SetVertexType(VertexType& aType);
    void AddDescriptorSetLayout(VkDescriptorSetLayout aSetLayout);
+   void AddDescriptorSetLayout(std::vector<VkDescriptorSetLayout> aSetLayouts);
    void AddPushConstant(VkShaderStageFlags aStage, uint32_t aOffset, uint32_t aSize);
 
    void SetCullMode(VkCullModeFlags aCullMode) {

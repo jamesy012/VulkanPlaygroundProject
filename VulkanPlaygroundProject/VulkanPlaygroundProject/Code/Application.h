@@ -12,9 +12,6 @@
 
 #include "Engine/FlyCamera.h"
 
-#include <AppCore/JSHelpers.h>
-
-
 class Window;
 class VulkanManager;
 
@@ -59,8 +56,5 @@ private:
    SceneUBO mSceneUbo{};
 
    FlyCamera mFlyCamera;
-
-   void JavaScriptTest(const ultralight::JSObject& thisObject, const ultralight::JSArgs& args);
-   ultralight::JSValue JavaScriptTestRet(const ultralight::JSObject& thisObject, const ultralight::JSArgs& args);
 };
 
