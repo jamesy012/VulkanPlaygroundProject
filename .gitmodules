@@ -16,3 +16,6 @@
 [submodule "VulkanPlaygroundProject/WorkDir/sponza"]
 	path = VulkanPlaygroundProject/WorkDir/sponza
 	url = https://github.com/jimmiebergmann/Sponza.git
+[submodule "Libraries/openvr"]
+	path = Libraries/openvr
+	url = https://github.com/ValveSoftware/openvr.git

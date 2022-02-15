@@ -22,7 +22,8 @@ VulkanManager* VulkanManager::_VulkanManager = nullptr;
 
 RenderManager* gRenderManager = nullptr;
 
-#define VULKAN_API_VERSION VK_HEADER_VERSION_COMPLETE
+//#define VULKAN_API_VERSION VK_HEADER_VERSION_COMPLETE
+#define VULKAN_API_VERSION VK_API_VERSION_1_3
 
 #define MAX_DESCRIPTOR_SETS 50
 constexpr VkDescriptorPoolSize poolSizes[3] = { 
