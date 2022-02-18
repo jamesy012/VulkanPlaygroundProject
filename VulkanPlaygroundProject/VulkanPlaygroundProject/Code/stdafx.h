@@ -1,6 +1,18 @@
 #pragma once
 #pragma warning(disable: 26812)
 
+#ifdef WEB_UI_ENABLED
+#define WEB_UI_ENABLED 1
+#else
+#define WEB_UI_ENABLED 0
+#endif
+
+#ifdef USE_VR
+#define USE_VR 1
+#else
+#define USE_VR 0
+#endif
+
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <Windows.h>

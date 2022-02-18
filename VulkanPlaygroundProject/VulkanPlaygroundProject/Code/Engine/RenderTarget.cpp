@@ -18,12 +18,12 @@ bool RenderTarget::Create(VkDevice aDevice, RenderPass* aRenderPass, VkExtent2D 
    info.imageType = VK_IMAGE_TYPE_2D;
 
    //result = vkCreateImage(aDevice, &info, GetAllocationCallback(), &mColor);
-   //ASSERT_VULKAN_SUCCESS_RET_FALSE(result);
+   ////ASSERT_VULKAN_SUCCESS_RET_FALSE(result);
    VmaAllocationCreateInfo allocInfo{};
    allocInfo.usage = VmaMemoryUsage::VMA_MEMORY_USAGE_GPU_ONLY;
-
+   
    VmaAllocationInfo allocationInfo;
-   result = vmaCreateImage(VulkanManager::Get()->GetAllocator(), &info, &allocInfo, &mColor, &mColorAllocation,&allocationInfo);
+   result = vmaCreateImage(VulkanManager::Get()->GetAllocator(), &info, &allocInfo, &mColor, &mColorAllocation, &allocationInfo);
    ASSERT_VULKAN_SUCCESS_RET_FALSE(result);
 
    VkImageViewCreateInfo viewInfo{};

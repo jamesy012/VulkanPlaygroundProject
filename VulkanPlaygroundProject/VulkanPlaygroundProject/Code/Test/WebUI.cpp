@@ -7,7 +7,7 @@
 #include "Engine/Pipeline.h"
 #include "Engine/Vertex.h"
 
-#ifdef WEB_UI_ENABLED
+#if WEB_UI_ENABLED == 1
 #include <Ultralight/Ultralight.h>
 #include <AppCore/Platform.h>
 
@@ -19,7 +19,7 @@ Image mHtmlUI;
 VkDescriptorSet mHtmlUISet;
 Pipeline mScreenSpacePipeline;
 
-#ifdef WEB_UI_ENABLED
+#if WEB_UI_ENABLED == 1
 JSValueRef OnButtonClick(JSContextRef ctx, JSObjectRef function,
     JSObjectRef thisObject, size_t argumentCount,
     const JSValueRef arguments[], JSValueRef* exception) {
@@ -113,7 +113,7 @@ void CopyBitmapToTexture(Image* image, ultralight::IntRect bounds, ultralight::R
 
 void WebUI::SetupMaterials(std::vector<VkDescriptorSetLayout> aSetLayouts, const RenderPass* aRenderPass)
 {
-#ifdef WEB_UI_ENABLED
+#if WEB_UI_ENABLED == 1
     mScreenSpacePipeline.AddShader(GetWorkDir() + "Shaders/ScreenSpace.vert");
     mScreenSpacePipeline.AddShader(GetWorkDir() + "Shaders/Textured.frag");
     mScreenSpacePipeline.SetVertexType(VertexTypeSimple);
@@ -126,7 +126,7 @@ void WebUI::SetupMaterials(std::vector<VkDescriptorSetLayout> aSetLayouts, const
 
 void WebUI::Start()
 {
-#ifdef WEB_UI_ENABLED
+#if WEB_UI_ENABLED == 1
     ultralight::Config config;
     ///
     /// We need to tell config where our resources are so it can 
@@ -232,7 +232,7 @@ void WebUI::Start()
 
 void WebUI::Update()
 {
-#ifdef WEB_UI_ENABLED
+#if WEB_UI_ENABLED == 1
     //mModelTest.SetRotation(glm::vec3(0, frameCounter * 0.07f, 0));
     {//mouse
         ultralight::MouseEvent evt;
@@ -275,7 +275,7 @@ void WebUI::Update()
 
 void WebUI::Render(VkCommandBuffer aCommandBuffer, BufferVertex* aScreenSpaceQuad)
 {
-#ifdef WEB_UI_ENABLED
+#if WEB_UI_ENABLED == 1
     renderer->Render();
     ultralight::BitmapSurface* surface = (ultralight::BitmapSurface*)(view->surface());
 
@@ -303,7 +303,7 @@ void WebUI::Render(VkCommandBuffer aCommandBuffer, BufferVertex* aScreenSpaceQua
 
 void WebUI::Destroy()
 {
-#ifdef WEB_UI_ENABLED
+#if WEB_UI_ENABLED == 1
     mHtmlUI.Destroy();
     mScreenSpacePipeline.Destroy();
 #endif

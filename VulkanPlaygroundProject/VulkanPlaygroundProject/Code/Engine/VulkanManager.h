@@ -91,6 +91,12 @@ public:
    std::function<void(void)> mSizeDependentCreateCallback;
    std::function<void(void)> mSizeDependentDestroyCallback;
 
+   void SubmitVrEye(VkCommandBuffer aCommandBuffer, RenderTarget* aRenderTarget, bool aRightEye);
+#if USE_VR == 1
+   glm::mat4 mHmdDevicePos;
+   glm::mat4 mVrControllerPos[2];
+#endif
+
 private:
    bool CreateInstance();
    bool CreateDevice();

@@ -9,6 +9,10 @@
 
 #include <vulkan/vulkan.h>
 
+#if USE_VR == 1
+#include <openvr.h>
+#endif
+
 #include <imgui.h>
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_vulkan.h>
@@ -23,7 +27,7 @@ VulkanManager* VulkanManager::_VulkanManager = nullptr;
 RenderManager* gRenderManager = nullptr;
 
 //#define VULKAN_API_VERSION VK_HEADER_VERSION_COMPLETE
-#define VULKAN_API_VERSION VK_API_VERSION_1_3
+#define VULKAN_API_VERSION VK_API_VERSION_1_2
 
 #define MAX_DESCRIPTOR_SETS 50
 constexpr VkDescriptorPoolSize poolSizes[3] = { 
@@ -42,15 +46,24 @@ const bool enableValidationLayers = false;
 const bool enableValidationLayers = true;
 #endif
 
-const std::vector<const char*> deviceExtensions = {
+const std::vector<const char*> constantDeviceExtensions = {
    VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 };
+
+std::vector<void*> delayedDelete;
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
    VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
    VkDebugUtilsMessageTypeFlagsEXT messageType,
    const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
    void* pUserData) {
+
+   static const std::vector<int32_t> skipMessages = { 416909302, 1303270965 };
+   for (int i = 0; i < skipMessages.size(); i++) {
+       if (pCallbackData->messageIdNumber == skipMessages[i]) {
+           return VK_FALSE;
+       }
+   }
 
    LOG("VULKAN %s: \n\t %s\n", pCallbackData->pMessageIdName, pCallbackData->pMessage);
 
@@ -61,12 +74,85 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
    return VK_FALSE;
 }
 
+#if USE_VR == 1
+vr::IVRSystem* m_pHMD;
+vr::IVRRenderModels* m_pRenderModels;
+vr::TrackedDevicePose_t m_rTrackedDevicePose[vr::k_unMaxTrackedDeviceCount];
+
+
+std::string GetTrackedDeviceString(vr::IVRSystem* pHmd, vr::TrackedDeviceIndex_t unDevice, vr::TrackedDeviceProperty prop, vr::TrackedPropertyError* peError = NULL)
+{
+    uint32_t unRequiredBufferLen = pHmd->GetStringTrackedDeviceProperty(unDevice, prop, NULL, 0, peError);
+    if (unRequiredBufferLen == 0)
+        return "";
+
+    char* pchBuffer = new char[unRequiredBufferLen];
+    unRequiredBufferLen = pHmd->GetStringTrackedDeviceProperty(unDevice, prop, pchBuffer, unRequiredBufferLen, peError);
+    std::string sResult = pchBuffer;
+    delete[] pchBuffer;
+    return sResult;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Processes a single VR event
+//-----------------------------------------------------------------------------
+void ProcessVREvent(const vr::VREvent_t& event)
+{
+    switch (event.eventType)
+    {
+    case vr::VREvent_TrackedDeviceDeactivated:
+    {
+        LOG("Device %u detached.\n", event.trackedDeviceIndex);
+    }
+    break;
+    case vr::VREvent_TrackedDeviceUpdated:
+    {
+        LOG("Device %u updated.\n", event.trackedDeviceIndex);
+    }
+    break;
+    case vr::VREvent_ButtonPress:
+    {
+        LOG("Button Press %u.\n", event.data.controller.button);
+    }
+    break;
+    }
+}
+#endif
+
 void VulkanManager::Create(Window* aWindow) {
    ASSERT_IF( _VulkanManager == nullptr );
    _VulkanManager = this;
 
    ASSERT_IF( gRenderManager == nullptr );
    gRenderManager = new RenderManager();
+
+#if USE_VR == 1
+   //VR Test
+   {
+       vr::EVRInitError eError = vr::VRInitError_None;
+       m_pHMD = vr::VR_Init(&eError, vr::VRApplication_Scene);
+       if (eError != vr::VRInitError_None)
+       {
+           m_pHMD = NULL;
+           LOG("Unable to init VR runtime: %s", vr::VR_GetVRInitErrorAsEnglishDescription(eError));
+           return;
+       }
+
+       m_pRenderModels = (vr::IVRRenderModels*)vr::VR_GetGenericInterface(vr::IVRRenderModels_Version, &eError);
+       if (!m_pRenderModels)
+       {
+           m_pHMD = NULL;
+           vr::VR_Shutdown();
+
+           LOG("Unable to get render model interface: %s", vr::VR_GetVRInitErrorAsEnglishDescription(eError));
+           return;
+       }
+
+       std::string m_strDriver = GetTrackedDeviceString(m_pHMD, vr::k_unTrackedDeviceIndex_Hmd, vr::Prop_ManufacturerName_String);
+       std::string m_strDisplay = GetTrackedDeviceString(m_pHMD, vr::k_unTrackedDeviceIndex_Hmd, vr::Prop_RenderModelName_String);
+       LOG("VR Startup %s - %s\n", m_strDriver.c_str(), m_strDisplay.c_str());
+   }
+#endif
 
    mWindow = aWindow;
    CreateInstance();
@@ -145,7 +231,6 @@ void VulkanManager::Create(Window* aWindow) {
       }
    }
 
-
    //Pre first run setup
    {
       //setup managers
@@ -160,10 +245,22 @@ void VulkanManager::Create(Window* aWindow) {
       }
       OneTimeCommandBufferEnd(buffer);
    }
+
+   for (int i = 0; i < delayedDelete.size(); i++) {
+       delete delayedDelete[i];
+   }
+   delayedDelete.clear();
 }
 
 void VulkanManager::Destroy() {
    WaitDevice();
+
+#if USE_VR == 1
+   if (m_pHMD) {
+       m_pHMD = NULL;
+       vr::VR_Shutdown();
+   }
+#endif
 
    vkDestroySampler(GetDevice(), mDefaultSampler, GetAllocationCallback());
    vkDestroySampler(GetDevice(), mDefaultMirrorSampler, GetAllocationCallback());
@@ -280,6 +377,45 @@ void VulkanManager::Update() {
          }
       }
    }
+
+#if USE_VR == 1
+   //VR
+   {
+       vr::VRCompositor()->WaitGetPoses(m_rTrackedDevicePose, vr::k_unMaxTrackedDeviceCount, NULL, 0);
+       if (m_rTrackedDevicePose[vr::k_unTrackedDeviceIndex_Hmd].bPoseIsValid) {
+           vr::HmdMatrix34_t mat = m_rTrackedDevicePose[vr::k_unTrackedDeviceIndex_Hmd].mDeviceToAbsoluteTracking;
+           mHmdDevicePos = glm::mat4(
+               mat.m[0][0], mat.m[1][0], mat.m[2][0], 0.0f,
+               mat.m[0][1], mat.m[1][1], mat.m[2][1], 0.0f,
+               mat.m[0][2], mat.m[1][2], mat.m[2][2], 0.0f,
+               mat.m[0][3], mat.m[1][3], mat.m[2][3], 1.0f);
+           //mHmdDevicePos = glm::mat4(
+           //    mat.m[0][0], mat.m[0][1], mat.m[0][2], mat.m[0][3],
+           //    mat.m[1][0], mat.m[1][1], mat.m[1][2], mat.m[1][3],
+           //    mat.m[2][0], mat.m[2][1], mat.m[2][2], mat.m[2][3],
+           //    0.0f,               0.0f,       0.0f,       1.0f);
+           mHmdDevicePos = glm::inverse(mHmdDevicePos);
+           //mHmdDevicePos = glm::mat4(glm::make_mat3x4(m_rTrackedDevicePose[vr::k_unTrackedDeviceIndex_Hmd].mDeviceToAbsoluteTracking.m));
+       }
+       if (m_rTrackedDevicePose[vr::k_unTrackedDeviceIndex_Hmd + 1].bPoseIsValid) {
+           vr::HmdMatrix34_t mat = m_rTrackedDevicePose[vr::k_unTrackedDeviceIndex_Hmd + 1].mDeviceToAbsoluteTracking;
+           mVrControllerPos[0] = glm::mat4(
+               mat.m[0][0], mat.m[1][0], mat.m[2][0], 0.0f,
+               mat.m[0][1], mat.m[1][1], mat.m[2][1], 0.0f,
+               mat.m[0][2], mat.m[1][2], mat.m[2][2], 0.0f,
+               mat.m[0][3], mat.m[1][3], mat.m[2][3], 1.0f);
+           //mVrControllerPos[0] = glm::inverse(mVrControllerPos[0]);
+       }
+
+       // Process SteamVR events
+       vr::VREvent_t event;
+       while (m_pHMD->PollNextEvent(&event, sizeof(event)))
+       {
+           ProcessVREvent(event);
+       }
+
+   }
+#endif
 }
 
 bool VulkanManager::RenderStart(VkCommandBuffer& aBuffer, uint32_t& aFrameIndex) {
@@ -306,7 +442,39 @@ bool VulkanManager::RenderStart(VkCommandBuffer& aBuffer, uint32_t& aFrameIndex)
    return true;
 }
 
+void VulkanManager::SubmitVrEye(VkCommandBuffer aCommandBuffer, RenderTarget* aRenderTarget, bool aRightEye) {
+#if USE_VR == 1
+    // Submit to SteamVR
+    vr::VRTextureBounds_t bounds;
+    bounds.uMin = 0.0f;
+    bounds.uMax = 1.0f;
+    bounds.vMin = 0.0f;
+    bounds.vMax = 1.0f;
+
+    vr::VRVulkanTextureData_t vulkanData;
+    //vulkanData.m_nImage = (uint64_t)m_leftEyeDesc.m_pImage;
+    vulkanData.m_nImage = (uint64_t)aRenderTarget->GetColorImage();
+    vulkanData.m_pDevice = (VkDevice_T*)mDevice;
+    vulkanData.m_pPhysicalDevice = (VkPhysicalDevice_T*)mPhysicalDevice;
+    vulkanData.m_pInstance = (VkInstance_T*)instance;
+    vulkanData.m_pQueue = (VkQueue_T*)mGraphicsQueue.mQueue;
+    vulkanData.m_nQueueFamilyIndex = mGraphicsQueue.mFamily;
+
+    vulkanData.m_nWidth = mSwapChainExtent.width;
+    vulkanData.m_nHeight = mSwapChainExtent.height;
+    //vulkanData.m_nFormat = VK_FORMAT_R8G8B8A8_SRGB;
+    vulkanData.m_nFormat = GetColorFormat();
+    vulkanData.m_nSampleCount = 1;
+
+    vr::Texture_t texture = { &vulkanData, vr::TextureType_Vulkan, vr::ColorSpace_Auto };
+    vr::EVRCompositorError errorLeft = vr::VRCompositor()->Submit(vr::Eye_Left, &texture, &bounds);
+    ////vulkanData.m_nImage = (uint64_t)m_rightEyeDesc.m_pImage;
+    vr::EVRCompositorError errorRight = vr::VRCompositor()->Submit(vr::Eye_Right, &texture, &bounds);
+#endif
+}
+
 void VulkanManager::RenderSubmit(std::vector<VkCommandBuffer> aCommandBuffers) {
+
    RenderImGui();
 
    ASSERT_IF(mCurrentImageIndex != -1);
@@ -526,6 +694,25 @@ bool VulkanManager::CreateInstance() {
          extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
       }
    }
+#if USE_VR == 1
+   {
+       char* vrExtenstionString;
+       uint32_t vrExtenstionSize = 0;
+       vrExtenstionSize = vr::VRCompositor()->GetVulkanInstanceExtensionsRequired(nullptr, 0);
+       vrExtenstionString = new char[vrExtenstionSize];
+       delayedDelete.push_back(vrExtenstionString);
+       vr::VRCompositor()->GetVulkanInstanceExtensionsRequired(vrExtenstionString, vrExtenstionSize);
+       int lastSplit = 0;
+       for (int i = 0; i < vrExtenstionSize; i++) {
+           if (vrExtenstionString[i] == ' ') {
+               vrExtenstionString[i] = 0;
+               extensions.push_back(vrExtenstionString + lastSplit);
+               lastSplit = i+1;
+           }
+       }
+       extensions.push_back(vrExtenstionString + lastSplit);
+   }
+#endif
 
    createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
    createInfo.ppEnabledExtensionNames = extensions.data();
@@ -551,6 +738,8 @@ bool VulkanManager::CreateInstance() {
    //}
 
    VkResult result = vkCreateInstance(&createInfo, GetAllocationCallback(), &mInstance);
+
+   //vkCreateInstance result check
    if (result != VK_SUCCESS) {
       ASSERT_RET_FALSE("Failed to create Instance");
    }
@@ -635,14 +824,14 @@ SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice aDevice, VkSurfac
    return details;
 }
 
-bool CheckDeviceExpensionSupport(VkPhysicalDevice aDevice) {
+bool CheckDeviceExpensionSupport(VkPhysicalDevice aDevice, std::vector<const char*> aDeviceExtensions) {
    uint32_t extensionCount;
    vkEnumerateDeviceExtensionProperties(aDevice, nullptr, &extensionCount, nullptr);
 
    std::vector<VkExtensionProperties> availableExtensions(extensionCount);
    vkEnumerateDeviceExtensionProperties(aDevice, nullptr, &extensionCount, availableExtensions.data());
 
-   std::set<std::string> requiredExtensions(deviceExtensions.begin(), deviceExtensions.end());
+   std::set<std::string> requiredExtensions(aDeviceExtensions.begin(), aDeviceExtensions.end());
 
    for (const auto& extension : availableExtensions) {
       requiredExtensions.erase(extension.extensionName);
@@ -651,7 +840,7 @@ bool CheckDeviceExpensionSupport(VkPhysicalDevice aDevice) {
    return requiredExtensions.empty();
 }
 
-bool IsDeviceSuitable(VkPhysicalDevice aDevice, VkSurfaceKHR aSurface) {
+bool IsDeviceSuitable(VkPhysicalDevice aDevice, VkSurfaceKHR aSurface, std::vector<const char*> aDeviceExtensions) {
    //VkPhysicalDeviceProperties deviceProperties;
    //vkGetPhysicalDeviceProperties(device, &deviceProperties);
    //VkPhysicalDeviceFeatures deviceFeatures;
@@ -662,7 +851,7 @@ bool IsDeviceSuitable(VkPhysicalDevice aDevice, VkSurfaceKHR aSurface) {
 
    QueueFamilyIndices indices = FindQueueFamilies(aDevice, aSurface);
 
-   bool extensionsSupported = CheckDeviceExpensionSupport(aDevice);
+   bool extensionsSupported = CheckDeviceExpensionSupport(aDevice, aDeviceExtensions);
 
    bool swapChainAdequte = false;
    if (extensionsSupported) {
@@ -676,8 +865,40 @@ bool IsDeviceSuitable(VkPhysicalDevice aDevice, VkSurfaceKHR aSurface) {
    return indices.graphicsFamily.has_value() && extensionsSupported && swapChainAdequte && supportedFeatures.samplerAnisotropy;
 }
 
+void GetDeviceExtensions(VkPhysicalDevice aDevice, std::vector<const char*>& aExtensions) {
+    aExtensions = constantDeviceExtensions;
+
+#if USE_VR == 1
+    {
+        char* vrDeviceExtenstionString;
+        uint32_t vrExtenstionSize = 0;
+        vrExtenstionSize = vr::VRCompositor()->GetVulkanDeviceExtensionsRequired(aDevice, nullptr, 0);
+        vrDeviceExtenstionString = new char[vrExtenstionSize];
+        delayedDelete.push_back(vrDeviceExtenstionString);
+        vr::VRCompositor()->GetVulkanDeviceExtensionsRequired(aDevice, vrDeviceExtenstionString, vrExtenstionSize);
+        int lastSplit = 0;
+        for (int i = 0; i < vrExtenstionSize; i++) {
+            if (vrDeviceExtenstionString[i] == ' ') {
+                vrDeviceExtenstionString[i] = 0;
+                aExtensions.push_back(vrDeviceExtenstionString + lastSplit);
+                lastSplit = i + 1;
+            }
+        }
+        aExtensions.push_back(vrDeviceExtenstionString + lastSplit);
+    }
+#endif
+}
+
 bool VulkanManager::CreateDevice() {
    ASSERT_VULKAN_VALUE(mInstance);
+
+#if USE_VR == 1
+   //uint64_t pHMDPhysicalDevice = 0;
+   //m_pHMD->GetOutputDevice(&pHMDPhysicalDevice, vr::TextureType_Vulkan, (VkInstance_T*)mInstance);
+#endif
+
+   std::vector<const char*> deviceExtensions;
+
    //physical device
    {
       uint32_t deviceCount = 0;
@@ -689,8 +910,9 @@ bool VulkanManager::CreateDevice() {
       std::vector<VkPhysicalDevice> devices(deviceCount);
       vkEnumeratePhysicalDevices(mInstance, &deviceCount, devices.data());
 
-      for (const auto& device : devices) {
-         if (IsDeviceSuitable(device, mSurface)) {
+      for (const VkPhysicalDevice& device : devices) {
+          GetDeviceExtensions(device, deviceExtensions);
+         if (IsDeviceSuitable(device, mSurface, deviceExtensions)) {
             mPhysicalDevice = device;
             break;
          }

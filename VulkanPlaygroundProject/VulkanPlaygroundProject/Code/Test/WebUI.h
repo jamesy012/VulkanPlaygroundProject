@@ -1,6 +1,6 @@
 #pragma once
 
-#ifdef WEB_UI_ENABLED
+#if WEB_UI_ENABLED == 1
 #include <AppCore/JSHelpers.h>
 #endif
 
@@ -16,7 +16,7 @@ public:
 
 private:
 
-#ifdef WEB_UI_ENABLED
+#if WEB_UI_ENABLED == 1
 	void JavaScriptTest(const ultralight::JSObject& thisObject, const ultralight::JSArgs& args);
 	ultralight::JSValue JavaScriptTestRet(const ultralight::JSObject& thisObject, const ultralight::JSArgs& args);
 #endif

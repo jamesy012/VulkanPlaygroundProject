@@ -126,13 +126,16 @@ void Application::Start() {
 
    //mModelTest.LoadModel(GetWorkDir() + "Models/treeTest.fbx", nullptr, {});
    mModelTest.LoadModel(GetWorkDir() + "Sponza/Sponza.obj", mMaterialDescriptorSet, {});
-   mModelTest.SetScale(0.05f);
+   mModelTest.SetScale(0.005f);
    mModelTest2.LoadModel(GetWorkDir() + "Models/mandalorian-star-wars/source/Mandalorian_Anim_fixed_textures.fbx", mMaterialDescriptorSet, {});
-   mModelTest2.SetScale(0.05f);
+   mModelTest2.SetScale(0.005f);
    mModelTest2.SetRotation(glm::vec3(-90, 0, 0));
 
    //mFlyCamera.SetPosition(glm::vec3(130, 50, 150));
    mFlyCamera.SetFarClip(150.0f);
+   mFlyCamera.SetNearClip(0.01f);
+   mFlyCamera.mMovementSpeed = 1.0f;
+   mFlyCamera.mTranslateSpeed = 0.2f;
 
    CreateDelayedSizeDependent();
 
@@ -152,6 +155,26 @@ void Application::Run() {
       mVkManager->Update();
 
       _CInput->Update();
+
+      //{
+      //    // Process SteamVR events
+      //    vr::VREvent_t event;
+      //    while (m_pHMD->PollNextEvent(&event, sizeof(event)))
+      //    {
+      //        ProcessVREvent(event);
+      //    }
+      //
+      //    //// Process SteamVR controller state
+      //    //for (vr::TrackedDeviceIndex_t unDevice = 0; unDevice < vr::k_unMaxTrackedDeviceCount; unDevice++)
+      //    //{
+      //    //    vr::VRControllerState_t state;
+      //    //    if (m_pHMD->GetControllerState(unDevice, &state, sizeof(state)))
+      //    //    {
+      //    //        LOG("GetControllerState %i, %i .\n", unDevice, state.ulButtonPressed == 0);
+      //    //        //m_rbShowTrackedDevice[unDevice] = state.ulButtonPressed == 0;
+      //    //    }
+      //    //}
+      //}
 
       Update();
 
@@ -191,33 +214,43 @@ void Application::ImGui() {
 }
 
 void Application::Update() {
-   PROFILE_START_SCOPED("Update");
+    PROFILE_START_SCOPED("Update");
 
-   mFlyCamera.UpdateInput();
+    //Transform hmdMatrix;
+    //hmdMatrix.SetMatrix(VulkanManager::Get()->mHmdDevicePos);
+    //mFlyCamera.SetRotation(hmdMatrix.GetRotation() * -glm::vec3(1,1,1));
+    mFlyCamera.UpdateInput();
 
     //ubo
-   {
-      //scene
-      {
-         mSceneUbo.mViewProj = mFlyCamera.GetPV();
-         mSceneUbo.mViewPos = glm::vec4(mFlyCamera.GetPostion(), 0);
-         //mSceneUbo.mLightPos = glm::vec4(mLightPos, 0);
+    {
+        //scene
+        {
+#if USE_VR == 1
+            //include hmd device in pv
+            glm::mat4 hmdView = glm::scale(VulkanManager::Get()->mHmdDevicePos, glm::vec3(1));
+            //glm::mat4 hmdView = glm::scale(VulkanManager::Get()->mHmdDevicePos, glm::vec3(.2));
+            mSceneUbo.mViewProj = mFlyCamera.GetProjection() * (hmdView * mFlyCamera.GetView());
+#else
+            mSceneUbo.mViewProj = mFlyCamera.GetPV();
+#endif
+            mSceneUbo.mViewPos = glm::vec4(mFlyCamera.GetPostion(), 0);
+            //mSceneUbo.mLightPos = glm::vec4(mLightPos, 0);
 
-         //for (int i = 0; i < NUM_SHADOW_CASCADES; i++) {
-         //   mSceneUbo.mShadowCascadeProj[i] = shadowOffsetsVpMatrix[i];
-         //   glm::value_ptr(mSceneUbo.mShadowSplits)[i] = shadowOffsetsSplitDepth[i];
-         //}
+            //for (int i = 0; i < NUM_SHADOW_CASCADES; i++) {
+            //   mSceneUbo.mShadowCascadeProj[i] = shadowOffsetsVpMatrix[i];
+            //   glm::value_ptr(mSceneUbo.mShadowSplits)[i] = shadowOffsetsSplitDepth[i];
+            //}
 
-         {
-            void* data;
-            mSceneBuffer.Get(&data);
-            memcpy(data, &mSceneUbo, sizeof(SceneUBO));
-            mSceneBuffer.Return();
-         }
-      }
-   }
+            {
+                void* data;
+                mSceneBuffer.Get(&data);
+                memcpy(data, &mSceneUbo, sizeof(SceneUBO));
+                mSceneBuffer.Return();
+            }
+        }
+    }
 
-   mWebUITest.Update();
+    mWebUITest.Update();
 
 }
 
@@ -299,7 +332,17 @@ void Application::Draw() {
 
          ubo.mModel = mModelTest2.GetMatrix();
          des.UpdateObjectAndBind(&ubo);
+         mModelTest2.Render(&des, RenderMode::NORMAL);  
+         
+#if USE_VR == 1
+         //render controller
+         glm::mat4 controllerPos = VulkanManager::Get()->mVrControllerPos[0];
+         controllerPos = glm::translate(controllerPos, mFlyCamera.GetPostion());
+         controllerPos = glm::scale(controllerPos, glm::vec3(-.001f));
+         ubo.mModel = controllerPos;
+         des.UpdateObjectAndBind(&ubo);
          mModelTest2.Render(&des, RenderMode::NORMAL);
+#endif
       
       }
       //RenderManager::Get()->Render( commandBuffer );
@@ -313,18 +356,23 @@ void Application::Draw() {
       VulkanManager::Get()->DebugMarkerEnd(commandBuffer);
    }
 
+
    //copy renderTarget to the back buffer
    {
       VulkanManager::Get()->BlitRenderTargetToBackBuffer(commandBuffer, &mRenderTarget);
    }
 
+
+   VulkanManager::Get()->SubmitVrEye(commandBuffer, &mRenderTarget, false);
    vkEndCommandBuffer(commandBuffer);
+
 
    mVkManager->RenderEnd();
 }
 
 
 void Application::Destroy() {
+
    _CInput->Shutdown();
    delete _CInput;
    mVkManager->WaitDevice();
