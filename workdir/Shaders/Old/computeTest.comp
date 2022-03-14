@@ -1,0 +1,26 @@
+#version 450
+
+layout (local_size_x = 64) in;
+
+layout(set = 0, binding = 0) uniform SceneBuffer{   
+	mat4 viewProj; 
+#ifndef SIMPLE_SCENE
+    vec4 viewPos;
+    vec4 lightPos;
+    vec4 shadowCascadeSplits;
+    mat4 shadowCascadeProj[4];
+#endif
+} sceneData;
+
+layout(set = 0, binding = 1) readonly buffer InputBuffer{
+    mat4 matrices[];
+} sourceData;
+
+layout(set = 0, binding = 2) buffer OutputBuffer{
+    mat4 matrices[];
+} outputData;
+
+
+void main() {
+    outputData.matrices[gl_GlobalInvocationID.x] = sceneData.viewProj * sourceData.matrices[gl_GlobalInvocationID.x];
+}

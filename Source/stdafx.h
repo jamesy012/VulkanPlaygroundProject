@@ -204,7 +204,7 @@ constexpr VkRect2D GetRect2DFromExtent2D(const VkExtent2D aExtent) {
 //~~~~~~~~~~ PROJECT HELPERS
 
 static std::string GetWorkDir() {
-   return "../WorkDir/";
+   return "";
 }
 
 enum RenderMode {
