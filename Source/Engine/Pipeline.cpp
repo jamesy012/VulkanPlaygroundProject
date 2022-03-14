@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "Pipeline.h"
 
-#define SHADERC 0
+#define SHADERC 1
 
 #if SHADERC
 #include <shaderc/shaderc.hpp>

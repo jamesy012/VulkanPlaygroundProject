@@ -14,8 +14,12 @@
 #include "Test/WebUI.h"
 
 WebUI mWebUITest;
+#include <filesystem>
 
 void Application::Start() {
+    std::string currentPath = std::filesystem::current_path().generic_string();
+    LOG("Current work dir: %s\n", currentPath.c_str());
+
    mWindow = new Window();
    mWindow->Create(800, 600, "vulkan");
    mVkManager = new VulkanManager();

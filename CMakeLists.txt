@@ -37,6 +37,9 @@ list(APPEND HPP_FILES ${IMGUI_HEADERS})
 
 add_executable(VulkanPlayground ${CPP_FILES} ${HPP_FILES})
 
+set_property(TARGET VulkanPlayground PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/bin")
+set_property(TARGET VulkanPlayground PROPERTY VS_DEBUGGER_COMMAND "${CMAKE_SOURCE_DIR}/bin")
+
 target_precompile_headers(VulkanPlayground PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/Source/stdafx.h)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/Source/)
@@ -58,12 +61,14 @@ add_subdirectory(Libraries/assimp EXCLUDE_FROM_ALL)
 add_subdirectory(Libraries/glfw EXCLUDE_FROM_ALL)
 add_subdirectory(Libraries/glm EXCLUDE_FROM_ALL)
 
-#add_subdirectory(Libraries/googleTest EXCLUDE_FROM_ALL)
+add_subdirectory(Libraries/googleTest EXCLUDE_FROM_ALL)
 #set(ENABLE_HLSL OFF)
-#add_subdirectory(Libraries/glslang EXCLUDE_FROM_ALL)
-#add_subdirectory(Libraries/SPIRV-Headers EXCLUDE_FROM_ALL)
-#add_subdirectory(Libraries/SPIRV-Tools EXCLUDE_FROM_ALL)
-#add_subdirectory(Libraries/shaderc EXCLUDE_FROM_ALL)
+#set(ENABLE_HLSL ON)
+set(BUILD_SHARED_LIBS OFF)
+add_subdirectory(Libraries/glslang EXCLUDE_FROM_ALL)
+add_subdirectory(Libraries/SPIRV-Headers EXCLUDE_FROM_ALL)
+add_subdirectory(Libraries/SPIRV-Tools EXCLUDE_FROM_ALL)
+add_subdirectory(Libraries/shaderc EXCLUDE_FROM_ALL)
 
 #add_subdirectory(Libraries/VulkanMemoryAllocator EXCLUDE_FROM_ALL)
 
@@ -75,10 +80,10 @@ target_link_libraries(VulkanPlayground
   PRIVATE glm
 #  PRIVATE VulkanMemoryAllocator
 
-#  PRIVATE glslang
+  PRIVATE glslang
 #  PRIVATE SPIRV-Headers
 #  PRIVATE SPIRV-Tools
-#  PRIVATE shaderc
+  PRIVATE shaderc
 
 
   PRIVATE dxguid.lib
@@ -91,7 +96,7 @@ target_include_directories(VulkanPlayground PRIVATE ${STB_PATH} PRIVATE ${VMA_PA
 #copy
 #file(COPY ${<some_var>}
 #    DESTINATION ${EXECUTABLE_OUTPUT_PATH})
-#message("----  Copy? ----")
+message("----  Copy? ----")
 #message(${CMAKE_CURRENT_BINARY_DIR})
 ##add_custom_command(TARGET VulkanPlayground
 ##    POST_BUILD
