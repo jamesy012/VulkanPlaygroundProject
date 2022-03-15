@@ -7,7 +7,7 @@
       "project": "CMakeLists.txt",
       "projectTarget": "VulkanPlayground.exe",
       "name": "VulkanPlayground.exe",
-      "currentDir": "${workspaceRoot}/bin"
+      "currentDir": "${workspaceRoot}/workdir"
     }
   ]
 }

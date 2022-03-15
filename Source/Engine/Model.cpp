@@ -306,6 +306,9 @@ void Model::Render(DescriptorUBO* aRenderDescriptor, RenderMode aRenderMode) {
 }
 
 void Model::Destroy() {
+    if (mMeshs.empty()) {
+        return;//no need to destoy when no mesh was loaded
+    }
    for (size_t i = 0; i < mImages.size(); i++) {
       mImages[i].Destroy();
    }

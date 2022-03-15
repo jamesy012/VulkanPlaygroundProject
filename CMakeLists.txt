@@ -74,9 +74,10 @@ add_subdirectory(Libraries/shaderc EXCLUDE_FROM_ALL)
 
 #find_library(DInput_Path dinput8)
 
-if(win32)
-set(Platform_Files PRIVATE dxguid.lib PRIVATE dinput8.lib)
+if(WIN32)
+   set(PLATFORM_FILES dxguid.lib dinput8.lib)
 endif()
+
 
 target_link_libraries(VulkanPlayground
   PRIVATE assimp
@@ -89,7 +90,7 @@ target_link_libraries(VulkanPlayground
 #  PRIVATE SPIRV-Tools
   PRIVATE shaderc
 
-  ${Platform_Files}
+  ${PLATFORM_FILES}
 #  PRIVATE dxguid.lib
 #  PRIVATE dinput8.lib
 )
@@ -101,7 +102,7 @@ target_include_directories(VulkanPlayground PRIVATE ${STB_PATH} PRIVATE ${VMA_PA
 #    DESTINATION ${EXECUTABLE_OUTPUT_PATH})
 message("----  Copy? ----")
 #windows glfw/assimp copy
-if(win32)
+if(WIN32)
 add_custom_command(TARGET VulkanPlayground
     POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/Libraries/glfw/src/glfw3d.dll "${CMAKE_CURRENT_BINARY_DIR}"
