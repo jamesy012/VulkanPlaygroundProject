@@ -1,24 +1,30 @@
 #include "stdafx.h"
 #include "InputHandler.h"
 
+#if WINDOWS
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include <GLFW/glfw3native.h>
 
 #define DIRECTINPUT_VERSION 0x0800
 #include <dinput.h>
 
-InputHandler* _CInput;
-
 LPDIRECTINPUT8 mDirectInput;
 LPDIRECTINPUTDEVICE8 mKeyboard;
 LPDIRECTINPUTDEVICE8 mMouse;
+DIMOUSESTATE mMouseState;
+DIMOUSESTATE mMouseStateOld;
+
+HWND hwnd;
+#endif
+
 
 unsigned char mKeyboardState[256];
 unsigned char mKeyboardStateOld[256];
-DIMOUSESTATE mMouseState;
-DIMOUSESTATE mMouseStateOld;
 int mMouseX, mMouseY;
 int mMouseDeltaX, mMouseDeltaY;
+
+InputHandler* _CInput;
+
 
 unsigned char mKeyboardRemapper[256] = { 0 };
 //	IKEY_Escape				/*DIK_ESCAPE		*/
@@ -169,6 +175,7 @@ unsigned char mKeyboardRemapper[256] = { 0 };
 
 
 InputHandler::InputHandler() {
+#if WINDOWS
 	mKeyboardRemapper[IKEY_Escape] = DIK_ESCAPE;
 	mKeyboardRemapper[IKEY_1] = DIK_1;
 	mKeyboardRemapper[IKEY_2] = DIK_2;
@@ -264,13 +271,14 @@ InputHandler::InputHandler() {
 	mKeyboardRemapper[IKEY_DownArrow] = DIK_DOWN;
 	mKeyboardRemapper[IKEY_Insert] = DIK_INSERT;
 	mKeyboardRemapper[IKEY_Delete] = DIK_DELETE;
+#endif
 }
 
-HWND hwnd;
 InputHandler::~InputHandler() {
 }
 
 bool InputHandler::Startup(GLFWwindow* a_InputWindow) {
+#if WINDOWS
 	HINSTANCE hInstance = GetModuleHandle(NULL);
 	hwnd = glfwGetWin32Window(a_InputWindow);
 	HRESULT hr;
@@ -319,6 +327,7 @@ bool InputHandler::Startup(GLFWwindow* a_InputWindow) {
 	if (FAILED(hr)) {
 		return false;
 	}
+#endif
 
 	_CInput = this;
 
@@ -326,6 +335,7 @@ bool InputHandler::Startup(GLFWwindow* a_InputWindow) {
 }
 
 void InputHandler::Shutdown() {
+#if WINDOWS
 	if (mMouse) {
 		mMouse->Unacquire();
 		mMouse->Release();
@@ -342,6 +352,7 @@ void InputHandler::Shutdown() {
 		mDirectInput->Release();
 		mDirectInput = nullptr;
 	}
+#endif
 }
 
 void InputHandler::Update() {
@@ -391,19 +402,27 @@ glm::vec2 InputHandler::GetMouseDelta() const {
 }
 
 bool InputHandler::IsMouseKeyDown(IMouseKeys aKey) const {
+#if WINDOWS
 	return mMouseState.rgbButtons[aKey] & 0x80;
+#endif
 }
 
 bool InputHandler::WasMouseKeyPressed(IMouseKeys aKey) const {
+#if WINDOWS
 	return (mMouseState.rgbButtons[aKey] & 0x80) && !(mMouseStateOld.rgbButtons[aKey] & 0x80);
+#endif
 }
 
 bool InputHandler::WasMouseKeyReleased(IMouseKeys aKey) const {
+#if WINDOWS
 	return !(mMouseState.rgbButtons[aKey] & 0x80) && (mMouseStateOld.rgbButtons[aKey] & 0x80);
+#endif
 }
 
 float InputHandler::GetMouseScroll() const {
+#if WINDOWS
 	return (float)mMouseState.lZ;
+#endif
 }
 
 std::vector<char> InputHandler::GetKeysDownArray() const {
@@ -461,6 +480,7 @@ std::string InputHandler::GetKeysDown() const {
 
 
 bool InputHandler::ReadKeyboard() {
+#if WINDOWS
 	HRESULT hr;
 
 	memcpy(mKeyboardStateOld, mKeyboardState, sizeof(mKeyboardState));
@@ -479,9 +499,13 @@ bool InputHandler::ReadKeyboard() {
 		}
 	}
 	return true;
+#else
+	return false;
+#endif
 }
 
 bool InputHandler::ReadMouse() {
+#if WINDOWS
 	HRESULT hr;
 
 
@@ -516,4 +540,7 @@ bool InputHandler::ReadMouse() {
 		mMouseDeltaY = mMouseState.lY;
 	}
 	return true;
+#else
+	return false;
+#endif
 }

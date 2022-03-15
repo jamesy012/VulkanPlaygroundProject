@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "Transform.h"
 
-#include <glm\ext.hpp>
+#include <glm/ext.hpp>
 #include <glm/gtx/matrix_decompose.hpp>
 
 Transform::Transform() {

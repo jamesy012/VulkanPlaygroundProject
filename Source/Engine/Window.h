@@ -25,7 +25,9 @@ public:
    GLFWwindow* GetWindow() const {
       return mWindow;
    }
+#if WINDOWS
    const void* GetHWND() const;
+#endif
 
    const bool IsFocused() const;
    const bool IsHovered() const;

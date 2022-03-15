@@ -1,10 +1,24 @@
 #pragma once
 #pragma warning(disable: 26812)
 
+#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
+#define WINDOWS 1
+#else
+#define WINDOWS 0
+#endif
+
+#if defined(__APPLE__)
+#define APPLE 1
+#else
+#define APPLE 0
+#endif
+
+#if WINDOWS
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <Windows.h>
 #undef LoadImage
+#endif
 
 #include <iostream>
 #include <assert.h>
@@ -22,9 +36,13 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 //~~~~~~~ ASSERTS/Validation
+#if WINDOWS
 #define ASSERT(msg) DebugBreak();
+#elif APPLE
+#define ASSERT(msg) assert(0);
+#endif
 #define ASSERT_IF(x) if((x) == false){ASSERT(__FUNCTION__)};
-#define ASSERT_RET(x) if(!x) {ASSERT(__FUNCTION__); return;};
+#define ASSERT_RET(x) if(!(x)) {ASSERT(__FUNCTION__); return;};
 #define ASSERT_RET_VALUE(x, ret) if(!(x)) {ASSERT(__FUNCTION__); return (ret);};
 #define ASSERT_RET_FALSE(x) ASSERT(__FUNCTION__); return false;
 
@@ -204,7 +222,11 @@ constexpr VkRect2D GetRect2DFromExtent2D(const VkExtent2D aExtent) {
 //~~~~~~~~~~ PROJECT HELPERS
 
 static std::string GetWorkDir() {
+#if WINDOWS
    return "";
+#elif APPLE
+   return "workdir/";
+#endif
 }
 
 enum RenderMode {

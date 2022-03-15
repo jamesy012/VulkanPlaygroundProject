@@ -4,6 +4,15 @@
 #include <ctime>
 #include <chrono>
 
+#if WINDOWS
+#define PLATFORM_STAT _stat
+#elif APPLE
+#include <sys/stat.h>
+#define PLATFORM_STAT stat
+#else
+#error no platform
+#endif
+
 FileIO::FileIO(std::string aPath) {
    mFilePath = aPath;
    size_t fileExtIndex = aPath.find_last_of('.');
@@ -25,12 +34,18 @@ FileIO::FileIO(std::string aPath) {
    }
 
    std::string cachePath = aPath + ".cache";
-   struct _stat stat {};
-   struct _stat statCache {};
-   mHasFile = !_stat(aPath.c_str(), &stat);
-   mHasCache = !_stat(cachePath.c_str(), &statCache);
+   struct PLATFORM_STAT statNorm {};
+   struct PLATFORM_STAT statCache {};
+   mHasFile = !PLATFORM_STAT(aPath.c_str(), &statNorm);
+   mHasCache = !PLATFORM_STAT(cachePath.c_str(), &statCache);
 
-   mFileModifyTime = stat.st_mtime;
+#if WINDOWS
+   mFileModifyTime = statNorm.st_mtime;
+#elif APPLE
+   mFileModifyTime = statNorm.st_mtimespec.tv_sec;
+#else
+#error
+#endif
 
    PrepareCache();
 }
@@ -57,12 +72,12 @@ void FileIO::StoreCache(std::size_t aHash, char* aInput, std::size_t aSize, time
 
 template<typename T>
 void WriteData(std::ofstream& stream, const T& data) {
-   stream.write(reinterpret_cast<const char*>(&data), sizeof T);
+   stream.write(reinterpret_cast<const char*>(&data), sizeof(T));
 }
 
 template<typename T>
 void ReadData(std::ifstream& stream, T& data) {
-   stream.read(reinterpret_cast<char*>(&data), sizeof T);
+   stream.read(reinterpret_cast<char*>(&data), sizeof(T));
 }
 
 void FileIO::Save() {

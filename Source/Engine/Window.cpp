@@ -1,10 +1,14 @@
 #include "stdafx.h"
 #include "Window.h"
 
+#if WINDOWS
 #define VK_USE_PLATFORM_WIN32_KHR
 #include <GLFW/glfw3.h>
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include <GLFW/glfw3native.h>
+#elif APPLE
+#include <GLFW/glfw3.h>
+#endif
 
 void Window::Create(const int aWidth, const int aHeight, const char* aTitle) {
    glfwInit();
@@ -60,9 +64,11 @@ const VkExtent2D Window::GetFBExtent() const {
    return actualExtent;
 }
 
+#if WINDOWS
 const void* Window::GetHWND() const {
    return glfwGetWin32Window(mWindow);
 }
+#endif
 
 const bool Window::IsFocused() const {
    return glfwGetWindowAttrib(mWindow, GLFW_FOCUSED);

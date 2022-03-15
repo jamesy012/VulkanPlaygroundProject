@@ -74,6 +74,10 @@ add_subdirectory(Libraries/shaderc EXCLUDE_FROM_ALL)
 
 #find_library(DInput_Path dinput8)
 
+if(win32)
+set(Platform_Files PRIVATE dxguid.lib PRIVATE dinput8.lib)
+endif()
+
 target_link_libraries(VulkanPlayground
   PRIVATE assimp
   PRIVATE glfw
@@ -85,10 +89,9 @@ target_link_libraries(VulkanPlayground
 #  PRIVATE SPIRV-Tools
   PRIVATE shaderc
 
-
-  PRIVATE dxguid.lib
-  PRIVATE dinput8.lib
-#  PRIVATE hlsld.lib
+  ${Platform_Files}
+#  PRIVATE dxguid.lib
+#  PRIVATE dinput8.lib
 )
 
 target_include_directories(VulkanPlayground PRIVATE ${STB_PATH} PRIVATE ${VMA_PATH})
@@ -97,22 +100,8 @@ target_include_directories(VulkanPlayground PRIVATE ${STB_PATH} PRIVATE ${VMA_PA
 #file(COPY ${<some_var>}
 #    DESTINATION ${EXECUTABLE_OUTPUT_PATH})
 message("----  Copy? ----")
-#message(${CMAKE_CURRENT_BINARY_DIR})
-##add_custom_command(TARGET VulkanPlayground
-##    POST_BUILD
-##    COMMAND ${CMAKE_COMMAND} -E copy glslang "${CMAKE_CURRENT_BINARY_DIR}"
-##    COMMENT "Copy dll file to ${CMAKE_CURRENT_BINARY_DIR} directory" VERBATIM
-##)
-#add_custom_command(TARGET VulkanPlayground
-#    POST_BUILD
-#    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/Libraries/glslang/hlsl/hlsl.dll "${CMAKE_CURRENT_BINARY_DIR}"
-#    COMMENT "Copy dll file to ${CMAKE_CURRENT_BINARY_DIR} directory" VERBATIM
-#)
-#add_custom_command(TARGET VulkanPlayground
-#    POST_BUILD
-#    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/Libraries/glslang/hlsl/hlsld.dll "${CMAKE_CURRENT_BINARY_DIR}"
-#    COMMENT "Copy dll file to ${CMAKE_CURRENT_BINARY_DIR} directory" VERBATIM
-#)
+#windows glfw/assimp copy
+if(win32)
 add_custom_command(TARGET VulkanPlayground
     POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/Libraries/glfw/src/glfw3d.dll "${CMAKE_CURRENT_BINARY_DIR}"
@@ -123,6 +112,7 @@ add_custom_command(TARGET VulkanPlayground
     COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/Libraries/assimp/bin/assimp-vc143-mtd.dll "${CMAKE_CURRENT_BINARY_DIR}"
     COMMENT "Copy dll file to ${CMAKE_CURRENT_BINARY_DIR} directory" VERBATIM
 )
+endif()
 
 
 ##imgui

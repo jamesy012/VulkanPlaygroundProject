@@ -131,7 +131,7 @@ void Application::Start() {
    //mModelTest.LoadModel(GetWorkDir() + "Models/treeTest.fbx", nullptr, {});
    mModelTest.LoadModel(GetWorkDir() + "Sponza/Sponza.obj", mMaterialDescriptorSet, {});
    mModelTest.SetScale(0.05f);
-   mModelTest2.LoadModel(GetWorkDir() + "Models/mandalorian-star-wars/source/Mandalorian_Anim_fixed_textures.fbx", mMaterialDescriptorSet, {});
+   //mModelTest2.LoadModel(GetWorkDir() + "Models/mandalorian-star-wars/source/Mandalorian_Anim_fixed_textures.fbx", mMaterialDescriptorSet, {});
    mModelTest2.SetScale(0.05f);
    mModelTest2.SetRotation(glm::vec3(-90, 0, 0));
 
@@ -303,7 +303,7 @@ void Application::Draw() {
 
          ubo.mModel = mModelTest2.GetMatrix();
          des.UpdateObjectAndBind(&ubo);
-         mModelTest2.Render(&des, RenderMode::NORMAL);
+         //mModelTest2.Render(&des, RenderMode::NORMAL);
       
       }
       //RenderManager::Get()->Render( commandBuffer );

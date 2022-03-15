@@ -1,4 +1,5 @@
 #pragma once
+//use chrome://tracing/ to see result
 
 #include <string>
 #include <map>
@@ -6,12 +7,16 @@
 #include <algorithm>
 #include <fstream>
 #include <assert.h>
-#include <profileapi.h>
 
 #include <thread>
 
-//use chrome://tracing/ to see result
+#if WINDOWS
+#include <profileapi.h>
+
 #define ALLOW_PROFILING 1
+#else
+#define ALLOW_PROFILING 0
+#endif
 #if ALLOW_PROFILING
 #define __PROFILE_TEXT_COMBINE(x,y) x##y
 #define PROFILE_START(name) Profiler::Get().BeginEvent(name, __FUNCTION__ );
@@ -30,6 +35,7 @@ static class Profiler* instance;
 
 class Profiler {
    struct Event {
+#if ALLOW_PROFILING
       std::string name;
       std::string function;
       std::thread::id id;
@@ -37,6 +43,7 @@ class Profiler {
       LARGE_INTEGER end = LARGE_INTEGER();
       //float duration;
       int stack = 0;
+#endif
    };
 public:
 
@@ -130,6 +137,7 @@ public:
    }
 
    void BeginEvent(std::string aName, std::string aFunction) {
+#if ALLOW_PROFILING
       if (mStartProfile) {
          mRunning = true;
          mStartProfile = false;
@@ -152,9 +160,11 @@ public:
          mEventStack[mStack] = (int)mEvents.size() - 1;
          QueryPerformanceCounter(&mEvents[mEvents.size() - 1].start);
       }
+#endif
    }
 
    void EndEvent() {
+#if ALLOW_PROFILING
       if (mRunning) {
          LARGE_INTEGER endTime;
          QueryPerformanceCounter(&endTime);
@@ -162,9 +172,11 @@ public:
          assert(e.stack == mStack);
          e.end = endTime;
       }
+#endif
    }
 
    void AddMarker(std::string aName, std::string aFunction) {
+#if ALLOW_PROFILING
       if (mStartProfile) {
          mRunning = true;
          mStartProfile = false;
@@ -176,10 +188,13 @@ public:
          e.function = aFunction;
          mMarkers.push_back(e);
       }
+#endif
    }
 
    void SetThreadName(std::string aName) {      
+#if ALLOW_PROFILING
       mThreads[std::this_thread::get_id()] = aName + " (" + std::to_string(std::hash<std::thread::id>{}(std::this_thread::get_id())) + ")";
+#endif
    }
 
    static Profiler& Get() {
@@ -189,6 +204,7 @@ public:
       return *instance;
    }
 private:
+#if ALLOW_PROFILING
    std::ofstream mOutputStream;
    int mStack = 0;
    bool mRunning = false;
@@ -199,6 +215,7 @@ private:
    std::map<std::thread::id, std::string> mThreads;
    LONGLONG mFrequency;
    LARGE_INTEGER mStartTime;
+#endif
 };
 
 class ScopedEvent {

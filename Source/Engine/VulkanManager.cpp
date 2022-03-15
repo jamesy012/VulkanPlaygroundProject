@@ -43,6 +43,9 @@ const bool enableValidationLayers = true;
 
 const std::vector<const char*> deviceExtensions = {
    VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+#if APPLE
+   "VK_KHR_portability_subset"
+#endif
 };
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
@@ -247,6 +250,7 @@ void VulkanManager::Update() {
             frameDelayMouseDeltaReset = false;
          }
          if (ImGui::IsMouseDragging(ImGuiMouseButton_Left) || ImGui::IsMouseDragging(ImGuiMouseButton_Right)) {
+#if WINDOWS
             static POINT p = { 0, 0 };
             static POINT pRel = { 0, 0 };
             if (GetCursorPos(&p)) {
@@ -276,6 +280,7 @@ void VulkanManager::Update() {
                   }
                }
             }
+#endif
          }
       }
    }

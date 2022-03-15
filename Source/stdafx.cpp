@@ -8,6 +8,7 @@ namespace Logger {
 };
 
 void Logger::LogMessage(const char* aMessage, ...) {
+#if WINDOWS
 	const unsigned int size = 1024 * 16;
 	static char buffer[size] = { 0 };
 	FillMemory(buffer, size, 0);
@@ -40,5 +41,11 @@ void Logger::LogMessage(const char* aMessage, ...) {
 	OutputDebugStringA(buffer);
 
 	va_end(argptr);
-
+#else
+#pragma message("todo")
+	va_list argptr;
+	va_start(argptr, aMessage);
+	vprintf(aMessage, argptr);
+	va_end(argptr);
+#endif
 }
