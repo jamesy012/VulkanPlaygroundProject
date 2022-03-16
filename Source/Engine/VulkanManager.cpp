@@ -22,7 +22,13 @@ VulkanManager* VulkanManager::_VulkanManager = nullptr;
 
 RenderManager* gRenderManager = nullptr;
 
+#if WINDOWS
 #define VULKAN_API_VERSION VK_HEADER_VERSION_COMPLETE
+#elif APPLE
+#define VULKAN_API_VERSION VK_HEADER_VERSION_COMPLETE
+#else
+#error
+#endif
 
 #define MAX_DESCRIPTOR_SETS 50
 constexpr VkDescriptorPoolSize poolSizes[3] = { 

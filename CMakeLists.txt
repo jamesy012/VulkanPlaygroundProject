@@ -37,8 +37,8 @@ list(APPEND HPP_FILES ${IMGUI_HEADERS})
 
 add_executable(VulkanPlayground ${CPP_FILES} ${HPP_FILES})
 
-set_property(TARGET VulkanPlayground PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/bin")
-set_property(TARGET VulkanPlayground PROPERTY VS_DEBUGGER_COMMAND "${CMAKE_SOURCE_DIR}/bin")
+set_property(TARGET VulkanPlayground PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/workdir")
+set_property(TARGET VulkanPlayground PROPERTY VS_DEBUGGER_COMMAND "${CMAKE_SOURCE_DIR}/workdir")
 
 target_precompile_headers(VulkanPlayground PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/Source/stdafx.h)
 

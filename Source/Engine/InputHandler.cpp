@@ -2,6 +2,18 @@
 #include "InputHandler.h"
 
 #if WINDOWS
+#define USE_DINPUT 1
+#endif
+
+//fallback on glfw?
+#if !defined(USE_DINPUT)
+#define USE_DINPUT 0
+#define USE_GLFWINPUT 1
+#else
+#define USE_GLFWINPUT 0
+#endif
+
+#if USE_DINPUT
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include <GLFW/glfw3native.h>
 
@@ -15,6 +27,15 @@ DIMOUSESTATE mMouseState;
 DIMOUSESTATE mMouseStateOld;
 
 HWND hwnd;
+
+#elif USE_GLFWINPUT
+#include <GLFW/glfw3.h>
+GLFWwindow* mWindow;
+struct MouseStates{
+	bool buttons[(uint)IMouseKeys::IMOUSEKEY_MAX_NUM_BUTTONS];
+};
+MouseStates mMouseState;
+MouseStates mMouseStateOld;
 #endif
 
 
@@ -25,157 +46,25 @@ int mMouseDeltaX, mMouseDeltaY;
 
 InputHandler* _CInput;
 
+#if USE_GLFWINPUT
+void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
+	mMouseState.buttons[button] = action == GLFW_PRESS;
+}
+void MousePosCallback(GLFWwindow* window, double xpos, double ypos) {
+	mMouseDeltaX = mMouseX - xpos;
+	mMouseDeltaY = mMouseY - ypos;
+	mMouseX = xpos;
+	mMouseY = ypos;
+}
+void KeyPressCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
+	mKeyboardState[key] = action == GLFW_PRESS;
+}
+#endif
 
 unsigned char mKeyboardRemapper[256] = { 0 };
-//	IKEY_Escape				/*DIK_ESCAPE		*/
-//	, IKEY_1					/*DIK_1				*/
-//	, IKEY_2					/*DIK_2				*/
-//	, IKEY_3					/*DIK_3				*/
-//	, IKEY_4					/*DIK_4				*/
-//	, IKEY_5					/*DIK_5				*/
-//	, IKEY_6					/*DIK_6				*/
-//	, IKEY_7					/*DIK_7				*/
-//	, IKEY_8					/*DIK_8				*/
-//	, IKEY_9					/*DIK_9				*/
-//	, IKEY_0					/*DIK_0				*/
-//	, IKEY_Minus				/*DIK_MINUS			*/
-//	, IKEY_Equals				/*DIK_EQUALS		*/
-//	, IKEY_Backspace			/*DIK_BACK			*/
-//	, IKEY_Tab					/*DIK_TAB			*/
-//	, IKEY_Q					/*DIK_Q				*/
-//	, IKEY_W					/*DIK_W				*/
-//	, IKEY_E					/*DIK_E				*/
-//	, IKEY_R					/*DIK_R				*/
-//	, IKEY_T					/*DIK_T				*/
-//	, IKEY_Y					/*DIK_Y				*/
-//	, IKEY_U					/*DIK_U				*/
-//	, IKEY_I					/*DIK_I				*/
-//	, IKEY_O					/*DIK_O				*/
-//	, IKEY_P					/*DIK_P				*/
-//	, IKEY_OpenSquareBracket	/*DIK_LBRACKET		*/
-//	, IKEY_CloseSquareBracket	/*DIK_RBRACKET		*/
-//	, IKEY_Enter				/*DIK_RETURN		*/
-//	, IKEY_LeftCtrl				/*DIK_LCONTROL		*/
-//	, IKEY_A					/*DIK_A				*/
-//	, IKEY_S					/*DIK_S				*/
-//	, IKEY_D					/*DIK_D				*/
-//	, IKEY_F					/*DIK_F				*/
-//	, IKEY_G					/*DIK_G				*/
-//	, IKEY_H					/*DIK_H				*/
-//	, IKEY_J					/*DIK_J				*/
-//	, IKEY_K					/*DIK_K				*/
-//	, IKEY_L					/*DIK_L				*/
-//	, IKEY_SemiColon			/*DIK_SEMICOLON		*/
-//	, IKEY_Apostrophe			/*DIK_APOSTROPHE	*/
-//	, IKEY_Tilde				/*DIK_GRAVE			*/
-//	, IKEY_LeftShift			/*DIK_LSHIFT		*/
-//	, IKEY_BackSlash			/*DIK_BACKSLASH		*/
-//	, IKEY_Z					/*DIK_Z				*/
-//	, IKEY_X					/*DIK_X				*/
-//	, IKEY_C					/*DIK_C				*/
-//	, IKEY_V					/*DIK_V				*/
-//	, IKEY_B					/*DIK_B				*/
-//	, IKEY_N					/*DIK_N				*/
-//	, IKEY_M					/*DIK_M				*/
-//	, IKEY_Comma				/*DIK_COMMA			*/
-//	, IKEY_Period				/*DIK_PERIOD		*/
-//	, IKEY_ForwardSlash			/*DIK_SLASH			*/
-//	, IKEY_RightShift			/*DIK_RSHIFT		*/
-//	, IKEY_PAD_Asterisk			/*DIK_MULTIPLY		*/
-//	, IKEY_NONE					/*DIK_LMENU			*/
-//	, IKEY_Space				/*DIK_SPACE			*/
-//	, IKEY_CapsLock				/*DIK_CAPITAL		*/
-//	, IKEY_F1					/*DIK_F1			*/
-//	, IKEY_F2					/*DIK_F2			*/
-//	, IKEY_F3					/*DIK_F3			*/
-//	, IKEY_F4					/*DIK_F4			*/
-//	, IKEY_F5					/*DIK_F5			*/
-//	, IKEY_F6					/*DIK_F6			*/
-//	, IKEY_F7					/*DIK_F7			*/
-//	, IKEY_F8					/*DIK_F8			*/
-//	, IKEY_F9					/*DIK_F9			*/
-//	, IKEY_F10					/*DIK_F10			*/
-//	, IKEY_NumLock				/*DIK_NUMLOCK		*/
-//	, IKEY_ScrollLock			/*DIK_SCROLL		*/
-//	, IKEY_PAD_7				/*DIK_NUMPAD7		*/
-//	, IKEY_PAD_8				/*DIK_NUMPAD8		*/
-//	, IKEY_PAD_9				/*DIK_NUMPAD9		*/
-//	, IKEY_PAD_Minus			/*DIK_SUBTRACT		*/
-//	, IKEY_PAD_4				/*DIK_NUMPAD4		*/
-//	, IKEY_PAD_5				/*DIK_NUMPAD5		*/
-//	, IKEY_PAD_6				/*DIK_NUMPAD6		*/
-//	, IKEY_PAD_Plus				/*DIK_ADD			*/
-//	, IKEY_PAD_1				/*DIK_NUMPAD1		*/
-//	, IKEY_PAD_2				/*DIK_NUMPAD2		*/
-//	, IKEY_PAD_3				/*DIK_NUMPAD3		*/
-//	, IKEY_PAD_0				/*DIK_NUMPAD0		*/
-//	, IKEY_PAD_Period			/*DIK_DECIMAL		*/
-//	, IKEY_NONE					/*DIK_OEM_102		*/
-//	, IKEY_F11					/*DIK_F11			*/
-//	, IKEY_F12					/*DIK_F12			*/
-//	, IKEY_NONE					/*DIK_F13			*/
-//	, IKEY_NONE					/*DIK_F14			*/
-//	, IKEY_NONE					/*DIK_F15			*/
-//	, IKEY_NONE					/*DIK_KANA			*/
-//	, IKEY_NONE					/*DIK_ABNT_C1		*/
-//	, IKEY_NONE					/*DIK_CONVERT		*/
-//	, IKEY_NONE					/*DIK_NOCONVERT		*/
-//	, IKEY_NONE					/*DIK_YEN			*/
-//	, IKEY_NONE					/*DIK_ABNT_C2		*/
-//	, IKEY_NONE					/*DIK_NUMPADEQUALS	*/
-//	, IKEY_NONE					/*DIK_PREVTRACK		*/
-//	, IKEY_NONE					/*DIK_AT			*/
-//	, IKEY_NONE					/*DIK_COLON			*/
-//	, IKEY_NONE					/*DIK_UNDERLINE		*/
-//	, IKEY_NONE					/*DIK_KANJI			*/
-//	, IKEY_NONE					/*DIK_STOP			*/
-//	, IKEY_NONE					/*DIK_AX			*/
-//	, IKEY_NONE					/*DIK_UNLABELED		*/
-//	, IKEY_NONE					/*DIK_NEXTTRACK		*/
-//	, IKEY_PAD_Enter			/*DIK_NUMPADENTER	*/
-//	, IKEY_RightCtrl			/*DIK_RCONTROL		*/
-//	, IKEY_NONE					/*DIK_MUTE			*/
-//	, IKEY_NONE					/*DIK_CALCULATOR	*/
-//	, IKEY_NONE					/*DIK_PLAYPAUSE		*/
-//	, IKEY_NONE					/*DIK_MEDIASTOP		*/
-//	, IKEY_NONE					/*DIK_VOLUMEDOWN	*/
-//	, IKEY_NONE					/*DIK_VOLUMEUP		*/
-//	, IKEY_NONE					/*DIK_WEBHOME		*/
-//	, IKEY_NONE					/*DIK_NUMPADCOMMA	*/
-//	, IKEY_PAD_ForwardSlash		/*DIK_DIVIDE		*/
-//	, IKEY_NONE					/*DIK_SYSRQ			*/
-//	, IKEY_NONE					/*DIK_RMENU			*/
-//	, IKEY_NONE					/*DIK_PAUSE			*/
-//	, IKEY_Home					/*DIK_HOME			*/
-//	, IKEY_UpArrow				/*DIK_UP			*/
-//	, IKEY_NONE					/*DIK_PRIOR			*/
-//	, IKEY_LeftArrow			/*DIK_LEFT			*/
-//	, IKEY_RightArrow			/*DIK_RIGHT			*/
-//	, IKEY_End					/*DIK_END			*/
-//	, IKEY_DownArrow			/*DIK_DOWN			*/
-//	, IKEY_NONE					/*DIK_NEXT			*/
-//	, IKEY_Insert				/*DIK_INSERT		*/
-//	, IKEY_Delete				/*DIK_DELETE		*/
-//	, IKEY_NONE					/*DIK_LWIN			*/
-//	, IKEY_NONE					/*DIK_RWIN			*/
-//	, IKEY_NONE					/*DIK_APPS			*/
-//	, IKEY_NONE					/*DIK_POWER			*/
-//	, IKEY_NONE					/*DIK_SLEEP			*/
-//	, IKEY_NONE					/*DIK_WAKE			*/
-//	, IKEY_NONE					/*DIK_WEBSEARCH		*/
-//	, IKEY_NONE					/*DIK_WEBFAVORITES	*/
-//	, IKEY_NONE					/*DIK_WEBREFRESH	*/
-//	, IKEY_NONE					/*DIK_WEBSTOP		*/
-//	, IKEY_NONE					/*DIK_WEBFORWARD	*/
-//	, IKEY_NONE					/*DIK_WEBBACK		*/
-//	, IKEY_NONE					/*DIK_MYCOMPUTER	*/
-//	, IKEY_NONE					/*DIK_MAIL			*/
-//	, IKEY_NONE					/*DIK_MEDIASELECT	*/
-//};
-
 
 InputHandler::InputHandler() {
-#if WINDOWS
+#if USE_DINPUT
 	mKeyboardRemapper[IKEY_Escape] = DIK_ESCAPE;
 	mKeyboardRemapper[IKEY_1] = DIK_1;
 	mKeyboardRemapper[IKEY_2] = DIK_2;
@@ -271,6 +160,102 @@ InputHandler::InputHandler() {
 	mKeyboardRemapper[IKEY_DownArrow] = DIK_DOWN;
 	mKeyboardRemapper[IKEY_Insert] = DIK_INSERT;
 	mKeyboardRemapper[IKEY_Delete] = DIK_DELETE;
+#elif USE_GLFWINPUT
+	mKeyboardRemapper[IKEY_Escape] = GLFW_KEY_ESCAPE;
+	mKeyboardRemapper[IKEY_1] = GLFW_KEY_1;
+	mKeyboardRemapper[IKEY_2] = GLFW_KEY_2;
+	mKeyboardRemapper[IKEY_3] = GLFW_KEY_3;
+	mKeyboardRemapper[IKEY_4] = GLFW_KEY_4;
+	mKeyboardRemapper[IKEY_5] = GLFW_KEY_5;
+	mKeyboardRemapper[IKEY_6] = GLFW_KEY_6;
+	mKeyboardRemapper[IKEY_7] = GLFW_KEY_7;
+	mKeyboardRemapper[IKEY_8] = GLFW_KEY_8;
+	mKeyboardRemapper[IKEY_9] = GLFW_KEY_9;
+	mKeyboardRemapper[IKEY_0] = GLFW_KEY_0;
+	mKeyboardRemapper[IKEY_Minus] = GLFW_KEY_MINUS;
+	mKeyboardRemapper[IKEY_Equals] = GLFW_KEY_EQUAL;
+	mKeyboardRemapper[IKEY_Backspace] = GLFW_KEY_BACKSPACE;
+	mKeyboardRemapper[IKEY_Tab] = GLFW_KEY_TAB;
+	mKeyboardRemapper[IKEY_Q] = GLFW_KEY_Q;
+	mKeyboardRemapper[IKEY_W] = GLFW_KEY_W;
+	mKeyboardRemapper[IKEY_E] = GLFW_KEY_E;
+	mKeyboardRemapper[IKEY_R] = GLFW_KEY_R;
+	mKeyboardRemapper[IKEY_T] = GLFW_KEY_T;
+	mKeyboardRemapper[IKEY_Y] = GLFW_KEY_Y;
+	mKeyboardRemapper[IKEY_U] = GLFW_KEY_U;
+	mKeyboardRemapper[IKEY_I] = GLFW_KEY_I;
+	mKeyboardRemapper[IKEY_O] = GLFW_KEY_O;
+	mKeyboardRemapper[IKEY_P] = GLFW_KEY_P;
+	mKeyboardRemapper[IKEY_OpenSquareBracket] = GLFW_KEY_LEFT_BRACKET;
+	mKeyboardRemapper[IKEY_CloseSquareBracket] = GLFW_KEY_RIGHT_BRACKET;
+	mKeyboardRemapper[IKEY_Enter] = GLFW_KEY_ENTER;
+	mKeyboardRemapper[IKEY_LeftCtrl] = GLFW_KEY_LEFT_CONTROL;
+	mKeyboardRemapper[IKEY_A] = GLFW_KEY_A;
+	mKeyboardRemapper[IKEY_S] = GLFW_KEY_S;
+	mKeyboardRemapper[IKEY_D] = GLFW_KEY_D;
+	mKeyboardRemapper[IKEY_F] = GLFW_KEY_F;
+	mKeyboardRemapper[IKEY_G] = GLFW_KEY_G;
+	mKeyboardRemapper[IKEY_H] = GLFW_KEY_H;
+	mKeyboardRemapper[IKEY_J] = GLFW_KEY_J;
+	mKeyboardRemapper[IKEY_K] = GLFW_KEY_K;
+	mKeyboardRemapper[IKEY_L] = GLFW_KEY_L;
+	mKeyboardRemapper[IKEY_SemiColon] = GLFW_KEY_SEMICOLON;
+	mKeyboardRemapper[IKEY_Apostrophe] = GLFW_KEY_APOSTROPHE;
+	mKeyboardRemapper[IKEY_Tilde] = GLFW_KEY_GRAVE_ACCENT;
+	mKeyboardRemapper[IKEY_LeftShift] = GLFW_KEY_LEFT_SHIFT;
+	mKeyboardRemapper[IKEY_BackSlash] = GLFW_KEY_BACKSLASH;
+	mKeyboardRemapper[IKEY_Z] = GLFW_KEY_Z;
+	mKeyboardRemapper[IKEY_X] = GLFW_KEY_X;
+	mKeyboardRemapper[IKEY_C] = GLFW_KEY_C;
+	mKeyboardRemapper[IKEY_V] = GLFW_KEY_V;
+	mKeyboardRemapper[IKEY_B] = GLFW_KEY_B;
+	mKeyboardRemapper[IKEY_N] = GLFW_KEY_N;
+	mKeyboardRemapper[IKEY_M] = GLFW_KEY_M;
+	mKeyboardRemapper[IKEY_Comma] = GLFW_KEY_COMMA;
+	mKeyboardRemapper[IKEY_Period] = GLFW_KEY_PERIOD;
+	mKeyboardRemapper[IKEY_ForwardSlash] = GLFW_KEY_SLASH;
+	mKeyboardRemapper[IKEY_RightShift] = GLFW_KEY_RIGHT_SHIFT;
+	mKeyboardRemapper[IKEY_PAD_Asterisk] = GLFW_KEY_KP_MULTIPLY;
+	mKeyboardRemapper[IKEY_Space] = GLFW_KEY_SPACE;
+	mKeyboardRemapper[IKEY_CapsLock] = GLFW_KEY_CAPS_LOCK;
+	mKeyboardRemapper[IKEY_F1] = GLFW_KEY_F1;
+	mKeyboardRemapper[IKEY_F2] = GLFW_KEY_F2;
+	mKeyboardRemapper[IKEY_F3] = GLFW_KEY_F3;
+	mKeyboardRemapper[IKEY_F4] = GLFW_KEY_F4;
+	mKeyboardRemapper[IKEY_F5] = GLFW_KEY_F5;
+	mKeyboardRemapper[IKEY_F6] = GLFW_KEY_F6;
+	mKeyboardRemapper[IKEY_F7] = GLFW_KEY_F7;
+	mKeyboardRemapper[IKEY_F8] = GLFW_KEY_F8;
+	mKeyboardRemapper[IKEY_F9] = GLFW_KEY_F9;
+	mKeyboardRemapper[IKEY_F10] = GLFW_KEY_F10;
+	mKeyboardRemapper[IKEY_NumLock] = GLFW_KEY_NUM_LOCK;
+	mKeyboardRemapper[IKEY_ScrollLock] = GLFW_KEY_SCROLL_LOCK;
+	mKeyboardRemapper[IKEY_PAD_7] = GLFW_KEY_KP_7;
+	mKeyboardRemapper[IKEY_PAD_8] = GLFW_KEY_KP_8;
+	mKeyboardRemapper[IKEY_PAD_9] = GLFW_KEY_KP_9;
+	mKeyboardRemapper[IKEY_PAD_Minus] = GLFW_KEY_KP_SUBTRACT;
+	mKeyboardRemapper[IKEY_PAD_4] = GLFW_KEY_KP_4;
+	mKeyboardRemapper[IKEY_PAD_5] = GLFW_KEY_KP_5;
+	mKeyboardRemapper[IKEY_PAD_6] = GLFW_KEY_KP_6;
+	mKeyboardRemapper[IKEY_PAD_Plus] = GLFW_KEY_KP_ADD;
+	mKeyboardRemapper[IKEY_PAD_1] = GLFW_KEY_KP_1;
+	mKeyboardRemapper[IKEY_PAD_2] = GLFW_KEY_KP_2;
+	mKeyboardRemapper[IKEY_PAD_3] = GLFW_KEY_KP_3;
+	mKeyboardRemapper[IKEY_PAD_0] = GLFW_KEY_KP_0;
+	mKeyboardRemapper[IKEY_PAD_Period] = GLFW_KEY_KP_DECIMAL;
+	mKeyboardRemapper[IKEY_F11] = GLFW_KEY_F11;
+	mKeyboardRemapper[IKEY_F12] = GLFW_KEY_F12;
+	mKeyboardRemapper[IKEY_PAD_Enter] = GLFW_KEY_KP_ENTER;
+	mKeyboardRemapper[IKEY_RightCtrl] = GLFW_KEY_RIGHT_CONTROL;
+	mKeyboardRemapper[IKEY_PAD_ForwardSlash] = GLFW_KEY_KP_DIVIDE;
+	mKeyboardRemapper[IKEY_Home] = GLFW_KEY_HOME;
+	mKeyboardRemapper[IKEY_UpArrow] = GLFW_KEY_UP;
+	mKeyboardRemapper[IKEY_LeftArrow] = GLFW_KEY_LEFT;
+	mKeyboardRemapper[IKEY_RightArrow] = GLFW_KEY_RIGHT;
+	mKeyboardRemapper[IKEY_End] = GLFW_KEY_END;
+	mKeyboardRemapper[IKEY_DownArrow] = GLFW_KEY_DOWN;
+	mKeyboardRemapper[IKEY_Insert] = GLFW_KEY_INSERT;
+	mKeyboardRemapper[IKEY_Delete] = GLFW_KEY_DELETE;
 #endif
 }
 
@@ -278,7 +263,7 @@ InputHandler::~InputHandler() {
 }
 
 bool InputHandler::Startup(GLFWwindow* a_InputWindow) {
-#if WINDOWS
+#if USE_DINPUT
 	HINSTANCE hInstance = GetModuleHandle(NULL);
 	hwnd = glfwGetWin32Window(a_InputWindow);
 	HRESULT hr;
@@ -327,6 +312,13 @@ bool InputHandler::Startup(GLFWwindow* a_InputWindow) {
 	if (FAILED(hr)) {
 		return false;
 	}
+
+#elif USE_GLFWINPUT
+	mWindow = a_InputWindow;
+
+	glfwSetMouseButtonCallback(mWindow, MouseButtonCallback);
+	glfwSetCursorPosCallback(mWindow, MousePosCallback);
+	glfwSetKeyCallback(mWindow, KeyPressCallback);
 #endif
 
 	_CInput = this;
@@ -335,7 +327,7 @@ bool InputHandler::Startup(GLFWwindow* a_InputWindow) {
 }
 
 void InputHandler::Shutdown() {
-#if WINDOWS
+#if USE_DINPUT
 	if (mMouse) {
 		mMouse->Unacquire();
 		mMouse->Release();
@@ -402,26 +394,42 @@ glm::vec2 InputHandler::GetMouseDelta() const {
 }
 
 bool InputHandler::IsMouseKeyDown(IMouseKeys aKey) const {
-#if WINDOWS
+#if USE_DINPUT
 	return mMouseState.rgbButtons[aKey] & 0x80;
+#elif USE_GLFWINPUT
+	return mMouseState.buttons[aKey];
+#else
+	return false;
 #endif
 }
 
 bool InputHandler::WasMouseKeyPressed(IMouseKeys aKey) const {
-#if WINDOWS
+#if USE_DINPUT
 	return (mMouseState.rgbButtons[aKey] & 0x80) && !(mMouseStateOld.rgbButtons[aKey] & 0x80);
+#elif USE_GLFWINPUT
+	return mMouseState.buttons[aKey] && !mMouseStateOld.buttons[aKey];
+#else
+	return false;
 #endif
 }
 
 bool InputHandler::WasMouseKeyReleased(IMouseKeys aKey) const {
-#if WINDOWS
+#if USE_DINPUT
 	return !(mMouseState.rgbButtons[aKey] & 0x80) && (mMouseStateOld.rgbButtons[aKey] & 0x80);
+#elif USE_GLFWINPUT
+	return !mMouseState.buttons[aKey] && mMouseStateOld.buttons[aKey];
+#else
+	return false;
 #endif
 }
 
 float InputHandler::GetMouseScroll() const {
-#if WINDOWS
+#if USE_DINPUT
 	return (float)mMouseState.lZ;
+#elif USE_GLFWINPUT
+return false;//glfwGetScr;
+#else
+return false;
 #endif
 }
 
@@ -480,7 +488,7 @@ std::string InputHandler::GetKeysDown() const {
 
 
 bool InputHandler::ReadKeyboard() {
-#if WINDOWS
+#if USE_DINPUT
 	HRESULT hr;
 
 	memcpy(mKeyboardStateOld, mKeyboardState, sizeof(mKeyboardState));
@@ -499,13 +507,15 @@ bool InputHandler::ReadKeyboard() {
 		}
 	}
 	return true;
-#else
-	return false;
+#elif USE_GLFWINPUT
+	memcpy(&mKeyboardStateOld, &mKeyboardState, sizeof(mKeyboardState));
+	//reset mKeyboardState? the callback doesnt trigger each frame it's active
+	return true;
 #endif
 }
 
 bool InputHandler::ReadMouse() {
-#if WINDOWS
+#if USE_DINPUT
 	HRESULT hr;
 
 
@@ -539,6 +549,10 @@ bool InputHandler::ReadMouse() {
 		mMouseDeltaX = mMouseState.lX;
 		mMouseDeltaY = mMouseState.lY;
 	}
+	return true;
+#elif USE_GLFWINPUT
+	memcpy(&mMouseStateOld, &mMouseState, sizeof(MouseStates));
+	//reset mMouseState? the callback doesnt trigger each frame it's active
 	return true;
 #else
 	return false;
