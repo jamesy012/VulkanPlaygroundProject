@@ -14,7 +14,7 @@
 #endif
 
 #if USE_DINPUT
-#define GLFW_EXPOSE_NATIVE_WIN32
+#define (unsigned char)GLFW_EXPOSE_NATIVE_WIN32
 #include <GLFW/glfw3native.h>
 
 #define DIRECTINPUT_VERSION 0x0800
@@ -48,7 +48,7 @@ InputHandler* _CInput;
 
 #if USE_GLFWINPUT
 void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
-	mMouseState.buttons[button] = action == GLFW_PRESS;
+	mMouseState.buttons[button] = action == (unsigned char)GLFW_PRESS;
 }
 void MousePosCallback(GLFWwindow* window, double xpos, double ypos) {
 	mMouseDeltaX = mMouseX - xpos;
@@ -57,7 +57,7 @@ void MousePosCallback(GLFWwindow* window, double xpos, double ypos) {
 	mMouseY = ypos;
 }
 void KeyPressCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-	mKeyboardState[key] = action == GLFW_PRESS;
+	mKeyboardState[key] = action == (unsigned char)GLFW_PRESS;
 }
 #endif
 
@@ -161,101 +161,101 @@ InputHandler::InputHandler() {
 	mKeyboardRemapper[IKEY_Insert] = DIK_INSERT;
 	mKeyboardRemapper[IKEY_Delete] = DIK_DELETE;
 #elif USE_GLFWINPUT
-	mKeyboardRemapper[IKEY_Escape] = GLFW_KEY_ESCAPE;
-	mKeyboardRemapper[IKEY_1] = GLFW_KEY_1;
-	mKeyboardRemapper[IKEY_2] = GLFW_KEY_2;
-	mKeyboardRemapper[IKEY_3] = GLFW_KEY_3;
-	mKeyboardRemapper[IKEY_4] = GLFW_KEY_4;
-	mKeyboardRemapper[IKEY_5] = GLFW_KEY_5;
-	mKeyboardRemapper[IKEY_6] = GLFW_KEY_6;
-	mKeyboardRemapper[IKEY_7] = GLFW_KEY_7;
-	mKeyboardRemapper[IKEY_8] = GLFW_KEY_8;
-	mKeyboardRemapper[IKEY_9] = GLFW_KEY_9;
-	mKeyboardRemapper[IKEY_0] = GLFW_KEY_0;
-	mKeyboardRemapper[IKEY_Minus] = GLFW_KEY_MINUS;
-	mKeyboardRemapper[IKEY_Equals] = GLFW_KEY_EQUAL;
-	mKeyboardRemapper[IKEY_Backspace] = GLFW_KEY_BACKSPACE;
-	mKeyboardRemapper[IKEY_Tab] = GLFW_KEY_TAB;
-	mKeyboardRemapper[IKEY_Q] = GLFW_KEY_Q;
-	mKeyboardRemapper[IKEY_W] = GLFW_KEY_W;
-	mKeyboardRemapper[IKEY_E] = GLFW_KEY_E;
-	mKeyboardRemapper[IKEY_R] = GLFW_KEY_R;
-	mKeyboardRemapper[IKEY_T] = GLFW_KEY_T;
-	mKeyboardRemapper[IKEY_Y] = GLFW_KEY_Y;
-	mKeyboardRemapper[IKEY_U] = GLFW_KEY_U;
-	mKeyboardRemapper[IKEY_I] = GLFW_KEY_I;
-	mKeyboardRemapper[IKEY_O] = GLFW_KEY_O;
-	mKeyboardRemapper[IKEY_P] = GLFW_KEY_P;
-	mKeyboardRemapper[IKEY_OpenSquareBracket] = GLFW_KEY_LEFT_BRACKET;
-	mKeyboardRemapper[IKEY_CloseSquareBracket] = GLFW_KEY_RIGHT_BRACKET;
-	mKeyboardRemapper[IKEY_Enter] = GLFW_KEY_ENTER;
-	mKeyboardRemapper[IKEY_LeftCtrl] = GLFW_KEY_LEFT_CONTROL;
-	mKeyboardRemapper[IKEY_A] = GLFW_KEY_A;
-	mKeyboardRemapper[IKEY_S] = GLFW_KEY_S;
-	mKeyboardRemapper[IKEY_D] = GLFW_KEY_D;
-	mKeyboardRemapper[IKEY_F] = GLFW_KEY_F;
-	mKeyboardRemapper[IKEY_G] = GLFW_KEY_G;
-	mKeyboardRemapper[IKEY_H] = GLFW_KEY_H;
-	mKeyboardRemapper[IKEY_J] = GLFW_KEY_J;
-	mKeyboardRemapper[IKEY_K] = GLFW_KEY_K;
-	mKeyboardRemapper[IKEY_L] = GLFW_KEY_L;
-	mKeyboardRemapper[IKEY_SemiColon] = GLFW_KEY_SEMICOLON;
-	mKeyboardRemapper[IKEY_Apostrophe] = GLFW_KEY_APOSTROPHE;
-	mKeyboardRemapper[IKEY_Tilde] = GLFW_KEY_GRAVE_ACCENT;
-	mKeyboardRemapper[IKEY_LeftShift] = GLFW_KEY_LEFT_SHIFT;
-	mKeyboardRemapper[IKEY_BackSlash] = GLFW_KEY_BACKSLASH;
-	mKeyboardRemapper[IKEY_Z] = GLFW_KEY_Z;
-	mKeyboardRemapper[IKEY_X] = GLFW_KEY_X;
-	mKeyboardRemapper[IKEY_C] = GLFW_KEY_C;
-	mKeyboardRemapper[IKEY_V] = GLFW_KEY_V;
-	mKeyboardRemapper[IKEY_B] = GLFW_KEY_B;
-	mKeyboardRemapper[IKEY_N] = GLFW_KEY_N;
-	mKeyboardRemapper[IKEY_M] = GLFW_KEY_M;
-	mKeyboardRemapper[IKEY_Comma] = GLFW_KEY_COMMA;
-	mKeyboardRemapper[IKEY_Period] = GLFW_KEY_PERIOD;
-	mKeyboardRemapper[IKEY_ForwardSlash] = GLFW_KEY_SLASH;
-	mKeyboardRemapper[IKEY_RightShift] = GLFW_KEY_RIGHT_SHIFT;
-	mKeyboardRemapper[IKEY_PAD_Asterisk] = GLFW_KEY_KP_MULTIPLY;
-	mKeyboardRemapper[IKEY_Space] = GLFW_KEY_SPACE;
-	mKeyboardRemapper[IKEY_CapsLock] = GLFW_KEY_CAPS_LOCK;
-	mKeyboardRemapper[IKEY_F1] = GLFW_KEY_F1;
-	mKeyboardRemapper[IKEY_F2] = GLFW_KEY_F2;
-	mKeyboardRemapper[IKEY_F3] = GLFW_KEY_F3;
-	mKeyboardRemapper[IKEY_F4] = GLFW_KEY_F4;
-	mKeyboardRemapper[IKEY_F5] = GLFW_KEY_F5;
-	mKeyboardRemapper[IKEY_F6] = GLFW_KEY_F6;
-	mKeyboardRemapper[IKEY_F7] = GLFW_KEY_F7;
-	mKeyboardRemapper[IKEY_F8] = GLFW_KEY_F8;
-	mKeyboardRemapper[IKEY_F9] = GLFW_KEY_F9;
-	mKeyboardRemapper[IKEY_F10] = GLFW_KEY_F10;
-	mKeyboardRemapper[IKEY_NumLock] = GLFW_KEY_NUM_LOCK;
-	mKeyboardRemapper[IKEY_ScrollLock] = GLFW_KEY_SCROLL_LOCK;
-	mKeyboardRemapper[IKEY_PAD_7] = GLFW_KEY_KP_7;
-	mKeyboardRemapper[IKEY_PAD_8] = GLFW_KEY_KP_8;
-	mKeyboardRemapper[IKEY_PAD_9] = GLFW_KEY_KP_9;
-	mKeyboardRemapper[IKEY_PAD_Minus] = GLFW_KEY_KP_SUBTRACT;
-	mKeyboardRemapper[IKEY_PAD_4] = GLFW_KEY_KP_4;
-	mKeyboardRemapper[IKEY_PAD_5] = GLFW_KEY_KP_5;
-	mKeyboardRemapper[IKEY_PAD_6] = GLFW_KEY_KP_6;
-	mKeyboardRemapper[IKEY_PAD_Plus] = GLFW_KEY_KP_ADD;
-	mKeyboardRemapper[IKEY_PAD_1] = GLFW_KEY_KP_1;
-	mKeyboardRemapper[IKEY_PAD_2] = GLFW_KEY_KP_2;
-	mKeyboardRemapper[IKEY_PAD_3] = GLFW_KEY_KP_3;
-	mKeyboardRemapper[IKEY_PAD_0] = GLFW_KEY_KP_0;
-	mKeyboardRemapper[IKEY_PAD_Period] = GLFW_KEY_KP_DECIMAL;
-	mKeyboardRemapper[IKEY_F11] = GLFW_KEY_F11;
-	mKeyboardRemapper[IKEY_F12] = GLFW_KEY_F12;
-	mKeyboardRemapper[IKEY_PAD_Enter] = GLFW_KEY_KP_ENTER;
-	mKeyboardRemapper[IKEY_RightCtrl] = GLFW_KEY_RIGHT_CONTROL;
-	mKeyboardRemapper[IKEY_PAD_ForwardSlash] = GLFW_KEY_KP_DIVIDE;
-	mKeyboardRemapper[IKEY_Home] = GLFW_KEY_HOME;
-	mKeyboardRemapper[IKEY_UpArrow] = GLFW_KEY_UP;
-	mKeyboardRemapper[IKEY_LeftArrow] = GLFW_KEY_LEFT;
-	mKeyboardRemapper[IKEY_RightArrow] = GLFW_KEY_RIGHT;
-	mKeyboardRemapper[IKEY_End] = GLFW_KEY_END;
-	mKeyboardRemapper[IKEY_DownArrow] = GLFW_KEY_DOWN;
-	mKeyboardRemapper[IKEY_Insert] = GLFW_KEY_INSERT;
-	mKeyboardRemapper[IKEY_Delete] = GLFW_KEY_DELETE;
+	mKeyboardRemapper[IKEY_Escape] = (unsigned char)GLFW_KEY_ESCAPE;
+	mKeyboardRemapper[IKEY_1] = (unsigned char)GLFW_KEY_1;
+	mKeyboardRemapper[IKEY_2] = (unsigned char)GLFW_KEY_2;
+	mKeyboardRemapper[IKEY_3] = (unsigned char)GLFW_KEY_3;
+	mKeyboardRemapper[IKEY_4] = (unsigned char)GLFW_KEY_4;
+	mKeyboardRemapper[IKEY_5] = (unsigned char)GLFW_KEY_5;
+	mKeyboardRemapper[IKEY_6] = (unsigned char)GLFW_KEY_6;
+	mKeyboardRemapper[IKEY_7] = (unsigned char)GLFW_KEY_7;
+	mKeyboardRemapper[IKEY_8] = (unsigned char)GLFW_KEY_8;
+	mKeyboardRemapper[IKEY_9] = (unsigned char)GLFW_KEY_9;
+	mKeyboardRemapper[IKEY_0] = (unsigned char)GLFW_KEY_0;
+	mKeyboardRemapper[IKEY_Minus] = (unsigned char)GLFW_KEY_MINUS;
+	mKeyboardRemapper[IKEY_Equals] = (unsigned char)GLFW_KEY_EQUAL;
+	mKeyboardRemapper[IKEY_Backspace] = (unsigned char)GLFW_KEY_BACKSPACE;
+	mKeyboardRemapper[IKEY_Tab] = (unsigned char)GLFW_KEY_TAB;
+	mKeyboardRemapper[IKEY_Q] = (unsigned char)GLFW_KEY_Q;
+	mKeyboardRemapper[IKEY_W] = (unsigned char)GLFW_KEY_W;
+	mKeyboardRemapper[IKEY_E] = (unsigned char)GLFW_KEY_E;
+	mKeyboardRemapper[IKEY_R] = (unsigned char)GLFW_KEY_R;
+	mKeyboardRemapper[IKEY_T] = (unsigned char)GLFW_KEY_T;
+	mKeyboardRemapper[IKEY_Y] = (unsigned char)GLFW_KEY_Y;
+	mKeyboardRemapper[IKEY_U] = (unsigned char)GLFW_KEY_U;
+	mKeyboardRemapper[IKEY_I] = (unsigned char)GLFW_KEY_I;
+	mKeyboardRemapper[IKEY_O] = (unsigned char)GLFW_KEY_O;
+	mKeyboardRemapper[IKEY_P] = (unsigned char)GLFW_KEY_P;
+	mKeyboardRemapper[IKEY_OpenSquareBracket] = (unsigned char)GLFW_KEY_LEFT_BRACKET;
+	mKeyboardRemapper[IKEY_CloseSquareBracket] = (unsigned char)GLFW_KEY_RIGHT_BRACKET;
+	mKeyboardRemapper[IKEY_Enter] = (unsigned char)GLFW_KEY_ENTER;
+	mKeyboardRemapper[IKEY_LeftCtrl] = (unsigned char)GLFW_KEY_LEFT_CONTROL;
+	mKeyboardRemapper[IKEY_A] = (unsigned char)GLFW_KEY_A;
+	mKeyboardRemapper[IKEY_S] = (unsigned char)GLFW_KEY_S;
+	mKeyboardRemapper[IKEY_D] = (unsigned char)GLFW_KEY_D;
+	mKeyboardRemapper[IKEY_F] = (unsigned char)GLFW_KEY_F;
+	mKeyboardRemapper[IKEY_G] = (unsigned char)GLFW_KEY_G;
+	mKeyboardRemapper[IKEY_H] = (unsigned char)GLFW_KEY_H;
+	mKeyboardRemapper[IKEY_J] = (unsigned char)GLFW_KEY_J;
+	mKeyboardRemapper[IKEY_K] = (unsigned char)GLFW_KEY_K;
+	mKeyboardRemapper[IKEY_L] = (unsigned char)GLFW_KEY_L;
+	mKeyboardRemapper[IKEY_SemiColon] = (unsigned char)GLFW_KEY_SEMICOLON;
+	mKeyboardRemapper[IKEY_Apostrophe] = (unsigned char)GLFW_KEY_APOSTROPHE;
+	mKeyboardRemapper[IKEY_Tilde] = (unsigned char)GLFW_KEY_GRAVE_ACCENT;
+	mKeyboardRemapper[IKEY_LeftShift] = (unsigned char)GLFW_KEY_LEFT_SHIFT;
+	mKeyboardRemapper[IKEY_BackSlash] = (unsigned char)GLFW_KEY_BACKSLASH;
+	mKeyboardRemapper[IKEY_Z] = (unsigned char)GLFW_KEY_Z;
+	mKeyboardRemapper[IKEY_X] = (unsigned char)GLFW_KEY_X;
+	mKeyboardRemapper[IKEY_C] = (unsigned char)GLFW_KEY_C;
+	mKeyboardRemapper[IKEY_V] = (unsigned char)GLFW_KEY_V;
+	mKeyboardRemapper[IKEY_B] = (unsigned char)GLFW_KEY_B;
+	mKeyboardRemapper[IKEY_N] = (unsigned char)GLFW_KEY_N;
+	mKeyboardRemapper[IKEY_M] = (unsigned char)GLFW_KEY_M;
+	mKeyboardRemapper[IKEY_Comma] = (unsigned char)GLFW_KEY_COMMA;
+	mKeyboardRemapper[IKEY_Period] = (unsigned char)GLFW_KEY_PERIOD;
+	mKeyboardRemapper[IKEY_ForwardSlash] = (unsigned char)GLFW_KEY_SLASH;
+	mKeyboardRemapper[IKEY_RightShift] = (unsigned char)GLFW_KEY_RIGHT_SHIFT;
+	mKeyboardRemapper[IKEY_PAD_Asterisk] = (unsigned char)GLFW_KEY_KP_MULTIPLY;
+	mKeyboardRemapper[IKEY_Space] = (unsigned char)GLFW_KEY_SPACE;
+	mKeyboardRemapper[IKEY_CapsLock] = (unsigned char)GLFW_KEY_CAPS_LOCK;
+	mKeyboardRemapper[IKEY_F1] = (unsigned char)GLFW_KEY_F1;
+	mKeyboardRemapper[IKEY_F2] = (unsigned char)GLFW_KEY_F2;
+	mKeyboardRemapper[IKEY_F3] = (unsigned char)GLFW_KEY_F3;
+	mKeyboardRemapper[IKEY_F4] = (unsigned char)GLFW_KEY_F4;
+	mKeyboardRemapper[IKEY_F5] = (unsigned char)GLFW_KEY_F5;
+	mKeyboardRemapper[IKEY_F6] = (unsigned char)GLFW_KEY_F6;
+	mKeyboardRemapper[IKEY_F7] = (unsigned char)GLFW_KEY_F7;
+	mKeyboardRemapper[IKEY_F8] = (unsigned char)GLFW_KEY_F8;
+	mKeyboardRemapper[IKEY_F9] = (unsigned char)GLFW_KEY_F9;
+	mKeyboardRemapper[IKEY_F10] = (unsigned char)GLFW_KEY_F10;
+	mKeyboardRemapper[IKEY_NumLock] = (unsigned char)GLFW_KEY_NUM_LOCK;
+	mKeyboardRemapper[IKEY_ScrollLock] = (unsigned char)GLFW_KEY_SCROLL_LOCK;
+	mKeyboardRemapper[IKEY_PAD_7] = (unsigned char)GLFW_KEY_KP_7;
+	mKeyboardRemapper[IKEY_PAD_8] = (unsigned char)GLFW_KEY_KP_8;
+	mKeyboardRemapper[IKEY_PAD_9] = (unsigned char)GLFW_KEY_KP_9;
+	mKeyboardRemapper[IKEY_PAD_Minus] = (unsigned char)GLFW_KEY_KP_SUBTRACT;
+	mKeyboardRemapper[IKEY_PAD_4] = (unsigned char)GLFW_KEY_KP_4;
+	mKeyboardRemapper[IKEY_PAD_5] = (unsigned char)GLFW_KEY_KP_5;
+	mKeyboardRemapper[IKEY_PAD_6] = (unsigned char)GLFW_KEY_KP_6;
+	mKeyboardRemapper[IKEY_PAD_Plus] = (unsigned char)GLFW_KEY_KP_ADD;
+	mKeyboardRemapper[IKEY_PAD_1] = (unsigned char)GLFW_KEY_KP_1;
+	mKeyboardRemapper[IKEY_PAD_2] = (unsigned char)GLFW_KEY_KP_2;
+	mKeyboardRemapper[IKEY_PAD_3] = (unsigned char)GLFW_KEY_KP_3;
+	mKeyboardRemapper[IKEY_PAD_0] = (unsigned char)GLFW_KEY_KP_0;
+	mKeyboardRemapper[IKEY_PAD_Period] = (unsigned char)GLFW_KEY_KP_DECIMAL;
+	mKeyboardRemapper[IKEY_F11] = (unsigned char)GLFW_KEY_F11;
+	mKeyboardRemapper[IKEY_F12] = (unsigned char)GLFW_KEY_F12;
+	mKeyboardRemapper[IKEY_PAD_Enter] = (unsigned char)GLFW_KEY_KP_ENTER;
+	mKeyboardRemapper[IKEY_RightCtrl] = (unsigned char)GLFW_KEY_RIGHT_CONTROL;
+	mKeyboardRemapper[IKEY_PAD_ForwardSlash] = (unsigned char)GLFW_KEY_KP_DIVIDE;
+	mKeyboardRemapper[IKEY_Home] = (unsigned char)GLFW_KEY_HOME;
+	mKeyboardRemapper[IKEY_UpArrow] = (unsigned char)GLFW_KEY_UP;
+	mKeyboardRemapper[IKEY_LeftArrow] = (unsigned char)GLFW_KEY_LEFT;
+	mKeyboardRemapper[IKEY_RightArrow] = (unsigned char)GLFW_KEY_RIGHT;
+	mKeyboardRemapper[IKEY_End] = (unsigned char)GLFW_KEY_END;
+	mKeyboardRemapper[IKEY_DownArrow] = (unsigned char)GLFW_KEY_DOWN;
+	mKeyboardRemapper[IKEY_Insert] = (unsigned char)GLFW_KEY_INSERT;
+	mKeyboardRemapper[IKEY_Delete] = (unsigned char)GLFW_KEY_DELETE;
 #endif
 }
 

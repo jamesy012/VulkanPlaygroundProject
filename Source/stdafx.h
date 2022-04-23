@@ -37,14 +37,34 @@
 
 //~~~~~~~ ASSERTS/Validation
 #if WINDOWS
-#define ASSERT(msg) DebugBreak();
+#define ASSERT_ALWAYS() DebugBreak();
 #elif APPLE
-#define ASSERT(msg) assert(0);
+#define ASSERT_ALWAYS() assert(0);
 #endif
-#define ASSERT_IF(x) if((x) == false){ASSERT(__FUNCTION__)};
-#define ASSERT_RET(x) if(!(x)) {ASSERT(__FUNCTION__); return;};
-#define ASSERT_RET_VALUE(x, ret) if(!(x)) {ASSERT(__FUNCTION__); return (ret);};
-#define ASSERT_RET_FALSE(x) ASSERT(__FUNCTION__); return false;
+
+
+#define ASSERT_IF(x) if((x) == false) {ASSERT_ALWAYS()};
+#define ASSERT_RET(x) if(!(x)) {ASSERT_ALWAYS(); return;};
+#define ASSERT_RET_VALUE(x, ret) if(!(x)) {ASSERT_ALWAYS(); return (ret);};
+#define ASSERT_RET_FALSE(x) ASSERT_ALWAYS(); return false;
+
+#define ASSERT_VULKAN_VALUE(x) ASSERT_IF(x != VK_NULL_HANDLE);
+#define ASSERT_VULKAN_SUCCESS(x) ASSERT_IF(x == VK_SUCCESS);
+#define ASSERT_VULKAN_SUCCESS_RET_FALSE(x) if(x != VK_SUCCESS){ASSERT_RET_FALSE("")};
+
+#define ASSERT_VULKAN_HANDLE(x) if((x) == VK_NULL_HANDLE) ASSERT_ALWAYS();
+#define ASSERT_VULKAN_SUCCESS(x) if((x) != VK_SUCCESS) ASSERT_ALWAYS();
+#define ASSERT_VALID(x) if((x) == nullptr) ASSERT_ALWAYS();
+#define ASSERT_INVALID(x) if((x) != nullptr) ASSERT_ALWAYS();
+#define ASSERT(x) ASSERT_ALWAYS()
+/*
+#define ASSERT_IF(x) if(!(x)) ASSERT_ALWAYS();
+
+#define ASSERT_RET(x) if((x)) return;
+#define ASSERT_RET_VALUE(x,v) if((x)) return v;
+#define ASSERT_RET_FALSE(x) ASSERT_RET_VALUE((x),false)
+#define ASSERT_VULKAN_SUCCESS_RET_FALSE(x) if((x)) return false;
+*/
 
 static void CheckVulkanResult(VkResult aResult) {
    if (aResult == VK_SUCCESS) {
@@ -53,11 +73,6 @@ static void CheckVulkanResult(VkResult aResult) {
    fprintf(stderr, "[vulkan] Error: VkResult = %d\n", aResult);
    assert(false);
 }
-
-#define ASSERT_VULKAN_VALUE(x) ASSERT_IF(x != VK_NULL_HANDLE);
-#define ASSERT_VULKAN_SUCCESS(x) ASSERT_IF(x == VK_SUCCESS);
-#define ASSERT_VULKAN_SUCCESS_RET_FALSE(x) if(x != VK_SUCCESS){ASSERT_RET_FALSE("")};
-#define ASSERT_VALID(x) ASSERT_IF(x != nullptr);
 
 
 //~~~~~~~ CONSTANTS
@@ -292,6 +307,7 @@ namespace Logger {
 #define LOG_GET_NAME ((const std::string)Logger::mLogCat)
 
 #define LOG(...) Logger::LogMessage(__VA_ARGS__);
+//#define LOG() LOG("\n")
 //#define LOG_LIT(Message, ...) Logger::LogMessage("%s\n", #Message, __VA_ARGS__);
 #define LOG_WITH_LINE(Message) Logger::LogMessage("(%s #%i) %s", __FUNCTION__, __LINE__, Message);
 

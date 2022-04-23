@@ -16,9 +16,17 @@
 WebUI mWebUITest;
 #include <filesystem>
 
-void Application::Start() {
+#include "Engine/HashString.h"
+
+   
+void Application::Start(int argc, char *argv[]) {
     std::string currentPath = std::filesystem::current_path().generic_string();
     LOG("Current work dir: %s\n", currentPath.c_str());
+
+
+   const HashString string("Test1");
+   LOG("%zu - %s \n",string.GetHash(), string.GetString().c_str());
+
 
    mWindow = new Window();
    mWindow->Create(800, 600, "vulkan");
@@ -171,7 +179,6 @@ void Application::ImGui() {
    PROFILE_START_SCOPED("ImGui - application update");
    ImGuiIO& io = ImGui::GetIO();
    _CInput->AllowInput(!io.WantCaptureMouse && mWindow->IsFocused() && mWindow->IsHovered());
-
 
    ImGui::Begin("stats");
    ImGui::Text("size: %iX%i", mRenderTarget.GetSize().width, mRenderTarget.GetSize().height);

@@ -6,8 +6,7 @@ Buffer::~Buffer() {
 }
 
 void Buffer::CopyFrom(Buffer* aBuffer, VkDeviceSize aOffset, VkDeviceSize aFromOffset, VkDeviceSize aSize, const VkCommandBuffer aCommandList) {
-	ASSERT_VULKAN_VALUE(mBuffer);
-	ASSERT_VULKAN_VALUE(aBuffer);
+	ASSERT_VULKAN_HANDLE(mBuffer);
 	if(aBuffer == VK_NULL_HANDLE) {
 		return;
 	}
@@ -47,7 +46,7 @@ bool Buffer::Create(VkDeviceSize aSize, VkBufferUsageFlags aUseage, VmaMemoryUsa
 }
 
 void Buffer::Destroy() {
-	ASSERT_VULKAN_VALUE(mBuffer);
+	ASSERT_VULKAN_HANDLE(mBuffer);
 	if(mBuffer) {
 		vmaDestroyBuffer(VulkanManager::Get()->GetAllocator(), mBuffer, mAllocation);
 	}
@@ -56,8 +55,8 @@ void Buffer::Destroy() {
 }
 
 void Buffer::Map(void** aData) {
-	ASSERT_VULKAN_VALUE(mBuffer);
-	if(mMapCounter++ == 0) {
+	ASSERT_VULKAN_HANDLE(mBuffer);
+	if(++mMapCounter == 1) {
 		vmaMapMemory(VulkanManager::Get()->GetAllocator(), mAllocation, &mMapPtr);
 	}
 	if(aData != nullptr) {
@@ -66,7 +65,7 @@ void Buffer::Map(void** aData) {
 }
 
 void Buffer::UnMap() {
-	ASSERT_VULKAN_VALUE(mBuffer);
+	ASSERT_VULKAN_HANDLE(mBuffer);
 	if(--mMapCounter == 0) {
 		vmaUnmapMemory(VulkanManager::Get()->GetAllocator(), mAllocation);
 	}

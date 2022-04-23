@@ -22,8 +22,8 @@ void Window::Destroy() {
 }
 
 void Window::DestroySurface(VkInstance aInstance) {
-   ASSERT_VULKAN_VALUE(aInstance);
-   ASSERT_VULKAN_VALUE(mSurface);
+   ASSERT_VULKAN_HANDLE(aInstance);
+   ASSERT_VULKAN_HANDLE(mSurface);
    vkDestroySurfaceKHR(aInstance, mSurface, GetAllocationCallback());
 }
 
@@ -33,7 +33,7 @@ void Window::SetWindowUserPtr(void* aPtr) {
 }
 
 bool Window::CreateSurface(VkInstance aInstance) {
-   ASSERT_VULKAN_VALUE(aInstance);
+   ASSERT_VULKAN_HANDLE(aInstance);
    const VkResult result = glfwCreateWindowSurface(aInstance, mWindow, GetAllocationCallback(), &mSurface);
    if (result != VK_SUCCESS) {
       ASSERT_RET_FALSE("Failed to create surface");

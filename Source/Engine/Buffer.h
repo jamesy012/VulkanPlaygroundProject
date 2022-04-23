@@ -11,12 +11,12 @@ public:
    void UnMap();
 
    void SetName(std::string aName) {
-      ASSERT_VULKAN_VALUE( mBuffer );
+      ASSERT_VULKAN_HANDLE( mBuffer );
       DebugSetObjName(VK_OBJECT_TYPE_BUFFER, mBuffer, aName);
    }
 
    const VkBuffer GetBuffer() const {
-      ASSERT_VULKAN_VALUE( mBuffer );
+      ASSERT_VULKAN_HANDLE( mBuffer );
       return mBuffer;
    }
    const VkDeviceSize GetSize() const {

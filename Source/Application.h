@@ -17,7 +17,7 @@ class VulkanManager;
 
 class Application {
 public:
-   void Start();
+   void Start(int argc, char *argv[]);
    void Run();
    void Destroy();
 private:

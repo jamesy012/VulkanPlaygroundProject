@@ -29,8 +29,9 @@ bool Image::LoadImage(std::string aPath) {
    bool result = LoadImageData(width, height, pixels);
 
    stbi_image_free(pixels);
-
+   if(result) {
    SetName(aPath);
+   }
    return result;
 }
 

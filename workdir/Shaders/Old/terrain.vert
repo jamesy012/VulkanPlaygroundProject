@@ -46,7 +46,7 @@ void main() {
 
 
     mat4 modelScene = objectData.modelMatrix;
-    mat3 modelSceneMat3 = mat3(modelScene);
+    //mat3 modelSceneMat3 = mat3(modelScene);
     vec4 pos = modelScene * vec4(position, 1.0);
     gl_Position = sceneData.viewProj * pos;
 

@@ -1,51 +1,59 @@
 #include "stdafx.h"
 
-#include <stdarg.h> 
+#include <stdarg.h>
 
-namespace Logger {
+#if WINDOWS
+#define LOGOUTPUT(x) OutputDebugStringA(x);
+#else
+#define LOGOUTPUT(x)
+#endif
+
+#define LOGCONSOLE(...)           \
+	memset(buffer, 0, size);      \
+	sprintf(buffer, __VA_ARGS__); \
+	printf(buffer);               \
+	LOGOUTPUT(buffer)
+#define LOGCONSOLEVA(x, p_va_list) \
+	memset(buffer, 0, size);       \
+	vsprintf(buffer, p_va_list);   \
+	printf(buffer);                \
+	LOGOUTPUT(buffer)
+
+namespace Logger
+{
 	int mPrintIndent = 0;
 	std::string mLogCat;
 };
 
-void Logger::LogMessage(const char* aMessage, ...) {
-#if WINDOWS
+void Logger::LogMessage(const char *aMessage, ...)
+{
 	const unsigned int size = 1024 * 16;
-	static char buffer[size] = { 0 };
-	FillMemory(buffer, size, 0);
+	static char buffer[size] = {0};
+	memset(buffer, 0, size);
 
-	//Category
-	if (!mLogCat.empty()) {
-		sprintf_s(buffer, "%s%s", mLogCat.c_str(), ":\t");
-		printf(buffer);
-		OutputDebugStringA(buffer);
-
+	// Category
+	if (!mLogCat.empty())
+	{
+		LOGCONSOLE("%s%s", mLogCat.c_str(), ":\t")
 	}
 
-	FillMemory(buffer, size, 0);
+	memset(buffer, 0, size);
 
-	//indent
+	// indent
 	std::string indent;
-	for (int i = 0; i < mPrintIndent; ++i) {
+	for (int i = 0; i < mPrintIndent; ++i)
+	{
 		indent += '\t';
 	}
-	printf(indent.c_str());
-	OutputDebugStringA(indent.c_str());
+	LOGCONSOLE(indent.c_str());
 
-	//message/arguments
+	// message/arguments
 	va_list argptr;
 	va_start(argptr, aMessage);
 	vprintf(aMessage, argptr);
 
-
-	vsprintf_s(buffer, aMessage, argptr);
-	OutputDebugStringA(buffer);
+	vsprintf(buffer, aMessage, argptr);
+	LOGOUTPUT(buffer);
 
 	va_end(argptr);
-#else
-#pragma message("todo")
-	va_list argptr;
-	va_start(argptr, aMessage);
-	vprintf(aMessage, argptr);
-	va_end(argptr);
-#endif
 }
